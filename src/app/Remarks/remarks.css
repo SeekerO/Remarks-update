@@ -1,0 +1,160 @@
+.partial-h1 {
+    padding: 0.5rem;
+    color: #ffffff;
+    margin-top: 20px;
+    width: 100%;
+    font-size: 20px;
+    background-color: #cb840a;
+    border-width: 0;
+    cursor: pointer;
+}
+
+.partial-h1:hover {
+    background-color: #3B82F6;
+}
+
+.partial {
+    padding: 0.5rem;
+    border-radius: 0.125rem;
+    border-width: 0;
+    width: 100%;
+    background-color: #F59E0B;
+    color: #ffffff;
+    cursor: pointer;
+    margin-top: 20px;
+}
+
+.partial:hover {
+    background-color: #3B82F6;
+}
+
+.non-h1 {
+    padding: 0.5rem;
+    color: #ffffff;
+    margin-top: 20px;
+    width: 100%;
+    font-size: 20px;
+    background-color: #c23838;
+    border-width: 0;
+    cursor: pointer;
+}
+
+.non-h1:hover {
+    background-color: #3B82F6;
+}
+
+.non {
+    padding: 0.5rem;
+    border-radius: 0.125rem;
+    border-width: 0;
+    width: 100%;
+    background-color: #EF4444;
+    color: #ffffff;
+    cursor: pointer;
+    margin-top: 20px;
+}
+
+.non:hover {
+    background-color: #3B82F6;
+}
+
+.full {
+    padding: 0.5rem;
+    border-radius: 0.125rem;
+    border-width: 0;
+    width: 100%;
+    background-color: #026440;
+    color: #ffffff;
+    cursor: pointer;
+    margin-top: 20px;
+}
+
+.full-h1 {
+    padding: 0.5rem;
+    color: #ffffff;
+    margin-top: 20px;
+    width: 100%;
+    font-size: 20px;
+    background-color: #02462d;
+    border-width: 0;
+    cursor: pointer;
+}
+
+.full-h1:hover {
+    background-color: #3B82F6;
+}
+
+
+.full:hover {
+    background-color: #3B82F6;
+}
+
+.prov {
+    padding: 0.5rem;
+    border-radius: 0.125rem;
+    border-width: 0;
+    width: 100%;
+    background-color: #1e293b;
+    color: #ffffff;
+    cursor: pointer;
+    margin-top: 20px;
+}
+
+.prov-h1 {
+    color: #1e293b;
+}
+
+.prov:hover {
+    background-color: #3B82F6;
+}
+
+.region-select {
+    padding: 0.5rem;
+    border-radius: 0.125rem;
+    width: 100%;
+    margin-bottom: 20px;
+    border: 1px solid #1e293b;
+}
+
+.province-container {
+    display: none;
+}
+
+.province-container.active {
+    display: block;
+}
+
+
+.province-container.active {
+    margin-top: 20px;
+}
+
+.province-item {
+    margin-bottom: 20px;
+}
+
+.municipality-container {
+    margin-top: 10px;
+}
+
+.municipality-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    /* Two columns */
+    gap: 10px;
+}
+
+.municipality-item {
+    padding: 8px;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    text-align: center;
+    background-color: #f5f5f5;
+    cursor: pointer;
+
+}
+
+.municipality-item:hover {
+    background-color: #3B82F6;
+    color: white;
+}
