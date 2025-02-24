@@ -4,273 +4,363 @@
 
 import Link from "next/link";
 import React, { useEffect, useLayoutEffect, useState } from "react";
-import { IoSearchOutline, IoChevronBack, IoCloudUploadOutline } from "react-icons/io5";
+import {
+  IoSearchOutline,
+  IoChevronBack,
+  IoCloudUploadOutline,
+} from "react-icons/io5";
 import { AiOutlineLoading3Quarters } from "react-icons/ai";
 import Image from "next/image";
 import * as XLSX from "xlsx";
 import LZString from "lz-string";
 import kkk from "../../lib/image/KKK.png";
 import moment from "moment";
-import { IoIosRefresh } from "react-icons/io";
 import { MdDelete } from "react-icons/md";
+import { BsFiletypeXlsx } from "react-icons/bs";
+import Duplicated from "./components/duplicated";
 
 interface EvaluationData {
-    FULLNAME: string;
-    POSITION: string;
-    "MUNICIPALITY/REGION"?: string;
-    STATUS: string;
-    REMARKS?: string;
+  FULLNAME: string;
+  POSITION: string;
+  "MUNICIPALITY/REGION"?: string;
+  STATUS: string;
+  REMARKS?: string;
 }
 
 const ITEMS_PER_PAGE = 50;
 
 const Evaluation = () => {
-    const [data, setData] = useState<EvaluationData[]>([]);
-    const [search, setSearch] = useState("");
-    const [currentPage, setCurrentPage] = useState(1);
-    const [loading, setLoading] = useState(false);
+  const [data, setData] = useState<EvaluationData[]>([]);
+  const [search, setSearch] = useState("");
+  const [currentPage, setCurrentPage] = useState(1); // current number of the page
+  const [loading, setLoading] = useState(false);
+  const [open, setOpen] = useState(false); // Opeing the xlsx modal
 
-    useLayoutEffect(() => {
-        const storedData = localStorage.getItem("evaluationData") || sessionStorage.getItem("evaluationData");
-        if (storedData) {
-            const decompressedData = JSON.parse(LZString.decompress(storedData) || "[]");
-            setData(decompressedData);
-        }
-    }, []);
+  useLayoutEffect(() => {
+    const storedData =
+      localStorage.getItem("evaluationData") ||
+      sessionStorage.getItem("evaluationData");
+    if (storedData) {
+      const decompressedData = JSON.parse(
+        LZString.decompress(storedData) || "[]"
+      );
+      setData(decompressedData);
+    }
+  }, []);
 
-    const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
-        const files = event.target.files;
-        if (!files || files.length === 0) return;
+  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = event.target.files;
+    if (!files || files.length === 0) return;
 
-        setLoading(true);
+    setLoading(true);
 
-        const readers: Promise<EvaluationData[]>[] = [];
+    const readers: Promise<EvaluationData[]>[] = [];
 
-        for (const file of files) {
-            const reader = new FileReader();
-            readers.push(
-                new Promise((resolve) => {
-                    reader.onload = (e) => {
-                        const binaryString = e.target?.result;
-                        if (!binaryString) return resolve([]);
+    for (const file of files) {
+      const reader = new FileReader();
+      readers.push(
+        new Promise((resolve) => {
+          reader.onload = (e) => {
+            const binaryString = e.target?.result;
+            if (!binaryString) return resolve([]);
 
-                        const workbook = XLSX.read(binaryString, { type: "binary" });
-                        const sheetName = workbook.SheetNames[0];
-                        const worksheet = workbook.Sheets[sheetName];
-                        if (!worksheet) return resolve([]);
+            const workbook = XLSX.read(binaryString, { type: "binary" });
+            const sheetName = workbook.SheetNames[0];
+            const worksheet = workbook.Sheets[sheetName];
+            if (!worksheet) return resolve([]);
 
-                        const jsonData: EvaluationData[] = XLSX.utils.sheet_to_json(worksheet, { defval: " " });
-                        resolve(jsonData);
-                    };
-                    reader.readAsBinaryString(file);
-                })
+            const jsonData: EvaluationData[] = XLSX.utils.sheet_to_json(
+              worksheet,
+              { defval: " " }
             );
-        }
-
-        Promise.all(readers).then((results) => {
-            const mergedData = results.flat(); // Merge all data into one array
-            setData((prevData) => [...prevData, ...mergedData]); // Append new data to existing data
-            setCurrentPage(1);
-
-            const compressedData = LZString.compress(JSON.stringify(mergedData));
-            try {
-                localStorage.setItem("evaluationData", compressedData);
-            } catch {
-                sessionStorage.setItem("evaluationData", compressedData);
-            }
-            setLoading(false);
-        });
-    };
-
-    const filteredData = data.filter((row: any) =>
-        Object.values(row).some(value => value?.toString().toLowerCase().includes(search.toLowerCase()))
-    );
-
-    useEffect(() => {
-        if (search.trim() !== "") setCurrentPage(1);
-    }, [search]);
-
-    const totalPages = Math.ceil(filteredData.length / ITEMS_PER_PAGE);
-    const paginatedData = filteredData.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
-
-
-    const convertExcelTimestamp = (serial: number): string => {
-        if (!serial || isNaN(serial)) return "Invalid Date";
-        return moment("1899-12-30").add(serial, "days").format("YYYY-MM-DD");
-    };
-
-    const clearEvaluationData = () => {
-        localStorage.removeItem("evaluationData");
-        sessionStorage.removeItem("evaluationData");
-        setData([]); // Clear the state
-        setCurrentPage(1);
-        window.location.reload();
-    };
-
-    const CountTotal = () => {
-        const full = filteredData.filter(item => item.STATUS?.toLowerCase().includes("full")).length
-        const non = filteredData.filter(item => item.STATUS?.toLowerCase().includes("non")).length
-        const partial = filteredData.filter(item => item.STATUS?.toLowerCase().includes("partial")).length
-
-        return full + non + partial
+            resolve(jsonData);
+          };
+          reader.readAsBinaryString(file);
+        })
+      );
     }
 
+    Promise.all(readers).then((results) => {
+      const mergedData = results.flat(); // Merge all data into one array
+      setData((prevData) => [...prevData, ...mergedData]); // Append new data to existing data
+      setCurrentPage(1);
 
+      const compressedData = LZString.compress(JSON.stringify(mergedData));
+      try {
+        localStorage.setItem("evaluationData", compressedData);
+      } catch {
+        sessionStorage.setItem("evaluationData", compressedData);
+      }
+      setLoading(false);
+    });
+  };
 
-    return (
-        <div className="flex flex-col items-center py-5 bg-slate-300 h-screen text-slate-950">
-            <div className="w-full mt-4 px-2">
-                <Link href="/" className="text-slate-950 flex gap-1 items-center font-semibold hover:text-blue-700">
-                    <IoChevronBack className="text-[2rem]" />BACK
-                </Link>
-            </div>
+  const filteredData = data.filter((row: any) =>
+    Object.values(row).some((value) =>
+      value?.toString().toLowerCase().includes(search.toLowerCase())
+    )
+  );
 
-            <div className="font-semibold tracking-widest text-[2.5rem] flex items-center">
-                <Image src={kkk} alt="Description of image" width={100} height={50} />
-                <label className="">EVALUATION</label>
-            </div>
+  useEffect(() => {
+    if (search.trim() !== "") setCurrentPage(1);
+  }, [search]);
 
-            <div className="w-full flex text-slate-950 justify-between px-10 py-5">
-                <div className="flex w-[400px] px-2 py-0.5 gap-2 items-center mx-2 border-[1px] border-slate-700 rounded-xl">
-                    <IoSearchOutline className="text-[20px]" />
-                    <input
-                        type="text"
-                        onChange={(e) => setSearch(e.target.value)}
-                        className="w-full outline-none px-3 py-2 bg-slate-300 "
-                        placeholder="Search here.."
-                    />
-                </div>
+  const totalPages = Math.ceil(filteredData.length / ITEMS_PER_PAGE);
+  const paginatedData = filteredData.slice(
+    (currentPage - 1) * ITEMS_PER_PAGE,
+    currentPage * ITEMS_PER_PAGE
+  );
 
-                <div className="flex items-center gap-5">
+  const convertExcelTimestamp = (serial: number): string => {
+    if (!serial || isNaN(serial)) return "Invalid Date";
+    return moment("1899-12-30").add(serial, "days").format("YYYY-MM-DD");
+  };
 
-                    {filteredData.length === 0 ?
-                        <label className="flex items-center gap-2 px-4 py-2 bg-blue-500 text-white rounded-lg cursor-pointer hover:scale-125 duration-300 ">
-                            <IoCloudUploadOutline className="text-[20px]" /> Upload
-                            <input type="file" accept=".xlsx, .xls" onChange={handleFileUpload} className="hidden" />
-                        </label> :
-                        <a onClick={clearEvaluationData} className="flex items-center gap-2 px-4 py-3 border-[1px] border-red-500 text-red-500 hover:scale-125 duration-300 rounded-lg cursor-pointer">
-                            <MdDelete className="text-[16px] font-bold" />
-                        </a>
+  const clearEvaluationData = () => {
+    localStorage.removeItem("evaluationData");
+    sessionStorage.removeItem("evaluationData");
+    setData([]); // Clear the state
+    setCurrentPage(1);
+    window.location.reload();
+  };
+
+  const CountTotal = () => {
+    const full = filteredData.filter((item) =>
+      item.STATUS?.toLowerCase().includes("full")
+    ).length;
+    const non = filteredData.filter((item) =>
+      item.STATUS?.toLowerCase().includes("non")
+    ).length;
+    const partial = filteredData.filter((item) =>
+      item.STATUS?.toLowerCase().includes("partial")
+    ).length;
+
+    return full + non + partial;
+  };
+
+  return (
+    <div className="flex flex-col items-center py-5 bg-slate-300 h-screen text-slate-950">
+      <div className="w-full mt-4 px-2">
+        <Link
+          href="/"
+          className="text-slate-950 flex gap-1 items-center font-semibold hover:text-blue-700"
+        >
+          <IoChevronBack className="text-[2rem]" />
+          BACK
+        </Link>
+      </div>
+
+      <div className="font-semibold tracking-widest text-[2.5rem] flex items-center">
+        <Image src={kkk} alt="Description of image" width={100} height={50} />
+        <label className="">EVALUATION</label>
+      </div>
+
+      <div className="w-full flex text-slate-950 justify-between px-10 py-5">
+        <div className="flex items-center">
+          <div className="flex w-[400px] px-2 py-0.5 gap-2 items-center mx-2 border-[1px] border-slate-700 rounded-xl">
+            <IoSearchOutline className="text-[20px]" />
+            <input
+              type="text"
+              onChange={(e) => setSearch(e.target.value)}
+              className="w-full outline-none px-3 py-2 bg-slate-300 "
+              placeholder="Search here.."
+            />
+          </div>
+          <a
+            onClick={() => setOpen(true)}
+            className="border-[1px] border-slate-950 p-2 text-[1.3rem] rounded-md hover:border-green-600 hover:text-green-600 hover:scale-125 duration-300 cursor-pointer"
+          >
+            <BsFiletypeXlsx />
+          </a>
+        </div>
+
+        <div className="flex items-center gap-5">
+          {filteredData.length === 0 ? (
+            <label className="flex items-center gap-2 px-4 py-2 bg-blue-500 text-white rounded-lg cursor-pointer hover:scale-125 duration-300 ">
+              <IoCloudUploadOutline className="text-[20px]" /> Upload
+              <input
+                type="file"
+                accept=".xlsx, .xls"
+                onChange={handleFileUpload}
+                className="hidden"
+              />
+            </label>
+          ) : (
+            <a
+              onClick={clearEvaluationData}
+              className="flex items-center gap-2 px-4 py-3 border-[1px] border-red-500 text-red-500 hover:scale-125 duration-300 rounded-lg cursor-pointer"
+            >
+              <MdDelete className="text-[16px] font-bold" />
+            </a>
+          )}
+        </div>
+      </div>
+
+      <div className="grid-cols-2 grid lg:grid-cols-4 px-10  justify-center gap-10 mb-2">
+        <label className="font-semibold tracking-wide bg-green-700 text-slate-100 px-10 py-1 items-center flex rounded-md">
+          COMPLIANT:{" "}
+          {
+            filteredData.filter((item) =>
+              item.STATUS?.toLowerCase().includes("full")
+            ).length
+          }
+        </label>
+
+        <label className="font-semibold tracking-wide bg-red-700 text-slate-100 px-10 py-1 items-center flex rounded-md">
+          NON-COMPLIANT:{" "}
+          {
+            filteredData.filter((item) =>
+              item.STATUS?.toLowerCase().includes("non")
+            ).length
+          }
+        </label>
+
+        <label className="font-semibold tracking-wide bg-yellow-700 text-slate-100 px-10 py-1 items-center flex rounded-md">
+          PARTIAL-COMPLIANT:{" "}
+          {
+            filteredData.filter((item) =>
+              item.STATUS?.toLowerCase().includes("partial")
+            ).length
+          }
+        </label>
+
+        <label className="font-semibold tracking-wide bg-blue-700 text-slate-100 px-10 py-1 items-center flex rounded-md">
+          TOTAL: {CountTotal()}
+        </label>
+      </div>
+
+      <div className="w-[95%] overflow-auto">
+        {filteredData.length > 0 && (
+          <div>
+            {/* Mobile View (Card Layout) */}
+            <div className="flex flex-col gap-4 lg:hidden">
+              {paginatedData.map((row, rowIndex) => (
+                <div
+                  key={rowIndex}
+                  className="border border-gray-950 bg-slate-300 p-4 rounded-md shadow"
+                >
+                  {Object.entries(row).map(([key, value], cellIndex) => {
+                    let textColor = "";
+                    let cellValue = value ? value.toString().trim() : " ";
+
+                    // Convert Excel timestamp if applicable
+                    if (typeof value === "number" && value > 40000) {
+                      cellValue = convertExcelTimestamp(value);
                     }
 
+                    // Apply color styling for first column
+                    if (cellIndex === 0 && typeof value === "string") {
+                      const lowerCell = value.toLowerCase();
+                      if (lowerCell.includes("full"))
+                        textColor = "text-green-600 font-semibold";
+                      else if (lowerCell.includes("non"))
+                        textColor = "text-red-600 font-semibold";
+                      else if (lowerCell.includes("partial"))
+                        textColor = "text-yellow-600 font-semibold";
+                    }
+
+                    return (
+                      <div
+                        key={cellIndex}
+                        className="flex justify-between border-b border-gray-400 py-1"
+                      >
+                        <span className="font-semibold">{key}:</span>
+                        <span className={`${textColor}`}>{cellValue}</span>
+                      </div>
+                    );
+                  })}
                 </div>
+              ))}
             </div>
 
-            <div className="grid-cols-2 grid lg:grid-cols-4  justify-center gap-10 mb-2">
-                <label className="font-semibold tracking-wide bg-green-700 text-slate-100 px-10 py-1 items-center flex rounded-md">
-                    COMPLIANT: {filteredData.filter(item => item.STATUS?.toLowerCase().includes("full")).length}
-                </label>
+            {/* Desktop View (Table) */}
+            <table className="hidden lg:table w-full border-collapse border border-gray-950 bg-white">
+              <thead>
+                <tr className="bg-slate-950 text-white uppercase font-semibold">
+                  {Object.keys(filteredData[0]).map((key) => (
+                    <th
+                      key={key}
+                      className="border border-gray-950 px-4 text-center"
+                    >
+                      {key}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {paginatedData.map((row, rowIndex) => (
+                  <tr
+                    key={rowIndex}
+                    className="border border-gray-950 bg-slate-300"
+                  >
+                    {Object.values(row).map((cell, cellIndex) => {
+                      let textColor = "";
+                      let cellValue = cell ? cell.toString().trim() : " ";
 
-                <label className="font-semibold tracking-wide bg-red-700 text-slate-100 px-10 py-1 items-center flex rounded-md">
-                    NON-COMPLIANT: {filteredData.filter(item => item.STATUS?.toLowerCase().includes("non")).length}
-                </label>
+                      // Convert Excel timestamp if applicable
+                      if (typeof cell === "number" && cell > 40000) {
+                        cellValue = convertExcelTimestamp(cell);
+                      }
 
-                <label className="font-semibold tracking-wide bg-yellow-700 text-slate-100 px-10 py-1 items-center flex rounded-md">
-                    PARTIAL-COMPLIANT: {filteredData.filter(item => item.STATUS?.toLowerCase().includes("partial")).length}
-                </label>
+                      // Apply color styling for first column
+                      if (cellIndex === 0 && typeof cell === "string") {
+                        const lowerCell = cell.toLowerCase();
+                        if (lowerCell.includes("full"))
+                          textColor = "text-green-600 font-semibold";
+                        else if (lowerCell.includes("non"))
+                          textColor = "text-red-600 font-semibold";
+                        else if (lowerCell.includes("partial"))
+                          textColor = "text-yellow-600 font-semibold";
+                      }
 
-                <label className="font-semibold tracking-wide bg-blue-700 text-slate-100 px-10 py-1 items-center flex rounded-md">
-                    TOTAL: {CountTotal()}
-                </label>
+                      return (
+                        <td
+                          key={cellIndex}
+                          className={`border border-gray-950 px-4 py-2 text-center ${textColor}`}
+                        >
+                          {cellValue}
+                        </td>
+                      );
+                    })}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
 
-
-            </div>
-
-
-            <div className="w-[95%] overflow-auto">
-                {filteredData.length > 0 && (
-                    <div>
-                        {/* Mobile View (Card Layout) */}
-                        <div className="flex flex-col gap-4 lg:hidden">
-                            {paginatedData.map((row, rowIndex) => (
-                                <div key={rowIndex} className="border border-gray-950 bg-slate-300 p-4 rounded-md shadow">
-                                    {Object.entries(row).map(([key, value], cellIndex) => {
-                                        let textColor = "";
-                                        let cellValue = value ? value.toString().trim() : " ";
-
-                                        // Convert Excel timestamp if applicable
-                                        if (typeof value === "number" && value > 40000) {
-                                            cellValue = convertExcelTimestamp(value);
-                                        }
-
-                                        // Apply color styling for first column
-                                        if (cellIndex === 0 && typeof value === "string") {
-                                            const lowerCell = value.toLowerCase();
-                                            if (lowerCell.includes("full")) textColor = "text-green-600 font-semibold";
-                                            else if (lowerCell.includes("non")) textColor = "text-red-600 font-semibold";
-                                            else if (lowerCell.includes("partial")) textColor = "text-yellow-600 font-semibold";
-                                        }
-
-                                        return (
-                                            <div key={cellIndex} className="flex justify-between border-b border-gray-400 py-1">
-                                                <span className="font-semibold">{key}:</span>
-                                                <span className={`${textColor}`}>{cellValue}</span>
-                                            </div>
-                                        );
-                                    })}
-                                </div>
-                            ))}
-                        </div>
-
-                        {/* Desktop View (Table) */}
-                        <table className="hidden lg:table w-full border-collapse border border-gray-950 bg-white">
-                            <thead>
-                                <tr className="bg-slate-950 text-white uppercase font-semibold">
-                                    {Object.keys(filteredData[0]).map((key) => (
-                                        <th key={key} className="border border-gray-950 px-4 text-center">{key}</th>
-                                    ))}
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {paginatedData.map((row, rowIndex) => (
-                                    <tr key={rowIndex} className="border border-gray-950 bg-slate-300">
-                                        {Object.values(row).map((cell, cellIndex) => {
-                                            let textColor = "";
-                                            let cellValue = cell ? cell.toString().trim() : " ";
-
-                                            // Convert Excel timestamp if applicable
-                                            if (typeof cell === "number" && cell > 40000) {
-                                                cellValue = convertExcelTimestamp(cell);
-                                            }
-
-                                            // Apply color styling for first column
-                                            if (cellIndex === 0 && typeof cell === "string") {
-                                                const lowerCell = cell.toLowerCase();
-                                                if (lowerCell.includes("full")) textColor = "text-green-600 font-semibold";
-                                                else if (lowerCell.includes("non")) textColor = "text-red-600 font-semibold";
-                                                else if (lowerCell.includes("partial")) textColor = "text-yellow-600 font-semibold";
-                                            }
-
-                                            return (
-                                                <td key={cellIndex} className={`border border-gray-950 px-4 py-2 text-center ${textColor}`}>
-                                                    {cellValue}
-                                                </td>
-                                            );
-                                        })}
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                    </div>
-                )}
-
-            </div>
-
-            {loading && (
-                <div className="absolute inset-0 flex items-center justify-center bg-slate-900/70">
-                    <AiOutlineLoading3Quarters className="text-slate-10 text-[2rem] animate-spin" />
-                </div>
-            )}
-
-            {filteredData.length > 0 && <div className="flex justify-center gap-2 mt-4">
-                <button disabled={currentPage === 1} onClick={() => setCurrentPage(currentPage - 1)} className="px-4 py-2 bg-gray-400 disabled:opacity-50 rounded-lg">Previous</button>
-                <span className="px-4 py-2">Page {currentPage} of {totalPages}</span>
-                <button disabled={currentPage === totalPages} onClick={() => setCurrentPage(currentPage + 1)} className="px-4 py-2 bg-gray-400 disabled:opacity-50 rounded-lg">Next</button>
-            </div>}
-
-
+      {filteredData.length > 0 && (
+        <div className="flex justify-center gap-2 mt-4">
+          <button
+            disabled={currentPage === 1}
+            onClick={() => setCurrentPage(currentPage - 1)}
+            className="px-4 py-2 bg-gray-400 disabled:opacity-50 rounded-lg"
+          >
+            Previous
+          </button>
+          <span className="px-4 py-2">
+            Page {currentPage} of {totalPages}
+          </span>
+          <button
+            disabled={currentPage === totalPages}
+            onClick={() => setCurrentPage(currentPage + 1)}
+            className="px-4 py-2 bg-gray-400 disabled:opacity-50 rounded-lg"
+          >
+            Next
+          </button>
         </div>
-    );
+      )}
+
+      {loading && (
+        <div className="absolute inset-0 flex items-center justify-center bg-slate-900/70">
+          <AiOutlineLoading3Quarters className="text-slate-10 text-[2rem] animate-spin" />
+        </div>
+      )}
+
+      <Duplicated open={open} setOpen={setOpen} />
+    </div>
+  );
 };
 
 export default Evaluation;
