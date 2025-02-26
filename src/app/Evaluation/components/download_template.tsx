@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-"use client"
+/* eslint-disable @typescript-eslint/no-unused-vars */
+"use client";
 
 import React, { useEffect, useRef } from "react";
 import { MdOutlineFileDownload } from "react-icons/md";
