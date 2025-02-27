@@ -13,7 +13,7 @@ const CellItem = ({ cell, cellIndex }: { cell: any; cellIndex: number }) => {
   let cellValue = cell ? cell.toString().trim() : " ";
 
   // Convert Excel timestamp if applicable
-  if (typeof cell === "number" && cell > 40000) {
+  if ([2, 3].includes(cellIndex)) {
     cellValue = convertExcelTimestamp(cell);
   }
 
@@ -95,17 +95,21 @@ const CellItem = ({ cell, cellIndex }: { cell: any; cellIndex: number }) => {
     <td
       key={cellIndex}
       onClick={handleOpenModal}
-      className={`border border-gray-950 px-4 py-2 text-center ${textColor} ${
-        [13, 14, 15, 16, 17].includes(cellIndex) &&
-        "hover:text-blue-500 cursor-pointer hover:underline"
-      } `}
+      className={`border border-gray-950 px-4 py-2 text-center `}
     >
-      {cellValue}
-      <ModalCell
-        previewLink={previewLink}
-        open={openModal}
-        setOpen={setOpenModal}
-      />
+      <div
+        className={`${textColor} ${
+          [13, 14, 15, 16, 17].includes(cellIndex) &&
+          "hover:text-blue-500 cursor-pointer hover:underline"
+        } `}
+      >
+        {cellValue}
+        <ModalCell
+          previewLink={previewLink}
+          open={openModal}
+          setOpen={setOpenModal}
+        />
+      </div>
     </td>
   );
 };

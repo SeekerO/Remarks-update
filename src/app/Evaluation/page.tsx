@@ -20,6 +20,7 @@ import { MdDelete } from "react-icons/md";
 import { BsFiletypeXlsx } from "react-icons/bs";
 import Duplicated from "./components/download_template";
 import CellItem from "./components/cellitem";
+import { MdNumbers } from "react-icons/md";
 
 interface EvaluationData {
   FULLNAME: string;
@@ -38,6 +39,7 @@ const Evaluation = () => {
   const [currentPage, setCurrentPage] = useState(1); // current number of the page
   const [loading, setLoading] = useState(false);
   const [open, setOpen] = useState(false); // Opeing the xlsx modal
+  const [controlno, setControlNo] = useState(false);
 
   useLayoutEffect(() => {
     const storedData =
@@ -87,20 +89,29 @@ const Evaluation = () => {
 
             jsonData = jsonData.map((row: any, rowIndex: number) => {
               const newRow = { ...row };
+              const column1Key = Object.keys(newRow)[0]; // Get key for 1st column
               const column7Key = Object.keys(newRow)[6]; // Get key for 7th column
+
+              if (column1Key) {
+                const originalValue = newRow[column1Key];
+
+                newRow._firstFour =
+                  typeof originalValue === "string"
+                    ? originalValue.slice(0, 4)
+                    : ""; // Extract first 4 characters
+              }
 
               if (column7Key) {
                 if (!newRow[column7Key] && lastNonEmptyValue !== null) {
                   newRow[column7Key] = lastNonEmptyValue; // Copy value from above
                   newRow._copied = true; // Mark row as copied
 
-                  // Mark the source row as copied
                   if (lastNonEmptyRowIndex !== null) {
                     jsonData[lastNonEmptyRowIndex]._copied = true;
                   }
                 } else {
                   lastNonEmptyValue = newRow[column7Key]; // Update last known non-empty value
-                  lastNonEmptyRowIndex = rowIndex; // Update last known non-empty row index
+                  lastNonEmptyRowIndex = rowIndex;
                 }
               }
 
@@ -131,11 +142,21 @@ const Evaluation = () => {
     });
   };
 
-  const filteredData = data.filter((row: any) =>
-    Object.values(row).some((value) =>
-      value?.toString().toLowerCase().includes(search.toLowerCase())
-    )
-  );
+  const filteredData = data.filter((row: any) => {
+    if (!controlno) {
+      // Search in all columns
+      return Object.values(row).some((value) =>
+        value?.toString().toLowerCase().includes(search.toLowerCase())
+      );
+    } else {
+      // Search only in the 5th column
+      const column5Key = Object.keys(row)[4]; // Get key for the 5th column dynamically
+      return row[column5Key]
+        ?.toString()
+        .toLowerCase()
+        .includes(search.toLowerCase());
+    }
+  });
 
   useEffect(() => {
     if (search.trim() !== "") setCurrentPage(1);
@@ -199,13 +220,29 @@ const Evaluation = () => {
 
       <div className="w-full flex text-slate-950 justify-between px-10 py-5">
         <div className="flex items-center">
-          <div className="flex w-[400px] px-2 py-0.5 gap-2 items-center mx-2 border-[1px] border-slate-700 rounded-xl">
+          <button
+            onClick={() => setControlNo(!controlno)}
+            className={`flex items-center gap-1 border-[1px] p-2.5 rounded-xl ${
+              controlno
+                ? "border-blue-700 text-blue-700"
+                : "border-slate-950 text-slate-950"
+            }`}
+          >
+            CTRL <MdNumbers />
+          </button>
+          <div
+            className={`flex w-[400px] px-2 py-0.5 gap-2 items-center mx-2 border-[1px] ${
+              !controlno ? "border-slate-700" : "border-blue-700 text-blue-700"
+            } rounded-xl`}
+          >
             <IoSearchOutline className="text-[20px]" />
             <input
               type="text"
               onChange={(e) => setSearch(e.target.value)}
-              className="w-full outline-none px-3 py-2 bg-slate-300 "
-              placeholder="Search here.."
+              className={`w-full outline-none px-3 py-2 bg-slate-300 `}
+              placeholder={`${
+                !controlno ? "Search here.." : "Search Control No..."
+              }`}
             />
           </div>
           <a
@@ -330,17 +367,33 @@ const Evaluation = () => {
                 </tr>
               </thead>
               <tbody>
-                {paginatedData.map((row, rowIndex) => (
-                  <tr key={rowIndex} className={`border border-gray-950 `}>
-                    {Object.values(row).map((cell, cellIndex) => (
-                      <CellItem
-                        key={cellIndex}
-                        cell={cell}
-                        cellIndex={cellIndex}
-                      />
-                    ))}
-                  </tr>
-                ))}
+                {paginatedData
+                  .sort((a: any, b: any) => {
+                    if (!controlno) return 0; // No sorting if controlno is false
+
+                    const column5KeyA = Object.keys(a)[4]; // Get column 5 key dynamically
+                    const column5KeyB = Object.keys(b)[4];
+
+                    if (!column5KeyA || !column5KeyB) return 0; // Skip sorting if keys are missing
+
+                    const valA = parseFloat(a[column5KeyA]); // Convert to number
+                    const valB = parseFloat(b[column5KeyB]);
+
+                    if (isNaN(valA) || isNaN(valB)) return 0; // Skip sorting if non-numeric
+
+                    return valA - valB; // Sort numbers in ascending order (lowest first)
+                  })
+                  .map((row, rowIndex) => (
+                    <tr key={rowIndex} className={`border border-gray-950 `}>
+                      {Object.values(row).map((cell, cellIndex) => (
+                        <CellItem
+                          key={cellIndex}
+                          cell={cell}
+                          cellIndex={cellIndex}
+                        />
+                      ))}
+                    </tr>
+                  ))}
               </tbody>
             </table>
           </div>
