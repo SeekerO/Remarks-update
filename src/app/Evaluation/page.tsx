@@ -4,23 +4,24 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import React, { useEffect, useLayoutEffect, useState } from "react";
+import * as XLSX from "xlsx";
+import LZString from "lz-string";
+import kkk from "../../lib/image/KKK.png";
+import moment from "moment";
+import Duplicated from "./components/Template/download_template";
+import CellItem from "./components/util/cellitem";
+
+import { BsFiletypeXlsx } from "react-icons/bs";
+import { MdDelete } from "react-icons/md";
+import { MdNumbers } from "react-icons/md";
 import {
   IoSearchOutline,
   IoChevronBack,
   IoCloudUploadOutline,
 } from "react-icons/io5";
 import { AiOutlineLoading3Quarters } from "react-icons/ai";
-import Image from "next/image";
-import * as XLSX from "xlsx";
-import LZString from "lz-string";
-import kkk from "../../lib/image/KKK.png";
-import moment from "moment";
-import { MdDelete } from "react-icons/md";
-import { BsFiletypeXlsx } from "react-icons/bs";
-import Duplicated from "./components/download_template";
-import CellItem from "./components/cellitem";
-import { MdNumbers } from "react-icons/md";
 
 interface EvaluationData {
   FULLNAME: string;
@@ -201,15 +202,14 @@ const Evaluation = () => {
     return full + non + partial;
   };
 
-  const handleKeyDown = (event:  React.KeyboardEvent<HTMLInputElement>) => {
+  const handleKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
     if (event.key === "Enter") {
-      setSearch("")
-    }else if (event.key === "-") {
+      setSearch("");
+    } else if (event.key === "-") {
       event.preventDefault(); // Prevent default "-" input
       setSearch((prev) => prev.slice(0, -1)); // Simulate backspace
     }
   };
-
 
   return (
     <div className="flex flex-col items-center py-5 bg-slate-300 h-screen text-slate-950">
