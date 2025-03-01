@@ -1,7 +1,7 @@
 "use client";
 /* eslint-disable @typescript-eslint/no-unused-vars */
 
-import React, { useRef, useEffect, useCallback, useState } from "react";
+import React, { useRef, useEffect, useState } from "react";
 
 const GdriveModal = ({
   cellValue,
@@ -24,12 +24,11 @@ const GdriveModal = ({
       ) {
         const link = await convertToPreviewLink(cellValue);
         setPreview(link);
-      } else if ([19].includes(cellIndex)) {
       }
     };
 
     fetchPreviewLink();
-  }, [cellValue]); // Now safe to include
+  }, [cellValue, cellIndex]);
 
   const expandUrl = async (shortUrl: string): Promise<string> => {
     try {
@@ -44,22 +43,18 @@ const GdriveModal = ({
     }
   };
 
-  const convertToPreviewLink = useCallback(
-    async (url: string): Promise<string> => {
-      if (typeof url !== "string") return url;
+  const convertToPreviewLink = async (url: string): Promise<string> => {
+    if (typeof url !== "string") return url;
 
-      if (url.includes("view")) {
-        return url.replace(/\/view?.*$/, "/preview");
-      } else if (url.includes("https://bit.ly")) {
-        const expandedURL = await expandUrl(url);
-        console.log(expandedURL);
-        return convertBitLinkToPreview(expandedURL);
-      } else {
-        return convertFolderToPreview(url);
-      }
-    },
-    []
-  );
+    if (url.includes("view")) {
+      return url.replace(/\/view?.*$/, "/preview");
+    } else if (url.includes("https://bit.ly")) {
+      const expandedURL = await expandUrl(url);
+      return convertBitLinkToPreview(expandedURL);
+    } else {
+      return convertFolderToPreview(url);
+    }
+  };
 
   const convertFolderToPreview = (url: string): string => {
     const match = url?.match(/folders\/([^?]+)/);
@@ -88,13 +83,16 @@ const GdriveModal = ({
     return () => {
       document.removeEventListener("mousedown", handleClickOutside);
     };
-  }, [ref]); // Added ref to dependencies
+  }, []);
 
   if (!open) return null;
 
   return (
     <div className="fixed inset-0 w-screen h-screen z-50 flex items-center justify-center bg-black bg-opacity-50">
-      <div className="w-[80vw] h-[90vh] bg-white p-4 rounded-lg shadow-lg">
+      <div
+        ref={ref}
+        className="w-[80vw] h-[90vh] bg-white p-4 rounded-lg shadow-lg relative"
+      >
         <button
           className="absolute top-4 right-4 text-gray-600 hover:text-black"
           onClick={() => setOpen(false)}

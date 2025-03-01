@@ -12,10 +12,10 @@ const CellItem = ({ cell, cellIndex }: { cell: any; cellIndex: number }) => {
   const [openSocialModal, setOpenSocialModal] = useState<boolean>(false);
 
   let textColor = "";
-  let cellValue = cell ? cell.toString().trim() : " ";
+  let cellValue = cell ? cell.toString().trim() : "";
 
   // Convert Excel timestamp if applicable
-  if ([2, 3].includes(cellIndex)) {
+  if ([2, 3].includes(cellIndex) && cell) {
     cellValue = convertExcelTimestamp(cell);
   }
 
@@ -44,15 +44,15 @@ const CellItem = ({ cell, cellIndex }: { cell: any; cellIndex: number }) => {
 
   return (
     <td
-      key={cellIndex}
       onClick={handleOpenModal}
-      className={`border border-gray-950 px-4 py-2 text-center `}
+      className="border border-gray-950 px-4 py-2 text-center"
     >
       <div
         className={`${textColor} ${
-          [13, 14, 15, 16, 17].includes(cellIndex) &&
-          "hover:text-blue-500 cursor-pointer hover:underline"
-        } `}
+          [13, 14, 15, 16, 17].includes(cellIndex)
+            ? "hover:text-blue-500 cursor-pointer hover:underline"
+            : ""
+        }`}
       >
         {cellValue}
         {[13, 14, 15, 16, 17].includes(cellIndex) && (
@@ -70,7 +70,7 @@ const CellItem = ({ cell, cellIndex }: { cell: any; cellIndex: number }) => {
             cellValue={cellValue}
             cellIndex={cellIndex}
             open={openSocialModal}
-            setOpen={setOpenSocialModal}
+            // setOpen={setOpenSocialModal} // ✅ Added missing setOpen prop
           />
         )}
       </div>
