@@ -241,7 +241,7 @@ const Evaluation = () => {
               value={column}
               className="w-[300px] flex gap-2"
             >
-              {!hiddenColumns.includes(column) ? "✔️" : "❌"}
+              {!hiddenColumns.includes(column) ? "✔️ " : "❌ "}
 
               {column}
             </option>
