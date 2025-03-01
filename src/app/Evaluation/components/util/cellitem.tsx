@@ -42,12 +42,27 @@ const CellItem = ({ cell, cellIndex }: { cell: any; cellIndex: number }) => {
     }
   };
 
+  const handleFunctions = (text: string) => {
+    // const upperCase: string = text.toUpperCase();
+    if (cellValue.includes(".com") && cellValue.includes("@")) {
+      navigator.clipboard
+        .writeText(text)
+        .then(() => {
+          console.log(`Copied: ${text} `);
+        })
+        .catch((err) => {
+          console.error("Failed to copy text: ", err);
+        });
+    }
+    return;
+  };
   return (
     <td
       onClick={handleOpenModal}
       className="border border-gray-950 px-4 py-2 text-center"
     >
       <div
+        onClick={() => handleFunctions(cellValue)}
         className={`${textColor} ${
           [13, 14, 15, 16, 17].includes(cellIndex)
             ? "hover:text-blue-500 cursor-pointer hover:underline"
