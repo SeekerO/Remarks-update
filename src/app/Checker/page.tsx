@@ -243,7 +243,7 @@ const Checker = () => {
                                 </div>
                             </div>
                             <div className="flex flex-wrap justify-center gap-2 w-full">
-                                {list.map(value => (<div key={value} className="text-white border-[1px] border-gray-100 px-2 rounded-md text-sm">{value}</div>))}
+                                {list.map(value => (<a onClick={() => setSearchResult(value)} key={value} className="text-white border-[1px] border-gray-100 px-2 rounded-md text-sm">{value}</a>))}
                             </div>
                         </div>
 
