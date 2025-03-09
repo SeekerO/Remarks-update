@@ -52,7 +52,6 @@ const Evaluation = () => {
 
   useLayoutEffect(() => {
     const storedData =
-      localStorage.getItem("evaluationData") ||
       sessionStorage.getItem("evaluationData");
     if (storedData) {
       const decompressedData = JSON.parse(
@@ -139,14 +138,8 @@ const Evaluation = () => {
       const mergedData = results.flat();
       setData((prevData) => [...prevData, ...mergedData]);
       setCurrentPage(1);
-
       const compressedData = LZString.compress(JSON.stringify(mergedData));
-      try {
-        localStorage.setItem("evaluationData", compressedData);
-      } catch {
-        sessionStorage.setItem("evaluationData", compressedData);
-      }
-
+      sessionStorage.setItem("evaluationData", compressedData);
       setLoading(false);
     });
   };
@@ -183,7 +176,6 @@ const Evaluation = () => {
   };
 
   const clearEvaluationData = () => {
-    localStorage.removeItem("evaluationData");
     sessionStorage.removeItem("evaluationData");
     setData([]); // Clear the state
     setCurrentPage(1);
@@ -272,18 +264,16 @@ const Evaluation = () => {
         <div className="flex items-center">
           <button
             onClick={() => setControlNo(!controlno)}
-            className={`flex items-center gap-1 border-[1px] p-2.5 rounded-xl ${
-              controlno
-                ? "border-blue-700 text-blue-700"
-                : "border-slate-950 text-slate-950"
-            }`}
+            className={`flex items-center gap-1 border-[1px] p-2.5 rounded-xl ${controlno
+              ? "border-blue-700 text-blue-700"
+              : "border-slate-950 text-slate-950"
+              }`}
           >
             CTRL <MdNumbers />
           </button>
           <div
-            className={`flex w-[400px] px-2 py-0.5 gap-2 items-center mx-2 border-[1px] ${
-              !controlno ? "border-slate-700" : "border-blue-700 text-blue-700"
-            } rounded-xl`}
+            className={`flex w-[400px] px-2 py-0.5 gap-2 items-center mx-2 border-[1px] ${!controlno ? "border-slate-700" : "border-blue-700 text-blue-700"
+              } rounded-xl`}
           >
             <IoSearchOutline className="text-[20px]" />
             <input
@@ -292,9 +282,8 @@ const Evaluation = () => {
               onChange={(e) => setSearch(e.target.value)}
               value={search}
               className={`w-full outline-none px-3 py-2 bg-slate-300 `}
-              placeholder={`${
-                !controlno ? "Search here.." : "Search Control No..."
-              }`}
+              placeholder={`${!controlno ? "Search here.." : "Search Control No..."
+                }`}
             />
           </div>
           <a

@@ -39,6 +39,12 @@ export default function Home() {
             >
               EVALUATION
             </Link>
+            <Link
+              href={"/Checker"}
+              className="bg-blue-900 text-white font-semibold px-10 py-3 rounded-md hover:scale-110 duration-300"
+            >
+              CHECKER
+            </Link>
           </motion.div>
         </motion.div>
       </div>
