@@ -27,8 +27,9 @@ const Checker = () => {
   const [dataSetEvaluated, setDataSetEvaluated] = useState<any[]>([]);
   const [matchedData, setMatchedData] = useState<any[]>([]);
   const [list, setList] = useState<any[]>([]);
-  const [threshholdValue, setThresholdValue] = useState<number>(70);
+  const [threshholdValue, setThresholdValue] = useState<number>(7);
   const [openSettings, setOpenSettings] = useState<boolean>(false);
+  const [dataNotmatched, setDataNotMatched] = useState<any>([]);
 
   const [searchDataSet, setSearchDataSet] = useState<string>("");
   const [searchDataSetEvaluated, setSearchDataSetEvaluated] =
@@ -105,7 +106,11 @@ const Checker = () => {
       normalizedName: normalizeName(entry.FULLNAME),
     }));
 
-    const matches = dataSetEvaluated.reduce((acc, evalEntry) => {
+    const matches: any = [];
+    const notMatched: any = [];
+    const thresh = threshholdValue * 100;
+
+    dataSetEvaluated.forEach((evalEntry) => {
       const { FULLNAME: nameA, REGION: regionA } = evalEntry;
       const normalizedA = normalizeName(nameA);
 
@@ -120,26 +125,29 @@ const Checker = () => {
         { name: "", region: "", score: 0 }
       );
 
-      const thresh: number = threshholdValue * 100;
-
-      if (bestMatch.score > thresh) {
-        acc.push({
+      if (bestMatch.score * 100 > thresh) {
+        matches.push({
           nameA,
           regionA,
           nameB: bestMatch.name,
           regionB: bestMatch.region,
           similarity: bestMatch.score.toFixed(2),
         });
+      } else {
+        notMatched.push({ nameA, regionA });
       }
+    });
 
-      return acc;
-    }, []);
-
+    // FIX NOT GIVING DATA THAT IS MATCHED
     setMatchedData(matches);
+
     sessionStorage.setItem("matched_data", JSON.stringify(matches));
 
+    setDataNotMatched(notMatched);
+    sessionStorage.setItem("not_matched_data", JSON.stringify(notMatched));
+
     const differentRegions = new Set();
-    matches.forEach(({ regionA, regionB }: { regionA: any; regionB: any }) => {
+    matches.forEach(({ regionA, regionB }: any) => {
       if (regionA !== regionB) differentRegions.add(regionB);
     });
 
