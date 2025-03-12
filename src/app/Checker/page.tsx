@@ -27,9 +27,10 @@ const Checker = () => {
   const [dataSetEvaluated, setDataSetEvaluated] = useState<any[]>([]);
   const [matchedData, setMatchedData] = useState<any[]>([]);
   const [list, setList] = useState<any[]>([]);
-  const [threshholdValue, setThresholdValue] = useState<number>(7);
+  const [threshholdValue, setThresholdValue] = useState<number>(70);
   const [openSettings, setOpenSettings] = useState<boolean>(false);
   const [dataNotmatched, setDataNotMatched] = useState<any>([]);
+  const [openNotMatched, setOpenNotMatched] = useState<boolean>(false);
 
   const [searchDataSet, setSearchDataSet] = useState<string>("");
   const [searchDataSetEvaluated, setSearchDataSetEvaluated] =
@@ -108,7 +109,7 @@ const Checker = () => {
 
     const matches: any = [];
     const notMatched: any = [];
-    const thresh = threshholdValue * 100;
+    const thresh = threshholdValue / 100;
 
     dataSetEvaluated.forEach((evalEntry) => {
       const { FULLNAME: nameA, REGION: regionA } = evalEntry;
@@ -125,7 +126,7 @@ const Checker = () => {
         { name: "", region: "", score: 0 }
       );
 
-      if (bestMatch.score * 100 > thresh) {
+      if (bestMatch.score > thresh) {
         matches.push({
           nameA,
           regionA,
@@ -262,7 +263,7 @@ const Checker = () => {
         <div className="bg-slate-100 flex w-full h-[75vh] px-2 pb-2 rounded-b-xl gap-2">
           <div className="grid grid-cols-1 shrink-0 gap-2 h-full">
             {/* Upload Box for Evaluated Data */}
-            <div className="shrink-0 flex flex-col w-[50vh] h-[37vh] bg-slate-800 text-white rounded-lg overflow-x-hidden overflow-y-auto">
+            <div className="shrink-0 flex flex-col w-[50vh] min-h-[25vh] bg-slate-800 text-white rounded-lg overflow-x-hidden overflow-y-auto">
               {dataSet.length === 0 ? (
                 <div className="h-full w-full flex items-center justify-center">
                   <div className="flex flex-col">
@@ -306,7 +307,7 @@ const Checker = () => {
             </div>
 
             {/* Upload Box for CLC Data */}
-            <div className="shrink-0 flex flex-col w-[50vh] h-[37vh] bg-slate-500 text-black rounded-lg overflow-x-hidden overflow-y-auto">
+            <div className="shrink-0 flex flex-col w-[50vh] min-h-[25vh] bg-slate-500 text-black rounded-lg overflow-x-hidden overflow-y-auto">
               {dataSetEvaluated.length === 0 ? (
                 <div className="h-full w-full flex items-center justify-center">
                   <div className="flex flex-col">
@@ -352,32 +353,43 @@ const Checker = () => {
           <div className="w-full h-full flex flex-col bg-slate-800 p-4 rounded-lg">
             <div className="flex flex-col border-b-[1px] w-full border-slate-500 mb-2 py-2 gap-2 items-center justify-between">
               <div className="w-full flex items-center justify-between">
-                <button
-                  onClick={matchNames}
-                  className="bg-gray-100 text-gray-800 py-1 px-4 h-fit rounded-md hover:bg-blue-500 duration-300"
-                >
-                  Check
-                </button>
-                <div>
+                <div className="flex gap-2 items-center">
                   <button
-                    onClick={() => setOpenSettings(!openSettings)}
-                    className="bg-gray-100 p-2 rounded-md relative"
+                    onClick={matchNames}
+                    className="bg-gray-100 text-gray-800 py-1 px-4 h-fit rounded-md hover:bg-blue-500 duration-300"
                   >
-                    <IoSettingsSharp />
+                    Check
                   </button>
-                  <CheckerSettings
-                    open={openSettings}
-                    setOpen={setOpenSettings}
-                    settings={threshholdValue}
-                    setSettings={setThresholdValue}
-                  />
+                  <div>
+                    <button
+                      onClick={() => setOpenSettings(!openSettings)}
+                      className="bg-gray-100 p-2 rounded-md relative"
+                    >
+                      <IoSettingsSharp />
+                    </button>
+                    <CheckerSettings
+                      open={openSettings}
+                      setOpen={setOpenSettings}
+                      settings={threshholdValue}
+                      setSettings={setThresholdValue}
+                    />
+                  </div>
                 </div>
 
-                <div className="w-[50vh]">
+                <div className="w-[50vh] flex items-center gap-2 relative">
                   <SearchBar
                     searchText={searchResult}
                     searchSetter={setSearchResult}
                   />
+
+                  <button
+                    onClick={() => setOpenNotMatched(!openNotMatched)}
+                    className="bg-gray-100 text-gray-800 py-1 px-4 h-fit rounded-md hover:bg-blue-500 duration-300 text-nowrap"
+                  >
+                    Not Matched
+                  </button>
+
+                  <ShowNotMatched open={openNotMatched} setOpen={setOpenNotMatched} data={dataNotmatched} />
                 </div>
               </div>
               <div className="flex flex-wrap justify-center gap-2 w-full">
@@ -406,25 +418,23 @@ const Checker = () => {
                     <label>
                       {match.nameA} ({match.regionA}) ⇄ {match.nameB}{" "}
                       <span
-                        className={`font-semibold ${
-                          match.similarity * 100 >= 90
-                            ? "text-green-500"
-                            : match.similarity * 100 < 50
+                        className={`font-semibold ${match.similarity * 100 >= 90
+                          ? "text-green-500"
+                          : match.similarity * 100 < 50
                             ? "text-red-500"
                             : "text-yellow-500"
-                        }`}
+                          }`}
                       >
                         ({match.regionB})
                       </span>
                     </label>
                     <div
-                      className={`${
-                        match.similarity * 100 >= 90
-                          ? "bg-green-500"
-                          : match.similarity * 100 < 50
+                      className={`${match.similarity * 100 >= 90
+                        ? "bg-green-500"
+                        : match.similarity * 100 < 50
                           ? "bg-red-500"
                           : "bg-yellow-500"
-                      } text-[0.7rem] border-[1px] border-white h-10 w-10 flex items-center justify-center p-2 rounded-full ml-10`}
+                        } text-[0.7rem] border-[1px] border-white h-10 w-10 flex items-center justify-center p-2 rounded-full ml-10`}
                     >
                       {match.similarity * 100}%
                     </div>
@@ -514,3 +524,50 @@ const CheckerSettings = ({
     </div>
   );
 };
+
+
+const ShowNotMatched = ({ open, setOpen, data }: { open: boolean, setOpen: React.Dispatch<SetStateAction<boolean>>, data: any }) => {
+  const [search, setSearch] = useState<string>("");
+
+  const filteredDataMatch = data.filter((row: any) =>
+    Object.values(row).some((value) =>
+      value?.toString().toLowerCase().includes(search.toLowerCase())
+    )
+  );
+
+  const ref = useRef<HTMLDivElement | null>(null);
+
+  const handleClickOutside = (event: MouseEvent) => {
+    if (ref.current && !ref.current.contains(event.target as Node)) {
+      setOpen(false);
+    }
+  };
+
+  useEffect(() => {
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
+
+  if (!open) return null;
+  return (<div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 top-0">
+    <div ref={ref} className="bg-gray-800 w-[100vh] h-[90vh] rounded-md p-2 gap-y-2 overflow-hidden">
+      <div className="flex justify-center items-center text-[1.2rem] font-semibold">
+        <h1 className="font-semibold text-white text-[2rem]">Not Matched Data</h1>
+      </div>
+      <div className="flex justify-center items-center">
+        <SearchBar searchText={search} searchSetter={setSearch} />
+      </div>
+      {/* <pre>{JSON.stringify(filteredDataMatch, null, 2)}</pre> */}
+      <div className="overflow-auto h-[70vh] px-2 pt-1">
+        {filteredDataMatch?.map((value: any, index: number) => (
+          <div key={index} className="flex justify-between items-center border-b border-gray-300 text-white py-1">
+            <div>{value.nameA}</div>
+            <div className="px-4 bg-slate-500 text-white rounded-md font-semibold">{value.regionA}</div>
+          </div>
+        ))}
+      </div>
+    </div>
+  </div>)
+}
