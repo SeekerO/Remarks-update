@@ -1,3 +1,8 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+/* eslint-disable @typescript-eslint/no-unused-vars */
+
+"use client";
+
 import React, { useState, useRef, useEffect } from "react";
 import { IoCloudUploadOutline } from "react-icons/io5";
 import { MdDelete } from "react-icons/md";
