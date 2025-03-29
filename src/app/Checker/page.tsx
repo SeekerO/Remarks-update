@@ -260,10 +260,12 @@ const Checker = () => {
           </div>
         </div>
 
-        <div className="bg-slate-100 flex w-full h-[75vh] px-2 pb-2 rounded-b-xl gap-2">
-          <div className="grid grid-cols-1 shrink-0 gap-2 h-full">
+        <div className="bg-slate-100 flex w-full overflow-auto h-[75vh] px-2 pb-2 rounded-b-xl gap-2 ">
+          <div className="grid grid-cols-2 lg:grid-cols-1 w-full lg:w-fit shrink-0 gap-2 h-full">
             {/* Upload Box for Evaluated Data */}
-            <div className="shrink-0 flex flex-col w-[50vh] min-h-[25vh] bg-slate-800 text-white rounded-lg overflow-x-hidden overflow-y-auto">
+            <div
+              className={`shrink-0 flex flex-col w-[50vh] min-h-[25vh] bg-slate-800 text-white rounded-lg overflow-x-hidden overflow-y-auto`}
+            >
               {dataSet.length === 0 ? (
                 <div className="h-full w-full flex items-center justify-center">
                   <div className="flex flex-col">
@@ -310,7 +312,9 @@ const Checker = () => {
             </div>
 
             {/* Upload Box for CLC Data */}
-            <div className="shrink-0 flex flex-col w-[50vh] min-h-[25vh] bg-slate-500 text-black rounded-lg overflow-x-hidden overflow-y-auto">
+            <div
+              className={`shrink-0 flex flex-col w-[50vh] min-h-[25vh] bg-slate-500 text-black rounded-lg overflow-x-hidden overflow-y-auto`}
+            >
               {dataSetEvaluated.length === 0 ? (
                 <div className="h-full w-full flex items-center justify-center">
                   <div className="flex flex-col">
@@ -383,7 +387,7 @@ const Checker = () => {
                 </div>
 
                 <div className="w-[50vh] flex items-center gap-2 relative">
-                  <div className="p-2 rounded-md">
+                  <div className="p-2 rounded-md text-white">
                     {filteredDataMatch.length}
                   </div>
                   <SearchBar
@@ -465,143 +469,3 @@ const Checker = () => {
 };
 
 export default Checker;
-
-const normalizeName = (name: string) => {
-  return name
-    .replace(/[^a-zA-Z0-9 ]/g, "") // Remove special characters
-    .replace(/\b(Jr|Sr|II|III|IV|V)\b/gi, "") // Remove suffixes
-    .toLowerCase()
-    .trim();
-};
-
-const SearchBar = ({
-  searchText,
-  searchSetter,
-}: {
-  searchText: string;
-  searchSetter: React.Dispatch<React.SetStateAction<string>>;
-}) => {
-  return (
-    <div className="h-[30px] w-full bg-slate-100 rounded-md">
-      <input
-        type="text"
-        value={searchText}
-        onChange={(e) => searchSetter(e.target.value)}
-        placeholder="Search"
-        className="w-full h-full bg-transparent px-2 text-black outline-none"
-      />
-    </div>
-  );
-};
-
-const CheckerSettings = ({
-  open,
-  setOpen,
-  settings,
-  setSettings,
-}: {
-  open: boolean;
-  setOpen: React.Dispatch<SetStateAction<boolean>>;
-  settings: number;
-  setSettings: React.Dispatch<SetStateAction<number>>;
-}) => {
-  const ref = useRef<HTMLDivElement | null>(null);
-
-  const handleClickOutside = (event: MouseEvent) => {
-    if (ref.current && !ref.current.contains(event.target as Node)) {
-      setOpen(false);
-    }
-  };
-
-  useEffect(() => {
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-    };
-  }, []);
-
-  if (!open) return null;
-  return (
-    <div
-      ref={ref}
-      className="absolute py-2 px-1 w-[200px] bg-gray-200 mt-1 rounded-md flex flex-col gap-2"
-    >
-      <h1 className="w-full text-center px-1 font-semibold">SETTINGS</h1>
-      <div className="flex px-1 gap-2 items-center">
-        <label>THRESHOLD:</label>
-        <input
-          value={settings}
-          onChange={(e) => setSettings(Number(e.target.value))}
-          type="number"
-          className="w-14 rounded-md text-center"
-        />
-      </div>
-    </div>
-  );
-};
-
-const ShowNotMatched = ({
-  open,
-  setOpen,
-  data,
-}: {
-  open: boolean;
-  setOpen: React.Dispatch<SetStateAction<boolean>>;
-  data: any;
-}) => {
-  const [search, setSearch] = useState<string>("");
-
-  const filteredDataMatch = data.filter((row: any) =>
-    Object.values(row).some((value) =>
-      value?.toString().toLowerCase().includes(search.toLowerCase())
-    )
-  );
-
-  const ref = useRef<HTMLDivElement | null>(null);
-
-  const handleClickOutside = (event: MouseEvent) => {
-    if (ref.current && !ref.current.contains(event.target as Node)) {
-      setOpen(false);
-    }
-  };
-
-  useEffect(() => {
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-    };
-  }, []);
-
-  if (!open) return null;
-  return (
-    <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 top-0">
-      <div
-        ref={ref}
-        className="bg-gray-800 w-[100vh] h-[90vh] rounded-md p-2 gap-y-2 overflow-hidden"
-      >
-        <div className="flex justify-center items-center text-[1.2rem] font-semibold">
-          <h1 className="font-semibold text-white text-[2rem]">
-            Not Matched Data
-          </h1>
-        </div>
-        <div className="flex justify-center items-center">
-          <SearchBar searchText={search} searchSetter={setSearch} />
-        </div>
-        {/* <pre>{JSON.stringify(filteredDataMatch, null, 2)}</pre> */}
-        <div className="overflow-auto h-[70vh] px-2 pt-1">
-          {filteredDataMatch?.map((value: any, index: number) => (
-            <div
-              key={index}
-              className="flex justify-between items-center border-b border-gray-300 text-white py-1"
-            >
-              <div>{value.nameA}</div>
-              <div className="px-4 bg-slate-500 text-white rounded-md font-semibold">
-                {value.regionA}
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-    </div>
-  );
-};
