@@ -1,4 +1,4 @@
-"use client"
+"use client";
 
 import React, { useRef, useEffect, useState } from "react";
 import SearchBar from "@/lib/components/searchbar";
@@ -20,8 +20,9 @@ const UnmatchedList = ({ data, open, set }: Props) => {
     }
   };
 
-  const filteredItems = data.filter((item: string) => item[0].toLowerCase().includes(inputSearch.toLowerCase()))
-
+  const filteredItems = data.filter((item: string) =>
+    item[0].toLowerCase().includes(inputSearch.toLowerCase())
+  );
 
   useEffect(() => {
     document.addEventListener("mousedown", handleClickOutside);
@@ -44,7 +45,10 @@ const UnmatchedList = ({ data, open, set }: Props) => {
         </div>
         <div className="h-full overflow-y-auto overflow-x-hidden flex flex-col gap-y-2 mt-2">
           {filteredItems.map((value: string, index: number) => (
-            <div className="justify-between flex gap-5 border border-1 border-slate-600 px-2 py-1 rounded-md">
+            <div
+              key={index}
+              className="justify-between flex gap-5 border border-1 border-slate-600 px-2 py-1 rounded-md"
+            >
               <label className="font-bold">{value[0]}</label>
               <label className="font-thin">{value[1]}</label>
             </div>

@@ -26,7 +26,7 @@ const Matcher = () => {
   const [res, setRes] = useState<any>(null);
 
   const [inputSearch1, setInputSearch1] = useState<string>("");
-  const [inputSearch2, setInputSearch2] = useState<string>("");
+  // const [inputSearch2, setInputSearch2] = useState<string>("");
 
   const [delete1, setDelete1] = useState<boolean>(false);
   const [threshold, SetThreshold] = useState<number>(85);

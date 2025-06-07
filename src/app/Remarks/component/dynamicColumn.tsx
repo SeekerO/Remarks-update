@@ -90,7 +90,6 @@ const notify_deleted_column = () =>
 
 export default function DynamicColumn() {
   const [title, setTitle] = useState("");
-  const [column, setColumn] = useState<number>(1);
   const [columnColor, setColumnColor] = useState("red");
   const [items, setItems] = useState<Item[]>([{ label1: "" }]);
   const [columns, setColumns] = useState<Column[]>([]);

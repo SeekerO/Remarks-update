@@ -3,7 +3,7 @@
 
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { ChromePicker } from "react-color";
 
 export default function ColorPicker({ onChange, setColumnColor }) {
