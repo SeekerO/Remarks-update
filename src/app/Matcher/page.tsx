@@ -26,9 +26,6 @@ const Matcher = () => {
   const [res, setRes] = useState<any>(null);
 
   const [inputSearch1, setInputSearch1] = useState<string>("");
-  // const [inputSearch2, setInputSearch2] = useState<string>("");
-
-  const [delete1, setDelete1] = useState<boolean>(false);
   const [threshold, SetThreshold] = useState<number>(85);
 
   const handleMatchingMethod = async () => {
@@ -65,7 +62,6 @@ const Matcher = () => {
     setDataSet1(null);
     setDataSet2(null);
     setRes(null);
-    setDelete1(false);
   };
 
   return (
@@ -123,7 +119,7 @@ const Matcher = () => {
                     )
                 )
               ) : (
-                <UploadButton set={setDataSet1} delete1={delete1} />
+                <UploadButton set={setDataSet1} />
               )}
             </div>
           </div>
@@ -163,7 +159,7 @@ const Matcher = () => {
                     )
                 )
               ) : (
-                <UploadButton set={setDataSet2} delete1={delete1} />
+                <UploadButton set={setDataSet2} />
               )}
             </div>
           </div>
@@ -267,10 +263,8 @@ export default Matcher;
 // Upload button
 const UploadButton = ({
   set,
-  delete1,
 }: {
   set: React.Dispatch<React.SetStateAction<File | null>>;
-  delete1: boolean;
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [fileName, setFileName] = useState("");

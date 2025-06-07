@@ -107,7 +107,7 @@ export async function fetchSheetData(): Promise<SheetRow[]> {
     // Convert remaining rows to objects
     const dataRows = processedRows.slice(1);
 
-    const result = dataRows.map((row: any[], rowIndex: number) => {
+    const result = dataRows.map((row: any[]) => {
       const obj: SheetRow = {};
 
       headers.forEach((header: string, colIndex: number) => {
