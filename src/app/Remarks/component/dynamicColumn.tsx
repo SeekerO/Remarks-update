@@ -1,6 +1,3 @@
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-
 "use client";
 
 import {
@@ -142,7 +139,7 @@ export default function DynamicColumn() {
     setItems([...items, { label1: "" }]);
   };
 
-  const handleDeleteItem = (indexToDelete: any) => {
+  const handleDeleteItem = (indexToDelete: unknown) => {
     setItems((prevItems) =>
       prevItems.filter((_, index) => index !== indexToDelete)
     );

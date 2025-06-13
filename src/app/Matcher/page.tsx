@@ -1,6 +1,3 @@
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-
 "use client";
 
 import React, { useRef, useState } from "react";
@@ -23,7 +20,7 @@ import { AiOutlineUpload } from "react-icons/ai";
 const Matcher = () => {
   const [dataset1, setDataSet1] = useState<File | null>(null);
   const [dataset2, setDataSet2] = useState<File | null>(null);
-  const [res, setRes] = useState<any>(null);
+  const [res, setRes] = useState<any>([]);
 
   const [inputSearch1, setInputSearch1] = useState<string>("");
   const [threshold, SetThreshold] = useState<number>(85);
@@ -46,7 +43,7 @@ const Matcher = () => {
     setRes(result);
   };
 
-  const filterNames = (data: any) => {
+  const filterNames = (data: []) => {
     return data?.filter((item: string[]) =>
       item.some((value) => value.toLowerCase().includes(inputSearch1))
     );

@@ -1,10 +1,7 @@
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-
 "use client";
 
 import { useEffect, useState } from "react";
-import { fetchSheetData, SheetRow } from "./fetcherExcel";
+import { fetchSheetData } from "./fetcherExcel";
 
 interface LoadingState {
   isLoading: boolean;
@@ -12,7 +9,9 @@ interface LoadingState {
 }
 
 const Main = () => {
-  const [data, setData] = useState<SheetRow[] | null>(null);
+  const [data, setData] = useState<
+    Record<string, string | number | boolean | null>[] | null
+  >(null);
   const [loadingState, setLoadingState] = useState<LoadingState>({
     isLoading: true,
     error: null,
@@ -24,7 +23,6 @@ const Main = () => {
       try {
         setLoadingState({ isLoading: true, error: null });
 
-        // Capture console logs for debugging
         const originalLog = console.log;
         const logs: string[] = [];
         console.log = (...args) => {
@@ -34,7 +32,6 @@ const Main = () => {
 
         const rows = await fetchSheetData();
 
-        // Restore console.log
         console.log = originalLog;
         setDebugInfo(logs.join("\n"));
 
@@ -51,13 +48,6 @@ const Main = () => {
 
     loadData();
   }, []);
-
-  const renderValue = (value: any) => {
-    if (value === null || value === undefined) return "";
-    if (typeof value === "boolean") return value ? "TRUE" : "FALSE";
-    if (typeof value === "number") return value.toString();
-    return String(value);
-  };
 
   if (loadingState.isLoading) {
     return (
@@ -76,7 +66,6 @@ const Main = () => {
         <div className="text-red-600 bg-red-50 p-4 rounded-lg border border-red-200">
           <h3 className="font-bold text-lg mb-2">Error Loading Data</h3>
           <p className="mb-4">{loadingState.error}</p>
-
           <div className="space-y-2 text-sm">
             <h4 className="font-semibold">Troubleshooting:</h4>
             <ul className="list-disc ml-4 space-y-1">
@@ -128,7 +117,6 @@ const Main = () => {
             </button>
           </div>
 
-          {/* Table view */}
           <div className="overflow-x-auto mb-6 border border-gray-200 rounded-lg">
             <table className="min-w-full">
               <thead className="bg-gray-50">
@@ -151,7 +139,7 @@ const Main = () => {
                         key={cellIndex}
                         className="px-4 py-3 text-sm text-gray-900"
                       >
-                        {renderValue(value)}
+                        {String(value)}
                       </td>
                     ))}
                   </tr>
@@ -160,7 +148,6 @@ const Main = () => {
             </table>
           </div>
 
-          {/* Debug information */}
           {debugInfo && (
             <details className="mt-4">
               <summary className="cursor-pointer font-medium text-gray-700 hover:text-gray-900">
@@ -172,7 +159,6 @@ const Main = () => {
             </details>
           )}
 
-          {/* JSON view (collapsible) */}
           <details className="mt-4">
             <summary className="cursor-pointer font-medium text-gray-700 hover:text-gray-900">
               View Raw JSON Data

@@ -1,6 +1,3 @@
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-
 import { useEffect, useRef, useState } from "react";
 import { AiOutlineMenuFold } from "react-icons/ai";
 import { RiCloseFill } from "react-icons/ri";
