@@ -34,10 +34,10 @@ export default async function handler(
     keepExtensions: true, // Keep the original file extensions
   });
 
-  let uploadedFilePaths: string[] = []; // To keep track of files to clean up
+  const uploadedFilePaths: string[] = []; // To keep track of files to clean up
 
   try {
-    const { fields, files } = await new Promise<{
+    const { files } = await new Promise<{
       fields: formidable.Fields;
       files: formidable.Files;
     }>((resolve, reject) => {

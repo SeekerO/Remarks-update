@@ -1,5 +1,5 @@
 "use client";
-
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useState } from "react";
 import JSZip from "jszip";
 import Image from "next/image";
@@ -203,7 +203,7 @@ export default function Watermark() {
                 className="border border-gray-200 rounded-lg shadow-md overflow-hidden bg-white relative"
               >
                 {preview.dataUrl ? (
-                  <img
+                  <Image
                     src={preview.dataUrl}
                     alt={`Watermarked ${preview.name}`}
                     className="w-full h-48 object-contain bg-gray-50 p-2"
