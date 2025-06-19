@@ -41,7 +41,7 @@ export default function Home() {
             MATCHER
           </Link>
           <Link
-            href={"/Watermark"}
+            href={"/Watermarkv2"}
             className="bg-blue-900 text-white font-semibold px-10 py-3 rounded-md hover:scale-110 duration-300"
           >
             WATERMARK
