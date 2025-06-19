@@ -229,7 +229,7 @@ export default function ImageControls() {
                     <label className="font-medium text-gray-600  dark:text-white block mb-1">Footer Offset X</label>
                     <input
                         type="range"
-                        min="-500"
+                        min="-5000"
                         max="10000"
                         value={currentFooterSettings?.offsetX || 0}
                         onChange={(e) => updateFooterSettings({ offsetX: parseInt(e.target.value) })}
