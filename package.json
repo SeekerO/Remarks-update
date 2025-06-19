@@ -21,6 +21,7 @@
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "fabric": "^6.7.0",
+    "file-saver": "^2.0.5",
     "formidable": "^3.5.4",
     "fuzzball": "^2.2.2",
     "hamburger-react": "^2.5.2",
@@ -46,6 +47,7 @@
   "devDependencies": {
     "@eslint/eslintrc": "^3",
     "@types/archiver": "^6.0.3",
+    "@types/file-saver": "^2.0.7",
     "@types/formidable": "^3.4.5",
     "@types/node": "^20",
     "@types/react": "^19",
