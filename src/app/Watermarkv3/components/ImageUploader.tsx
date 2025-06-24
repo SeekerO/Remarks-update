@@ -72,8 +72,8 @@ export default function ImageUploader() {
     };
 
     return (
-        <div className="space-y-6">
-            <div>
+        <div className="space-y-6 px-">
+            <div className="flex flex-col gap-1 dark:bg-gray-800 bg-white shadow-lg p-4 rounded-lg">
                 <label className="font-semibold text-gray-700 dark:text-gray-100 mb-2 flex gap-2 items-center"><FaImage className="text-[20px]" />Upload Main Images</label>
                 <input
                     type="file"
@@ -90,7 +90,7 @@ export default function ImageUploader() {
                 />
             </div>
 
-            <div>
+            <div className="flex flex-col gap-1 dark:bg-gray-800 bg-white shadow-lg p-4 rounded-lg">
                 <label className="font-semibold text-gray-700 dark:text-gray-100 flex gap-2 items-center"><FaImage className="text-[20px]" />Upload Logo (Optional)</label>
                 <input
                     type="file"
@@ -106,7 +106,7 @@ export default function ImageUploader() {
                 />
             </div>
 
-            <div>
+            <div className="flex flex-col gap-1 dark:bg-gray-800 bg-white shadow-lg p-4 rounded-lg">
                 <label className="font-semibold text-gray-700 dark:text-gray-100 flex gap-2 items-center"><FaImage className="text-[20px]" />Upload Footer (Optional)</label>
                 <input
                     type="file"

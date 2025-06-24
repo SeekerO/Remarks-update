@@ -32,9 +32,12 @@ function WatermarkPageContent() {
                         <BreadCrumb />
                     </div>
                     <h1 className="text-2xl font-bold mb-6 text-gray-800 dark:text-gray-100 flex items-center justify-between">Watermark Editor
-                        <div onClick={handleDeleteAll} className="flex items-center justify-center w-8 h-8 bg-red-500 rounded-full cursor-pointer hover:bg-red-200 transition-colors duration-300 text-gray-100 hover:text-red-500">
-                            <MdDelete className=" text-[15px]" />
-                        </div>
+
+                        {images.length &&
+                            <div onClick={handleDeleteAll} className="flex items-center justify-center w-8 h-8 bg-red-500 rounded-full cursor-pointer hover:bg-red-200 transition-colors duration-300 text-gray-100 hover:text-red-500">
+                                <MdDelete className=" text-[15px]" />
+                            </div>
+                        }
                     </h1>
 
                     <div className="mb-8">
@@ -44,7 +47,7 @@ function WatermarkPageContent() {
                     global controls or individual controls based on selectedImageIndex. */}
                     <ImageControls />
                     {!images.length && ( // Display message if no images are uploaded
-                        <p className="text-gray-500 dark:text-gray-200 text-center mt-8 p-4 bg-white dark:bg-gray-800 rounded-lg shadow-inner text-sm italic font-thin">
+                        <p className="text-gray-500 dark:text-gray-200 text-center mt-8 p-4 bg-white dark:bg-gray-800 rounded-lg shadow-inner text-sm italic font-thin shadow-black">
                             Created by SeekerDev
                         </p>
                     )}

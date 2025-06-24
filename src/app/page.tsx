@@ -8,6 +8,7 @@ import { motion } from "framer-motion";
 export default function Home() {
   return (
     <div className="flex flex-col items-center justify-center h-screen w-screen dark:bg-gray-900 light:bg-slate-100">
+      {/* <LoginPage / */}
       <motion.div
         initial={{ y: -200, opacity: 0 }} // Start from above screen
         animate={{ y: 0, opacity: 1 }} // Fall down to normal position
