@@ -51,7 +51,7 @@ export default function PreviewArea() {
     return (
         <div className="space-y-6 p-1">
             <div className="flex justify-between items-center mb-4">
-                <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100">Image Previews</h2>
+                <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100">Image Previews {images.length}</h2>
                 {images.length > 0 && <button
                     onClick={downloadAll}
                     className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg shadow-md transition duration-300 ease-in-out transform hover:scale-105 flex items-end gap-2"

@@ -155,9 +155,9 @@ const ChatLayout = ({ handle }: { handle: () => void }) => {
     };
 
     return (
-        <div className="w-80 md:w-96 h-[60vh] bg-white dark:bg-gray-900 rounded-lg shadow-xl flex flex-col overflow-hidden">
+        <div hidden={true} className="w-80 md:w-96 h-[60vh] bg-white dark:bg-gray-900 rounded-lg shadow-xl flex flex-col overflow-hidden">
             {/* Chat Header */}
-            <div className="flex items-center justify-between p-4 bg-gradient-to-r from-blue-600 dark:from-gray-600 to-blue-500 dark:to-gray-800 text-white shadow-md">
+            <div className="flex items-center justify-between p-4 bg-gradient-to-r from-blue-600 dark:from-slate-600 to-blue-500 dark:to-slate-800 text-white shadow-md">
                 <div className="flex items-center gap-2">
                     <div className="relative gap-1 mt-2 mr-1">
                         <RiRobot2Fill className=" z-10 text-slate-100 text-2xl" />

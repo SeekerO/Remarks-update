@@ -6,6 +6,7 @@ import Head from 'next/head';
 import React, { useState, useEffect } from 'react';
 import SheetViewer from './component/SheerViewer'; // Adjust path
 import { extractSheetId } from './component/fetcherExcel'; // Import the helper function
+import BreadCrumb from '../component/breadcrumb';
 
 const HomePage: React.FC = () => {
   // State for sidebar visibility
@@ -32,20 +33,14 @@ const HomePage: React.FC = () => {
 
   return (
     <div className="min-h-screen flex font-inter overflow-hidden">
-      <Head>
-        <title>Google Sheet Data Viewer</title>
-        <meta name="description" content="View and interact with Google Sheet data" />
-        <link rel="icon" href="/favicon.ico" />
-        {/* Tailwind CSS CDN */}
-        {/* Inter Font */}
-        {/* XLSX library CDN for client-side Excel export */}
-      </Head>
+
 
       {/* Retractable Sidebar (Left Side) */}
       <aside
-        className={`bg-gray-800 text-white p-4 flex flex-col transition-all duration-300 ease-in-out
+        className={`bg-slate-100 dark:bg-gray-700 text-slate-200 p-4 flex flex-col transition-all duration-300 ease-in-out
                    ${sidebarOpen ? 'w-64' : 'w-16'} min-h-screen shrink-0 `}
       >
+        <BreadCrumb />
         <button
           onClick={() => setSidebarOpen(!sidebarOpen)}
           className="p-2 mb-4 rounded-md bg-gray-700 hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-500 self-end"
@@ -63,9 +58,9 @@ const HomePage: React.FC = () => {
         </button>
 
         {sidebarOpen && (
-          <div className="flex flex-col space-y-4">
+          <div className="flex flex-col space-y-4 text-gray-500 ">
             <div>
-              <label htmlFor="sheetLink" className="block text-sm font-medium text-gray-300 mb-1">
+              <label htmlFor="sheetLink" className="block text-sm font-medium mb-1">
                 Google Sheet Link:
               </label>
               <input
@@ -82,7 +77,7 @@ const HomePage: React.FC = () => {
             </div>
 
             <div>
-              <label htmlFor="sheetName" className="block text-sm font-medium text-gray-300 mb-1">
+              <label htmlFor="sheetName" className="block text-sm font-medium  mb-1">
                 Sheet Name:
               </label>
               <input
