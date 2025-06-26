@@ -148,29 +148,46 @@ export default function SingleImageEditor({ image, index }: SingleImageEditorPro
     const modalCanvasId = `modal-canvas-${index}`;
 
     return (
-        <div className="bg-white dark:bg-gray-700 rounded-lg p-4 flex flex-col items-center ">
-            <canvas ref={canvasRef} id={`canvas-${index}`} className={`w-full h-auto rounded-md mb-4 shadow-sm`} />
+        <div className="bg-white dark:bg-gray-800 rounded-xl p-5 flex flex-col items-center shadow-lg hover:shadow-xl transition-all duration-300 ease-in-out">
+            {/* Canvas for image display */}
+            <canvas ref={canvasRef} id={`canvas-${index}`} className="w-full h-auto rounded-lg mb-5 shadow-md border border-gray-200 dark:border-gray-700" />
 
-            <div className="flex flex-wrap gap-3 justify-center w-full">
+            {/* Action Buttons */}
+            <div className="flex flex-wrap gap-4 justify-center w-full">
                 <button
                     onClick={downloadImage}
-                    className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-md shadow-sm transition duration-300 ease-in-out transform hover:scale-105 flex gap-2 items-center"
+                    className="relative group p-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-full shadow-md transition duration-300 ease-in-out transform hover:scale-110 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-opacity-75"
+                    aria-label="Download Image"
                 >
-                    <FiDownload />
+                    <FiDownload className="text-xl" />
+                    <span className="absolute bottom-full mb-2 hidden group-hover:block px-3 py-1 bg-gray-700 text-white text-xs rounded-md whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                        Download
+                    </span>
                 </button>
+
                 <button
                     onClick={deleteImage}
-                    className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-md shadow-sm transition duration-300 ease-in-out transform hover:scale-105 flex gap-2 items-center"
+                    className="relative group p-3 bg-red-600 hover:bg-red-700 text-white rounded-full shadow-md transition duration-300 ease-in-out transform hover:scale-110 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-opacity-75"
+                    aria-label="Delete Image"
                 >
-                    <MdDelete />
+                    <MdDelete className="text-xl" />
+                    <span className="absolute bottom-full mb-2 hidden group-hover:block px-3 py-1 bg-gray-700 text-white text-xs rounded-md whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                        Delete
+                    </span>
                 </button>
+
                 <button
                     onClick={() => setOpenPreview(true)}
-                    className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md shadow-sm transition duration-300 ease-in-out transform hover:scale-105 flex gap-2 items-center"
+                    className="relative group p-3 bg-blue-600 hover:bg-blue-700 text-white rounded-full shadow-md transition duration-300 ease-in-out transform hover:scale-110 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-75"
+                    aria-label="Preview Image"
                 >
-                    <FiMaximize2 />
+                    <FiMaximize2 className="text-xl" />
+                    <span className="absolute bottom-full mb-2 hidden group-hover:block px-3 py-1 bg-gray-700 text-white text-xs rounded-md whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                        Preview
+                    </span>
                 </button>
             </div>
+
             {/* Pass the new modalCanvasId to the ModalPreview */}
             <ModalPreview canvasRef={canvasRef} open={openPreview} onClose={setOpenPreview} modalCanvasId={modalCanvasId} />
         </div>

@@ -47,8 +47,8 @@ function WatermarkPageContent() {
                     global controls or individual controls based on selectedImageIndex. */}
                     <ImageControls />
                     {!images.length && ( // Display message if no images are uploaded
-                        <p className="text-gray-500 dark:text-gray-200 text-center mt-8 p-4 bg-white dark:bg-gray-800 rounded-lg shadow-inner text-sm italic font-thin shadow-black">
-                            Created by SeekerDev
+                        <p className="text-gray-600 dark:text-gray-400 text-center mt-10 px-6 py-3 bg-gray-100 dark:bg-gray-800 rounded-xl shadow-md text-base font-medium transition-colors duration-300">
+                            Created by <span className="font-semibold text-indigo-600 dark:text-indigo-400">SeekerDev</span>
                         </p>
                     )}
                 </div>

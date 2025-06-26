@@ -185,127 +185,134 @@ export default function DynamicColumn() {
   };
 
   return (
-    <div className="w-full h-full flex flex-col overflow-hidden justify-center select-none">
-      <div className="w-full h-full flex gap-5">
-        <ToastContainer />
+    <div className="w-full h-full flex flex-col overflow-hidden justify-center select-none p-4 md:p-8 bg-gray-50 dark:bg-gray-900 font-sans">
+      <div className="w-full h-full flex flex-col md:flex-row gap-6">
+        <ToastContainer position="bottom-right" autoClose={3000} hideProgressBar newestOnTop closeOnClick rtl={false} pauseOnFocusLoss draggable pauseOnHover theme="colored" />
+
+        {/* Sidebar / Column Manager */}
         <div
-          className={`bg-slate-100 dark:bg-slate-700 ${
-            sideMenu ? "w-[400px]" : "w-[70px]"
-          } duration-300 h-full flex flex-col items-center overflow-hidden shadow-md rounded-xl ${
-            editColumn.length === 1 && "border-1 border-blue-500 border"
-          }`}
+          className={`
+          bg-white dark:bg-gray-800
+          ${sideMenu ? "w-full md:w-[420px]" : "w-[80px]"}
+          flex-shrink-0
+          duration-300
+          h-[90vh] md:h-full
+          flex flex-col items-center
+          shadow-xl rounded-2xl
+          border overflow-auto
+          ${editColumn.length === 1 ? "border-blue-500 ring-2 ring-blue-500" : "border-gray-200 dark:border-gray-700"}
+        `}
         >
           {sideMenu ? (
             <>
               <h1
-                className={`text-slate-700 dark:text-slate-100  shrink-0 text-nowrap text-xl font-bold mb-4 mt-4 uppercase tracking-wide flex gap-2 items-center ${
-                  editColumn.length === 1 && "text-blue-500"
-                }`}
+                className={`
+                text-gray-800 dark:text-gray-100
+                shrink-0 text-nowrap text-2xl font-extrabold
+                mb-6 mt-6 uppercase tracking-wide
+                flex gap-3 items-center
+                ${editColumn.length === 1 ? "text-blue-600 dark:text-blue-400" : ""}
+              `}
               >
                 {editColumn.length === 0 ? "Column Manager" : "Editing Column"}
                 <MdMenu
                   onClick={() => setSideMenu(!sideMenu)}
-                  className="text-[1.9rem] cursor-pointer"
+                  className="text-3xl cursor-pointer text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors duration-200"
                 />
               </h1>
+
               {editColumn.length === 0 ? (
                 <form
                   onSubmit={handleAddColumn}
-                  className="space-y-3 w-full shrink-0 flex flex-col gap-4 items-center px-3 "
+                  className="space-y-5 w-full shrink-0 flex flex-col gap-5 items-center px-5 pb-5"
                 >
-                  <div className="flex flex-col gap-2 items-center w-full">
-                    <div className="flex flex-col gap-y-2 w-full">
-                      <div className="flex items-center gap-1 bg-white dark:bg-slate-600 p-1 rounded-md text-slate-700 dark:text-slate-100">
-                        <MdOutlineTitle className="text-[2rem]  " />
-                        <input
-                          type="text"
-                          placeholder="Title"
-                          value={title}
-                          onChange={(e) => setTitle(e.target.value)}
-                          className="w-full outline-1 p-2 rounded outline-slate-300 bg-white dark:bg-slate-500 "
-                          required
-                        />
-                      </div>
-                      <div className="flex items-center gap-1 bg-white dark:bg-slate-600 p-1 rounded-md text-slate-700 dark:text-slate-100">
-                        <MdNumbers className="text-[2rem]" />
-                        <input
-                          type="number"
-                          placeholder="Column Number"
-                          disabled
-                          value={columns.length + 1}
-                          className="w-full outline-1 p-2 rounded outline-slate-300 bg-white dark:bg-slate-500"
-                        />
-                      </div>
-                      <div className="flex items-center gap-1 bg-white dark:bg-slate-600 p-1 rounded-md text-slate-700 dark:text-slate-100">
-                        <MdOutlineColorLens className="text-[1.9rem] " />
-
-                        <div className="flex-1 ">
-                          <ColorPicker
-                            onChange={handleColorChange}
-                            setColumnColor={setColumnColor}
-                          />
-                        </div>
-                      </div>
+                  <div className="flex flex-col gap-4 w-full">
+                    {/* Title Input */}
+                    <div className="flex items-center gap-2 bg-gray-100 dark:bg-gray-700 p-3 rounded-xl text-gray-700 dark:text-gray-100 shadow-sm">
+                      <MdOutlineTitle className="text-2xl text-gray-500 dark:text-gray-400" />
+                      <input
+                        type="text"
+                        placeholder="Column Title"
+                        value={title}
+                        onChange={(e) => setTitle(e.target.value)}
+                        className="w-full p-2 rounded-lg bg-transparent border-none focus:outline-none focus:ring-0 text-lg placeholder-gray-400 dark:placeholder-gray-500"
+                        required
+                      />
                     </div>
 
-                    <div className="h-[2px] w-[250px] bg-gray-300 mb-2 mt-2" />
+                    {/* Column Number Input */}
+                    <div className="flex items-center gap-2 bg-gray-100 dark:bg-gray-700 p-3 rounded-xl text-gray-700 dark:text-gray-100 shadow-sm">
+                      <MdNumbers className="text-2xl text-gray-500 dark:text-gray-400" />
+                      <input
+                        type="number"
+                        placeholder="Column Number"
+                        disabled
+                        value={columns.length + 1}
+                        className="w-full p-2 rounded-lg bg-transparent border-none focus:outline-none focus:ring-0 text-lg placeholder-gray-400 dark:placeholder-gray-500 cursor-not-allowed"
+                      />
+                    </div>
 
-                    <div className="w-full flex flex-col gap-2 border-1 border-slate-300 bg-white dark:bg-slate-600 p-2 rounded-md w-full">
-                      <label className="italic text-slate-700 dark:text-slate-100 font-semibold">
-                        Column Items
-                      </label>
-                      <div className="flex flex-col gap-2 min-h-[200px] max-h-[300px] overflow-auto p-1 w-full">
-                        {items.map((item, index) => (
-                          <div
-                            key={index}
-                            className="flex items-center gap-2 w-full"
-                          >
-                            <input
-                              required
-                              key={index}
-                              type="text"
-                              placeholder={`Item ${index + 1}`}
-                              value={item.label1}
-                              onChange={(e) =>
-                                handleItemChange(index, e.target.value)
-                              }
-                              className="outline-slate-300 focus:outline-1 focus:outline-slate-400 outline-1 h-fit p-2 rounded w-full bg-slate-100 dark:bg-slate-500"
-                            />
-                            {items.length >= 2 && (
-                              <label
-                                onClick={() => handleDeleteItem(index)}
-                                className="border-1 border-red-500 p-2 rounded-md fill-red-500 hover:fill-red-300 hover:border-red-300 duration-300 w-fit cursor-pointer"
-                              >
-                                <svg
-                                  xmlns="http://www.w3.org/2000/svg"
-                                  x="0px"
-                                  y="0px"
-                                  width="15"
-                                  height="15"
-                                  viewBox="0 0 24 24"
-                                >
-                                  <path d="M 10 2 L 9 3 L 4 3 L 4 5 L 7 5 L 17 5 L 20 5 L 20 3 L 15 3 L 14 2 L 10 2 z M 5 7 L 5 22 L 19 22 L 19 7 L 5 7 z"></path>
-                                </svg>
-                              </label>
-                            )}
-                          </div>
-                        ))}
-                        <button
-                          type="button"
-                          onClick={handleAddItem}
-                          className="sticky bottom-0 px-3 py-1 rounded bg-blue-500 text-white hover:bg-opacity-70 duration-300 cursor-pointer hover:scale-95"
-                        >
-                          Add Item
-                        </button>
+                    {/* Color Picker */}
+                    <div className="flex items-center gap-2 bg-gray-100 dark:bg-gray-700 p-3 rounded-xl text-gray-700 dark:text-gray-100 shadow-sm">
+                      <MdOutlineColorLens className="text-2xl text-gray-500 dark:text-gray-400" />
+                      <div className="flex-1">
+                        <ColorPicker onChange={handleColorChange} setColumnColor={setColumnColor} />
                       </div>
+                    </div>
+                  </div>
+
+                  <div className="w-full flex flex-col gap-3 border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-700 p-4 rounded-xl shadow-inner">
+                    <label className="text-lg font-semibold text-gray-700 dark:text-gray-100">
+                      Column Items
+                    </label>
+                    <div className="flex flex-col gap-3 min-h-[150px] max-h-[300px] overflow-y-auto p-1 pr-3 custom-scrollbar">
+                      {items.map((item, index) => (
+                        <div key={index} className="flex items-center gap-3 w-full">
+                          <input
+                            required
+                            type="text"
+                            placeholder={`Item ${index + 1}`}
+                            value={item.label1}
+                            onChange={(e) => handleItemChange(index, e.target.value)}
+                            className="flex-grow p-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-gray-100 dark:bg-gray-600 text-gray-800 dark:text-gray-100 focus:outline-none focus:ring-1 focus:ring-blue-500 transition-all duration-200"
+                          />
+                          {items.length >= 2 && (
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteItem(index)}
+                              className="p-2 rounded-full bg-red-100 hover:bg-red-200 dark:bg-red-800 dark:hover:bg-red-700 text-red-600 dark:text-red-300 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-red-500"
+                              aria-label="Delete item"
+                            >
+                              <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                x="0px"
+                                y="0px"
+                                width="18"
+                                height="18"
+                                viewBox="0 0 24 24"
+                                fill="currentColor"
+                              >
+                                <path d="M 10 2 L 9 3 L 4 3 L 4 5 L 7 5 L 17 5 L 20 5 L 20 3 L 15 3 L 14 2 L 10 2 z M 5 7 L 5 22 L 19 22 L 19 7 L 5 7 z"></path>
+                              </svg>
+                            </button>
+                          )}
+                        </div>
+                      ))}
+                      <button
+                        type="button"
+                        onClick={handleAddItem}
+                        className="mt-3 px-4 py-2 rounded-lg bg-blue-600 text-white font-semibold hover:bg-blue-700 transition-all duration-200 shadow-md hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      >
+                        Add Item
+                      </button>
                     </div>
                   </div>
 
                   <button
                     type="submit"
-                    className="flex items-center border-2 border-gray-400 text-black dark:text-slate-100 font-semibold px-7 py-2 rounded cursor-pointer hover:bg-blue-500 hover:border-blue-500 hover:text-white font-semibold duration-300"
+                    className="flex items-center justify-center gap-2 px-8 py-3 rounded-lg bg-indigo-600 text-white font-bold text-lg shadow-lg hover:bg-indigo-700 hover:shadow-xl transition-all duration-300 ease-in-out focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 dark:focus:ring-offset-gray-900"
                   >
-                    <MdAdd className="text-[1.5rem]" />
+                    <MdAdd className="text-2xl" />
                     Add Column
                   </button>
                 </form>
@@ -315,17 +322,17 @@ export default function DynamicColumn() {
                   handleColorChange={handleColorChange}
                   clearEditColumn={clearEditColumn}
                 />
-              )}{" "}
+              )}
             </>
           ) : (
             <SideMenuClose setSideMenu={setSideMenu} sideMenu={sideMenu} />
           )}
         </div>
 
-        <div className="w-full h-[90vh] flex flex-col">
-          {/* <h2 className="text-xl font-semibold pb-5">Reorder Columns</h2> */}
-
-          <div className="w-full overflow-x-auto h-full">
+        {/* Main Content Area (Sortable Columns) */}
+        <div className="w-full h-full flex flex-col flex-grow bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-6">
+          <h2 className="text-2xl font-bold text-gray-800 dark:text-white mb-6">Your Columns</h2>
+          <div className="w-full overflow-x-auto h-full pb-4 custom-scrollbar">
             <DndContext
               sensors={sensors}
               collisionDetection={closestCenter}
@@ -335,7 +342,7 @@ export default function DynamicColumn() {
                 items={columns.map((col) => col.id)}
                 strategy={rectSortingStrategy}
               >
-                <div className="flex flex-wrap gap-2 max-w-full">
+                <div className="flex flex-wrap gap-4 min-w-max"> {/* Changed gap and min-w-max */}
                   {columns.map((col) => (
                     <SortableColumn
                       key={col.id}
@@ -419,97 +426,109 @@ function SortableColumn({
     <div
       ref={setNodeRef}
       style={style}
-      className="group p-2 border rounded shadow bg-white dark:bg-slate-700 dark:text-white min-h-[200px] relative "
+      className="group p-4 border border-gray-200 dark:border-gray-700 rounded-xl shadow-lg bg-white dark:bg-gray-800 dark:text-white min-h-[250px] relative flex flex-col transition-all duration-300 ease-in-out hover:shadow-xl"
     >
-      {!col.locked && (
-        <div
-          {...attributes}
-          {...listeners}
-          className="group-hover:opacity-100 opacity-0 transition-opacity duration-200 cursor-grab active:cursor-grabbing text-md rounded mb-3 flex justify-center text-black bg-slate-100 dark:bg-slate-500 w-full py-1"
-        >
-          <RiDraggable className="rotate-90" />
-        </div>
-      )}
+      {/* Draggable Handle */}
+      {
+        !col.locked && (
+          <div
+            {...attributes}
+            {...listeners}
+            className="group-hover:opacity-100 opacity-0 transition-opacity duration-300 cursor-grab active:cursor-grabbing text-gray-600 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 rounded-lg mb-4 flex justify-center items-center py-2 shadow-sm hover:bg-gray-200 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            aria-label="Drag handle"
+          >
+            <RiDraggable className="text-2xl rotate-90" />
+          </div>
+        )
+      }
 
-      <div className="flex justify-between items-center mb-2 relative">
+      {/* Column Header */}
+      <div className="flex justify-between items-center mb-4 relative">
         <h1
           onClick={() => copyToClipboard(col.title)}
-          className="font-bold uppercase text-[2rem] truncate  cursor-pointer hover:opacity-80 transition"
+          className="font-extrabold text-4xl truncate cursor-pointer hover:opacity-80 transition-opacity duration-200"
           style={{ color: col.column_color }}
+          title="Click to copy title" // Tooltip for copy action
         >
           {col.title}
         </h1>
 
         <button
           onClick={() => setOpen(!open)}
-          className={`relative cursor-pointer py-1 ${open && "text-blue-400"}`}
+          className={`relative p-2 rounded-full transition-all duration-200 ${open ? "bg-blue-100 text-blue-600 dark:bg-blue-900 dark:text-blue-300" : "text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700"}`}
+          aria-label="Column options"
         >
-          <SlOptionsVertical />
+          <SlOptionsVertical className="text-xl" />
         </button>
       </div>
 
-      {open && (
-        <div
-          ref={ref}
-          className="space-x-1 shadow-md backdrop-blur-md bg-slate-100/30 p-2 w-[200px] h-[200px] absolute right-5 top-15 flex flex-col gap-2 rounded-md"
-        >
-          <>
+      {/* Options Dropdown */}
+      {
+        open && (
+          <div
+            ref={ref}
+            className="absolute right-0 top-16 z-10 w-[220px] bg-white dark:bg-gray-700 rounded-lg shadow-xl p-3 flex flex-col gap-2 border border-gray-200 dark:border-gray-600 animate-fade-in"
+          >
             <button
               onClick={toggleLock}
-              className={`w-full justify-center flex gap-2 items-center text-md py-1 rounded cursor-pointer ${
-                col.locked ? "bg-red-500" : "bg-green-500"
-              } text-white`}
+              className={`w-full justify-center flex items-center gap-2 py-2 rounded-md font-semibold transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2
+            ${col.locked
+                  ? "bg-red-500 hover:bg-red-600 text-white focus:ring-red-500"
+                  : "bg-green-500 hover:bg-green-600 text-white focus:ring-green-500"
+                }`}
             >
               {col.locked ? (
                 <>
-                  <FaUnlock /> Unlock
+                  <FaUnlock className="text-lg" /> Unlock
                 </>
               ) : (
                 <>
-                  {" "}
-                  <FaLock /> Lock
+                  <FaLock className="text-lg" /> Lock
                 </>
               )}
             </button>
             <button
               onClick={deleteCol}
-              className="text-md flex items-center w-full cursor-pointer active:text-white active:bg-red-500 justify-center py-1 bg-gray-400 rounded text-white text-center"
+              className="w-full justify-center flex items-center gap-2 py-2 rounded-md bg-gray-200 hover:bg-gray-300 dark:bg-gray-600 dark:hover:bg-gray-500 text-gray-800 dark:text-white font-semibold transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-gray-400"
             >
-              <MdDelete className="text-[20px]" /> Delete
+              <MdDelete className="text-xl" /> Delete
             </button>
-          </>
-          <button
-            onClick={() => setEditColumn([col])}
-            className="bg-blue-500 py-1 rounded-md w-full active:bg-blue-700 cursor-pointer text-white flex items-center justify-center gap-1 text-md"
-          >
-            <FaEdit className="text-[18px]" />
-            Edit
-          </button>
-        </div>
-      )}
+            <button
+              onClick={() => {
+                setEditColumn([col]);
+                setOpen(false); // Close dropdown after clicking edit
+              }}
+              className="w-full justify-center flex items-center gap-2 py-2 rounded-md bg-blue-600 hover:bg-blue-700 text-white font-semibold transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <FaEdit className="text-lg" /> Edit
+            </button>
+          </div>
+        )
+      }
 
-      <div className="p-2 rounded">
-        <p className="text-md italic tracking-wide font-thin">
+      {/* Column Details */}
+      <div className="flex flex-col flex-grow">
+        <p className="text-sm italic tracking-wide font-medium text-gray-600 dark:text-gray-400 mb-3">
           Column #: {col?.column + 1}
         </p>
-        <div className="flex flex-col gap-2 text-[1.2rem] mt-2">
+        <div className="flex flex-col gap-3 flex-grow overflow-y-auto pr-2 custom-scrollbar">
           {col.items.map((item, i) => (
             <div
               key={i}
-              className="text-white p-2 rounded-md flex items-center gap-5 active:cursor-copy cursor-pointer"
-              style={styleItem}
+              className="p-3 rounded-lg flex items-center gap-4 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors duration-200 shadow-sm"
+              style={styleItem} // Apply dynamic styling if needed
               onClick={() => copyToClipboard(item.label1)}
+              title="Click to copy item" // Tooltip for copy action
             >
-              <FaRegClipboard className="text-[25px] shrink-0" />
-              <label className="active:cursor-copy cursor-pointer">
+              <FaRegClipboard className="text-xl text-gray-500 dark:text-gray-400 shrink-0" />
+              <p className="text-lg font-medium text-gray-800 dark:text-gray-100 active:cursor-copy break-words">
                 {item.label1}
-              </label>
+              </p>
             </div>
           ))}
         </div>
       </div>
-      {/* <pre>{JSON.stringify(col, null, 2)}</pre> */}
-    </div>
+    </div >
   );
 }
 
@@ -574,97 +593,102 @@ function EditLayout({
   return (
     <form
       onSubmit={handleSaveColumn}
-      className="space-y-3 w-full flex flex-col gap-4 items-center px-3 "
+      className="space-y-6 w-full flex flex-col items-center px-5 py-6" // Increased padding and spacing
     >
-      <div className="flex flex-col gap-2 items-center w-full">
-        <div className="flex flex-col gap-y-2 w-full">
-          <div className="flex items-center gap-1 bg-white p-1 rounded-md">
-            <MdOutlineTitle className="text-[2rem] text-gray-500" />
-            <input
-              type="text"
-              placeholder="Title"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              className="w-full outline-1 p-2 rounded outline-slate-300 bg-white"
-              required
-            />
-          </div>
-          <div className="flex items-center gap-1 bg-white p-1 rounded-md">
-            <MdNumbers className="text-[2rem] text-gray-500" />
-            <input
-              type="number"
-              placeholder="Column Number"
-              disabled
-              value={col[0]?.column}
-              className="w-full outline-1 p-2 rounded outline-slate-300 bg-white"
-            />
-          </div>
-          <div className="flex items-center gap-1 bg-white p-1 rounded-md">
-            <MdOutlineColorLens className="text-[1.9rem] text-gray-500" />
-
-            <div className="flex-1 ">
-              <ColorPicker
-                onChange={handleColorChange}
-                setColumnColor={setColumnColor}
-              />
-            </div>
-          </div>
+      <div className="flex flex-col gap-4 w-full"> {/* Increased gap for better spacing */}
+        {/* Title Input */}
+        <div className="flex items-center gap-2 bg-gray-100 dark:bg-gray-700 p-3 rounded-xl shadow-sm text-gray-700 dark:text-gray-100">
+          <MdOutlineTitle className="text-2xl text-gray-500 dark:text-gray-400" /> {/* Larger, softer icon */}
+          <input
+            type="text"
+            placeholder="Column Title" // More specific placeholder
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            className="w-full p-2 rounded-lg bg-transparent border-none focus:outline-none focus:ring-0 text-lg placeholder-gray-400 dark:placeholder-gray-500" // Modern input styling
+            required
+          />
         </div>
 
-        <div className="h-[2px] w-[250px] bg-gray-300 mb-2 mt-2" />
+        {/* Column Number Input */}
+        <div className="flex items-center gap-2 bg-gray-100 dark:bg-gray-700 p-3 rounded-xl shadow-sm text-gray-700 dark:text-gray-100">
+          <MdNumbers className="text-2xl text-gray-500 dark:text-gray-400" />
+          <input
+            type="number"
+            placeholder="Column Number"
+            disabled
+            value={col[0]?.column}
+            className="w-full p-2 rounded-lg bg-transparent border-none focus:outline-none focus:ring-0 text-lg placeholder-gray-400 dark:placeholder-gray-500 cursor-not-allowed" // Consistent input styling, cursor-not-allowed for disabled
+          />
+        </div>
 
-        <div className="w-full flex flex-col gap-2">
-          <div className="w-full flex flex-col gap-2 border-1 border-slate-300 bg-white p-2 rounded-md w-full">
-            <label className="italic text-slate-500 font-semibold">
-              Column Items
-            </label>
-            <div className="flex flex-col gap-2 min-h-[200px] max-h-[300px] overflow-auto p-1 w-full">
-              {items.map((item, index) => (
-                <div key={index} className="flex items-center gap-2 w-full">
-                  <input
-                    required
-                    key={index}
-                    type="text"
-                    placeholder={`Item ${index + 1}`}
-                    value={item.label1}
-                    onChange={(e) => handleItemChange(index, e.target.value)}
-                    className="outline-slate-300 focus:outline-1 focus:outline-slate-400 outline-1 h-fit p-2 rounded w-full bg-slate-100"
-                  />
-                  {col[0].items.length >= 2 && (
-                    <label
-                      onClick={() => handleDeleteItem(index)}
-                      className="border-1 border-red-500 p-2 rounded-md fill-red-500 hover:fill-red-300 hover:border-red-300 duration-300 w-fit cursor-pointer"
-                    >
-                      <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        x="0px"
-                        y="0px"
-                        width="15"
-                        height="15"
-                        viewBox="0 0 24 24"
-                      >
-                        <path d="M 10 2 L 9 3 L 4 3 L 4 5 L 7 5 L 17 5 L 20 5 L 20 3 L 15 3 L 14 2 L 10 2 z M 5 7 L 5 22 L 19 22 L 19 7 L 5 7 z"></path>
-                      </svg>
-                    </label>
-                  )}
-                </div>
-              ))}
-              <button
-                type="button"
-                onClick={handleAddItem}
-                className="sticky bottom-0 px-3 py-1 rounded bg-blue-500 text-white hover:bg-blue-600 duration-300 cursor-pointer hover:scale-95"
-              >
-                Add Item
-              </button>
-            </div>
+        {/* Color Picker */}
+        <div className="flex items-center gap-2 bg-gray-100 dark:bg-gray-700 p-3 rounded-xl shadow-sm text-gray-700 dark:text-gray-100">
+          <MdOutlineColorLens className="text-2xl text-gray-500 dark:text-gray-400" />
+          <div className="flex-1">
+            <ColorPicker
+              onChange={handleColorChange}
+              setColumnColor={setColumnColor}
+            />
           </div>
         </div>
       </div>
 
-      <div className="flex flex-wrap justify-evenly w-full h-fit">
+      {/* Separator */}
+      <div className="h-0.5 w-full bg-gray-300 dark:bg-gray-600 my-4 rounded-full" /> {/* Thicker, full-width, rounded separator */}
+
+      {/* Column Items Section */}
+      <div className="w-full flex flex-col gap-3 border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-700 p-4 rounded-xl shadow-inner">
+        <label className="text-lg font-semibold text-gray-700 dark:text-gray-100"> {/* Stronger label */}
+          Column Items
+        </label>
+        <div className="flex flex-col gap-3 min-h-[150px] max-h-[300px] overflow-y-auto p-1 pr-3 custom-scrollbar"> {/* Enhanced scrollable area */}
+          {items.map((item, index) => (
+            <div key={index} className="flex items-center gap-3 w-full"> {/* Increased gap for items */}
+              <input
+                required
+                type="text"
+                placeholder={`Item ${index + 1}`}
+                value={item.label1}
+                onChange={(e) => handleItemChange(index, e.target.value)}
+                className="flex-grow p-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-gray-100 dark:bg-gray-600 text-gray-800 dark:text-gray-100 focus:outline-none focus:ring-1 focus:ring-blue-500 transition-all duration-200" // Modern input, focus ring
+              />
+              {col[0]?.items.length >= 2 && ( // Added optional chaining for safety
+                <button
+                  type="button" // Important for buttons inside forms
+                  onClick={() => handleDeleteItem(index)}
+                  className="p-2 rounded-full bg-red-100 hover:bg-red-200 dark:bg-red-800 dark:hover:bg-red-700 text-red-600 dark:text-red-300 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-red-500" // Circular button, subtle hover, focus ring
+                  aria-label={`Delete item ${index + 1}`} // Accessibility
+                >
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    x="0px"
+                    y="0px"
+                    width="18" // Larger icon
+                    height="18"
+                    viewBox="0 0 24 24"
+                    fill="currentColor" // Use currentColor for text color
+                  >
+                    <path d="M 10 2 L 9 3 L 4 3 L 4 5 L 7 5 L 17 5 L 20 5 L 20 3 L 15 3 L 14 2 L 10 2 z M 5 7 L 5 22 L 19 22 L 19 7 L 5 7 z"></path>
+                  </svg>
+                </button>
+              )}
+            </div>
+          ))}
+          <button
+            type="button"
+            onClick={handleAddItem}
+            className="mt-3 px-4 py-2 rounded-lg bg-blue-600 text-white font-semibold hover:bg-blue-700 transition-all duration-200 shadow-md hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-blue-500" // Elevated primary button style
+          >
+            Add Item
+          </button>
+        </div>
+      </div>
+
+      {/* Action Buttons */}
+      <div className="flex flex-wrap justify-center gap-4 w-full pt-4"> {/* Centered buttons with consistent gap */}
         <button
           type="submit"
-          className="border-2 border-gray-400 text-black font-semibold px-4 py-2 rounded cursor-pointer hover:bg-green-500 hover:border-green-500 hover:text-white font-semibold duration-300"
+          className="flex items-center justify-center gap-2 px-8 py-3 rounded-lg bg-green-600 text-white font-bold text-lg shadow-lg hover:bg-green-700 hover:shadow-xl transition-all duration-300 ease-in-out focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 dark:focus:ring-offset-gray-900" // Primary save button
         >
           Save Column
         </button>
@@ -672,7 +696,7 @@ function EditLayout({
         <button
           type="button"
           onClick={() => clearEditColumn()}
-          className="border-2 border-gray-400 text-black font-semibold px-4 py-2 rounded cursor-pointer hover:bg-red-500 hover:border-red-500 hover:text-white font-semibold duration-300"
+          className="flex items-center justify-center gap-2 px-8 py-3 rounded-lg bg-gray-300 text-gray-800 font-bold text-lg shadow-md hover:bg-gray-400 hover:shadow-lg transition-all duration-300 ease-in-out focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-offset-2 dark:focus:ring-offset-gray-900 dark:bg-gray-600 dark:text-white dark:hover:bg-gray-500" // Secondary cancel button
         >
           Cancel
         </button>

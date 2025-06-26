@@ -17,6 +17,7 @@ export default function PreviewArea() {
     const { images, selectedImageIndex, setSelectedImageIndex } = useImageEditor();
     const [processing, setProcessing] = useState<boolean>(false);
     const [downloadProgress, setDownloadProgress] = useState<number>(0);
+    const [fileName, setFileName] = useState<string>("watermarked_images.zip");
 
     // Use useRef to store the AbortController instance across renders
     const abortControllerRef = useRef<AbortController | null>(null);
@@ -88,7 +89,7 @@ export default function PreviewArea() {
                 console.log("Download cancelled after zip generation, before save (Aborted signal).");
                 return; // Don't save if cancelled
             }
-            saveAs(content, "watermarked_images.zip");
+            saveAs(content, fileName);
 
         } catch (error: any) { // Use 'any' for error to safely check for potential AbortError or others
             // Note: generateAsync will not throw an AbortError from an AbortSignal here
@@ -114,45 +115,55 @@ export default function PreviewArea() {
     };
 
     return (
-        <div className="space-y-6 p-1">
-            <div className="flex justify-between items-center mb-4">
-                <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100 flex gap-2">Image Previews
-                    <span className="flex items-center gap-1 px-2 py-0.5 rounded-md bg-blue-50 text-slate-900">
-                        <IoImage />
+        <div className="space-y-8 p-6 bg-gray-50 dark:bg-gray-900 min-h-screen rounded-lg shadow-inner">
+            {/* Header Section */}
+            <div className="flex flex-col sm:flex-row justify-between items-center mb-6 gap-4">
+                <h2 className="text-3xl font-extrabold text-gray-900 dark:text-white flex items-center gap-3">
+                    Image Previews
+                    <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 shadow-sm">
+                        <IoImage className="mr-1 text-base" />
                         {images.length}
                     </span>
                 </h2>
-                {images.length > 0 && (
-                    <div className="flex gap-4">
+                <div className="flex flex-col sm:flex-row items-center gap-4 w-full sm:w-auto">
+                    <input
+                        type="text"
+                        placeholder="Enter file name (optional)"
+                        onChange={(e) => setFileName(e.target.value)}
+                        className="flex-grow px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-700 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 transition-all duration-200 w-full sm:w-auto"
+                    />
+                    {images.length > 0 && (
                         <button
                             onClick={downloadAll}
-                            className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg shadow-md transition duration-300 ease-in-out transform hover:scale-105 flex items-end gap-2"
+                            className="px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-lg shadow-lg transition duration-300 ease-in-out transform hover:scale-105 flex items-center justify-center gap-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-opacity-75 disabled:opacity-50 disabled:cursor-not-allowed w-full sm:w-auto"
                             disabled={images.length === 0 || processing} // Disable button while processing
                         >
-                            <HiOutlineFolderDownload className="text-[25px]" /> Download All as ZIP
+                            <HiOutlineFolderDownload className="text-2xl" /> Download All as ZIP
                         </button>
-                    </div>
-                )}
+                    )}
+                </div>
             </div>
 
+            {/* Content Area */}
             {images.length === 0 ? (
-                <p className="text-gray-500 dark:text-gray-200 text-lg text-center bg-white dark:bg-gray-800 p-6 rounded-lg shadow-inner">
+                <p className="text-gray-500 dark:text-gray-400 text-xl text-center bg-white dark:bg-gray-800 p-8 rounded-2xl shadow-inner border border-gray-200 dark:border-gray-700">
                     No images uploaded yet. Please use the uploader on the left.
                 </p>
             ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {images.map((image: any, index: number) => (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3  gap-6">
+                    {images.map((image, index) => (
                         <div
                             key={index}
-                            className={`relative rounded-xl overflow-hidden transition-all duration-200 ease-in-out ${selectedImageIndex === index
-                                ? "border-blue-500 shadow-xl scale-102 border-2"
-                                : " hover:border-gray-400 cursor-pointer shadow-md"
+                            className={`relative rounded-xl overflow-hidden transition-all duration-300 ease-in-out cursor-pointer
+                            ${selectedImageIndex === index
+                                    ? "border-4 border-blue-500 shadow-xl scale-102"
+                                    : "border-2 border-transparent hover:border-gray-300 dark:hover:border-gray-600 shadow-md hover:shadow-lg"
                                 }`}
                             onClick={() => setSelectedImageIndex(index)}
                         >
                             <SingleImageEditor image={image} index={index} />
                             {selectedImageIndex === index && (
-                                <div className="absolute inset-0 bg-blue-500 bg-opacity-20 flex items-center justify-center text-white font-bold text-2xl pointer-events-none rounded-xl">
+                                <div className="absolute inset-0 bg-blue-600 bg-opacity-30 rounded-xl flex items-center justify-center text-white font-bold text-3xl opacity-100 transition-opacity duration-300 pointer-events-none">
                                     SELECTED
                                 </div>
                             )}
@@ -160,7 +171,9 @@ export default function PreviewArea() {
                     ))}
                 </div>
             )}
-            {/* Pass progress and totalImages to ModalLoading */}
+
+            {/* Loading Modal */}
+            {/* Ensure ModalLoading is imported or passed as a prop */}
             <ModalLoading open={processing} cancelProcess={cancelDownload} progress={downloadProgress} totalImages={images.length} />
         </div>
     );
