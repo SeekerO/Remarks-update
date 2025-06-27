@@ -101,7 +101,6 @@ export default function Home() {
         </div>
       </motion.div>
 
-      {/* Add some simple keyframe animations if not already defined in your CSS */}
 
     </div>
   );
