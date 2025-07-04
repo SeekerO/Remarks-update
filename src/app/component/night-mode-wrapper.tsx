@@ -10,7 +10,7 @@ interface WrapperProps {
 const ThemeWrapper: React.FC<WrapperProps> = ({ children }) => {
     return (
         <div>
-            <div className="fixed right-2 top-2">
+            <div className="fixed right-4 top-4">
                 <DarkModeToggle />
             </div>
             {children}

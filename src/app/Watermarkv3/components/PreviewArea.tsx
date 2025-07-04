@@ -34,8 +34,11 @@ export default function PreviewArea() {
         abortControllerRef.current = new AbortController();
         const signal = abortControllerRef.current.signal;
 
+
+
+        const filteredFilename = fileName.replace(".", " ")
         const zip = new JSZip();
-        const folder = zip.folder(fileName);
+        const folder = zip.folder(filteredFilename);
 
         try {
             for (const [index] of images.entries()) {
@@ -89,7 +92,7 @@ export default function PreviewArea() {
                 console.log("Download cancelled after zip generation, before save (Aborted signal).");
                 return; // Don't save if cancelled
             }
-            saveAs(content, fileName);
+            saveAs(content, filteredFilename);
 
         } catch (error: any) { // Use 'any' for error to safely check for potential AbortError or others
             // Note: generateAsync will not throw an AbortError from an AbortSignal here
@@ -125,23 +128,24 @@ export default function PreviewArea() {
                         {images.length}
                     </span>
                 </h2>
-                <div className="flex flex-col sm:flex-row items-center gap-4 w-full sm:w-auto">
+                {images.length > 0 && (<div className="flex flex-col sm:flex-row items-center gap-4 w-full sm:w-auto">
                     <input
                         type="text"
                         placeholder="Enter file name (optional)"
                         onChange={(e) => setFileName(e.target.value)}
                         className="flex-grow px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-700 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 transition-all duration-200 w-full sm:w-auto"
                     />
-                    {images.length > 0 && (
-                        <button
-                            onClick={downloadAll}
-                            className="px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-lg shadow-lg transition duration-300 ease-in-out transform hover:scale-105 flex items-center justify-center gap-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-opacity-75 disabled:opacity-50 disabled:cursor-not-allowed w-full sm:w-auto"
-                            disabled={images.length === 0 || processing} // Disable button while processing
-                        >
-                            <HiOutlineFolderDownload className="text-2xl" /> Download All as ZIP
-                        </button>
-                    )}
+
+                    <button
+                        onClick={downloadAll}
+                        className="px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-lg shadow-lg transition duration-300 ease-in-out transform hover:scale-105 flex items-center justify-center gap-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-opacity-75 disabled:opacity-50 disabled:cursor-not-allowed w-full sm:w-auto"
+                        disabled={images.length === 0 || processing} // Disable button while processing
+                    >
+                        <HiOutlineFolderDownload className="text-2xl" /> Download All as ZIP
+                    </button>
                 </div>
+                )}
+
             </div>
 
             {/* Content Area */}
