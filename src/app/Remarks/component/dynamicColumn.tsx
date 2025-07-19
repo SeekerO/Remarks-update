@@ -17,6 +17,8 @@ import {
 import { CSS } from "@dnd-kit/utilities";
 import { SetStateAction, useEffect, useRef, useState } from "react";
 
+import bske from "@/lib/json/bske.json"
+
 import ColorPicker from "./ColorPicker";
 // npm install react-color
 
@@ -34,8 +36,10 @@ import {
   MdMenu,
   MdAdd,
 } from "react-icons/md";
+import { IoSearchOutline } from "react-icons/io5";
 
-type Item = { label1: string };
+// MODIFIED: Added 'id' to Item type for better key management
+type Item = { id: string; label1: string };
 
 type Column = {
   id: string;
@@ -87,8 +91,9 @@ const notify_deleted_column = () =>
 
 export default function DynamicColumn() {
   const [title, setTitle] = useState("");
-  const [columnColor, setColumnColor] = useState("red");
-  const [items, setItems] = useState<Item[]>([{ label1: "" }]);
+  const [columnColor, setColumnColor] = useState("#B0E0E6");
+  // MODIFIED: Initialize items with a unique ID
+  const [items, setItems] = useState<Item[]>([{ id: crypto.randomUUID(), label1: "" }]);
   const [columns, setColumns] = useState<Column[]>([]);
   const STORAGE_KEY = "customColumns";
 
@@ -97,6 +102,8 @@ export default function DynamicColumn() {
   const [editColumn, setEditColumn] = useState<Column[]>([]);
 
   const [sideMenu, setSideMenu] = useState<boolean>(true);
+
+  const [searchTerm, setSearchTerm] = useState<string>("")
 
   useEffect(() => {
     fetchLocalStorage();
@@ -130,24 +137,27 @@ export default function DynamicColumn() {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
 
     setTitle("");
-
     setColumnColor("red");
-    setItems([{ label1: "" }]);
+    // MODIFIED: Initialize new item with a unique ID
+    setItems([{ id: crypto.randomUUID(), label1: "" }]);
   };
 
   const handleAddItem = () => {
-    setItems([...items, { label1: "" }]);
+    // MODIFIED: Generate unique ID for new items
+    setItems([...items, { id: crypto.randomUUID(), label1: "" }]);
   };
 
-  const handleDeleteItem = (indexToDelete: unknown) => {
+  // MODIFIED: Changed parameter to id (string)
+  const handleDeleteItem = (idToDelete: string) => {
     setItems((prevItems) =>
-      prevItems.filter((_, index) => index !== indexToDelete)
+      prevItems.filter((item) => item.id !== idToDelete)
     );
   };
 
-  const handleItemChange = (index: number, value: string) => {
-    const newItems = [...items];
-    newItems[index].label1 = value;
+  const handleItemChange = (id: string, value: string) => { // MODIFIED: Changed index to id
+    const newItems = items.map(item =>
+      item.id === id ? { ...item, label1: value } : item
+    );
     setItems(newItems);
   };
 
@@ -184,11 +194,29 @@ export default function DynamicColumn() {
     console.log("Selected color:", color);
   };
 
+  const storeMETA_DATA_BSKE_QUESTIONS = () => {
+    const newMETA_DATA = bske.BSKE
+    if (columns.length > 0) {
+      const old_data = columns;
+      const new_data = [...old_data, ...newMETA_DATA];
+      setColumns(new_data)
+      localStorage.setItem("customColumns", JSON.stringify(new_data))
+    }
+    else {
+      localStorage.setItem("customColumns", JSON.stringify(newMETA_DATA))
+      return setColumns(newMETA_DATA)
+    }
+  }
+
+  const filteredData1 = columns.filter((col) =>
+    col.title.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
   return (
     <div className="w-full h-full flex flex-col overflow-hidden justify-center select-none p-4 md:p-8 bg-gray-50 dark:bg-gray-900 font-sans">
-      <div className="w-full h-full flex flex-col md:flex-row gap-6">
-        <ToastContainer position="bottom-right" autoClose={3000} hideProgressBar newestOnTop closeOnClick rtl={false} pauseOnFocusLoss draggable pauseOnHover theme="colored" />
+      <ToastContainer position="bottom-right" autoClose={3000} hideProgressBar newestOnTop closeOnClick rtl={false} pauseOnFocusLoss draggable pauseOnHover theme="colored" />
 
+      <div className="w-full h-full flex flex-col md:flex-row gap-6">
         {/* Sidebar / Column Manager */}
         <div
           className={`
@@ -222,100 +250,109 @@ export default function DynamicColumn() {
               </h1>
 
               {editColumn.length === 0 ? (
-                <form
-                  onSubmit={handleAddColumn}
-                  className="space-y-5 w-full shrink-0 flex flex-col gap-5 items-center px-5 pb-5"
-                >
-                  <div className="flex flex-col gap-4 w-full">
-                    {/* Title Input */}
-                    <div className="flex items-center gap-2 bg-gray-100 dark:bg-gray-700 p-3 rounded-xl text-gray-700 dark:text-gray-100 shadow-sm">
-                      <MdOutlineTitle className="text-2xl text-gray-500 dark:text-gray-400" />
-                      <input
-                        type="text"
-                        placeholder="Column Title"
-                        value={title}
-                        onChange={(e) => setTitle(e.target.value)}
-                        className="w-full p-2 rounded-lg bg-transparent border-none focus:outline-none focus:ring-0 text-lg placeholder-gray-400 dark:placeholder-gray-500"
-                        required
-                      />
-                    </div>
+                <>
+                  <form
+                    onSubmit={handleAddColumn}
+                    className="space-y-5 w-full shrink-0 flex flex-col gap-5 items-center px-5 pb-5"
+                  >
+                    <div className="flex flex-col gap-4 w-full">
+                      {/* Title Input */}
+                      <div className="flex items-center gap-2 bg-gray-100 dark:bg-gray-700 p-3 rounded-xl text-gray-700 dark:text-gray-100 shadow-sm">
+                        <MdOutlineTitle className="text-2xl text-gray-500 dark:text-gray-400" />
+                        <input
+                          type="text"
+                          placeholder="Column Title"
+                          value={title}
+                          onChange={(e) => setTitle(e.target.value)}
+                          className="w-full p-2 rounded-lg bg-transparent border-none focus:outline-none focus:ring-0 text-lg placeholder-gray-400 dark:placeholder-gray-500"
+                          required
+                        />
+                      </div>
 
-                    {/* Column Number Input */}
-                    <div className="flex items-center gap-2 bg-gray-100 dark:bg-gray-700 p-3 rounded-xl text-gray-700 dark:text-gray-100 shadow-sm">
-                      <MdNumbers className="text-2xl text-gray-500 dark:text-gray-400" />
-                      <input
-                        type="number"
-                        placeholder="Column Number"
-                        disabled
-                        value={columns.length + 1}
-                        className="w-full p-2 rounded-lg bg-transparent border-none focus:outline-none focus:ring-0 text-lg placeholder-gray-400 dark:placeholder-gray-500 cursor-not-allowed"
-                      />
-                    </div>
+                      {/* Column Number Input */}
+                      <div className="flex items-center gap-2 bg-gray-100 dark:bg-gray-700 p-3 rounded-xl text-gray-700 dark:text-gray-100 shadow-sm">
+                        <MdNumbers className="text-2xl text-gray-500 dark:text-gray-400" />
+                        <input
+                          type="number"
+                          placeholder="Column Number"
+                          disabled
+                          value={columns.length + 1}
+                          className="w-full p-2 rounded-lg bg-transparent border-none focus:outline-none focus:ring-0 text-lg placeholder-gray-400 dark:placeholder-gray-500 cursor-not-allowed"
+                        />
+                      </div>
 
-                    {/* Color Picker */}
-                    <div className="flex items-center gap-2 bg-gray-100 dark:bg-gray-700 p-3 rounded-xl text-gray-700 dark:text-gray-100 shadow-sm">
-                      <MdOutlineColorLens className="text-2xl text-gray-500 dark:text-gray-400" />
-                      <div className="flex-1">
-                        <ColorPicker onChange={handleColorChange} setColumnColor={setColumnColor} />
+                      {/* Color Picker */}
+                      <div className="flex items-center gap-2 bg-gray-100 dark:bg-gray-700 p-3 rounded-xl text-gray-700 dark:text-gray-100 shadow-sm">
+                        <MdOutlineColorLens className="text-2xl text-gray-500 dark:text-gray-400" />
+                        <div className="flex-1">
+                          <ColorPicker onChange={handleColorChange} setColumnColor={setColumnColor} columnColor={columnColor} />
+                        </div>
                       </div>
                     </div>
-                  </div>
 
-                  <div className="w-full flex flex-col gap-3 border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-700 p-4 rounded-xl shadow-inner">
-                    <label className="text-lg font-semibold text-gray-700 dark:text-gray-100">
-                      Column Items
-                    </label>
-                    <div className="flex flex-col gap-3 min-h-[150px] max-h-[300px] overflow-y-auto p-1 pr-3 custom-scrollbar">
-                      {items.map((item, index) => (
-                        <div key={index} className="flex items-center gap-3 w-full">
-                          <input
-                            required
-                            type="text"
-                            placeholder={`Item ${index + 1}`}
-                            value={item.label1}
-                            onChange={(e) => handleItemChange(index, e.target.value)}
-                            className="flex-grow p-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-gray-100 dark:bg-gray-600 text-gray-800 dark:text-gray-100 focus:outline-none focus:ring-1 focus:ring-blue-500 transition-all duration-200"
-                          />
-                          {items.length >= 2 && (
-                            <button
-                              type="button"
-                              onClick={() => handleDeleteItem(index)}
-                              className="p-2 rounded-full bg-red-100 hover:bg-red-200 dark:bg-red-800 dark:hover:bg-red-700 text-red-600 dark:text-red-300 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-red-500"
-                              aria-label="Delete item"
-                            >
-                              <svg
-                                xmlns="http://www.w3.org/2000/svg"
-                                x="0px"
-                                y="0px"
-                                width="18"
-                                height="18"
-                                viewBox="0 0 24 24"
-                                fill="currentColor"
+                    <div className="w-full flex flex-col gap-3 border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-700 p-4 rounded-xl shadow-inner">
+
+                      <label className="text-lg font-semibold text-gray-700 dark:text-gray-100">
+                        Column Items
+                      </label>
+
+                      <div className="flex flex-col gap-3 min-h-[150px] max-h-[300px] overflow-y-auto p-1 pr-3 custom-scrollbar">
+                        {/* MODIFIED: Changed key to item.id, pass item.id to handleDeleteItem, pass item.id to handleItemChange */}
+                        {items.map((item) => (
+                          <div key={item.id} className="flex items-center gap-3 w-full">
+                            {/* MODIFIED: Changed input to textarea */}
+                            <textarea
+                              required
+                              placeholder={`Item ${item.id.substring(0, 4)}...`}
+                              value={item.label1}
+                              onChange={(e) => handleItemChange(item.id, e.target.value)}
+                              className="flex-grow p-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-gray-100 dark:bg-gray-600 text-gray-800 dark:text-gray-100 focus:outline-none focus:ring-1 focus:ring-blue-500 transition-all duration-200 min-h-[50px] resize-y" // Added min-h and resize-y for textarea
+                            />
+                            {items.length >= 2 && (
+                              <button
+                                type="button"
+                                onClick={() => handleDeleteItem(item.id)} // MODIFIED: Pass item.id
+                                className="p-2 rounded-full bg-red-100 hover:bg-red-200 dark:bg-red-800 dark:hover:bg-red-700 text-red-600 dark:text-red-300 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-red-500"
+                                aria-label="Delete item"
                               >
-                                <path d="M 10 2 L 9 3 L 4 3 L 4 5 L 7 5 L 17 5 L 20 5 L 20 3 L 15 3 L 14 2 L 10 2 z M 5 7 L 5 22 L 19 22 L 19 7 L 5 7 z"></path>
-                              </svg>
-                            </button>
-                          )}
-                        </div>
-                      ))}
-                      <button
-                        type="button"
-                        onClick={handleAddItem}
-                        className="mt-3 px-4 py-2 rounded-lg bg-blue-600 text-white font-semibold hover:bg-blue-700 transition-all duration-200 shadow-md hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      >
-                        Add Item
-                      </button>
+                                <svg
+                                  xmlns="http://www.w3.org/2000/svg"
+                                  x="0px"
+                                  y="0px"
+                                  width="18"
+                                  height="18"
+                                  viewBox="0 0 24 24"
+                                  fill="currentColor"
+                                >
+                                  <path d="M 10 2 L 9 3 L 4 3 L 4 5 L 7 5 L 17 5 L 20 5 L 20 3 L 15 3 L 14 2 L 10 2 z M 5 7 L 5 22 L 19 22 L 19 7 L 5 7 z"></path>
+                                </svg>
+                              </button>
+                            )}
+                          </div>
+                        ))}
+                        <button
+                          type="button"
+                          onClick={handleAddItem}
+                          className="mt-3 px-4 py-2 rounded-lg bg-blue-600 text-white font-semibold hover:bg-blue-700 transition-all duration-200 shadow-md hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        >
+                          Add Item
+                        </button>
+                      </div>
                     </div>
-                  </div>
 
-                  <button
-                    type="submit"
-                    className="flex items-center justify-center gap-2 px-8 py-3 rounded-lg bg-indigo-600 text-white font-bold text-lg shadow-lg hover:bg-indigo-700 hover:shadow-xl transition-all duration-300 ease-in-out focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 dark:focus:ring-offset-gray-900"
-                  >
-                    <MdAdd className="text-2xl" />
-                    Add Column
-                  </button>
-                </form>
+                    <button
+                      type="submit"
+                      className="flex items-center justify-center gap-2 px-8 py-3 rounded-lg bg-indigo-600 text-white font-bold text-lg shadow-lg hover:bg-indigo-700 hover:shadow-xl transition-all duration-300 ease-in-out focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 dark:focus:ring-offset-gray-900"
+                    >
+                      <MdAdd className="text-2xl" />
+                      Add Column
+                    </button>
+                  </form>
+
+                  <div className="flex flex-col">
+                    <button onClick={storeMETA_DATA_BSKE_QUESTIONS}>fetch</button>
+                  </div>
+                </>
               ) : (
                 <EditLayout
                   col={editColumn}
@@ -327,11 +364,20 @@ export default function DynamicColumn() {
           ) : (
             <SideMenuClose setSideMenu={setSideMenu} sideMenu={sideMenu} />
           )}
+
+
         </div>
 
         {/* Main Content Area (Sortable Columns) */}
         <div className="w-full h-full flex flex-col flex-grow bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-6">
-          <h2 className="text-2xl font-bold text-gray-800 dark:text-white mb-6">Your Columns</h2>
+          <div className="flex gap-2 mb-4">
+            <h2 className="text-2xl font-bold text-gray-800 dark:text-white ">Your Columns</h2>
+            <div className="flex gap-1 items-center text-white border border-white rounded-md px-2 py-1">
+              <IoSearchOutline className="text-[25px] " />
+              <input type="search" placeholder="Search title here.." onChange={(e) => setSearchTerm(e.target.value)} className="px-1 bg-transparent border-l-2 border-slate-400 outline-none w-[300px]" />
+            </div>
+          </div>
+          {/* <pre className="select-text">{JSON.stringify(columns, null, 2)}</pre> */}
           <div className="w-full overflow-x-auto h-full pb-4 custom-scrollbar">
             <DndContext
               sensors={sensors}
@@ -339,11 +385,11 @@ export default function DynamicColumn() {
               onDragEnd={handleDragEnd}
             >
               <SortableContext
-                items={columns.map((col) => col.id)}
+                items={filteredData1.map((col) => col.id)}
                 strategy={rectSortingStrategy}
               >
-                <div className="flex flex-wrap gap-4 min-w-max"> {/* Changed gap and min-w-max */}
-                  {columns.map((col) => (
+                <div className="flex flex-wrap gap-4 min-w-full"> {/* Changed gap and min-w-max */}
+                  {filteredData1.map((col) => (
                     <SortableColumn
                       key={col.id}
                       col={col}
@@ -421,6 +467,10 @@ function SortableColumn({
       });
     notify(`in Column ${col.column + 1}`);
   };
+
+
+
+
 
   return (
     <div
@@ -512,16 +562,21 @@ function SortableColumn({
           Column #: {col?.column + 1}
         </p>
         <div className="flex flex-col gap-3 flex-grow overflow-y-auto pr-2 custom-scrollbar">
-          {col.items.map((item, i) => (
+          {/* MODIFIED: Changed key to item.id */}
+          {col.items.map((item) => (
             <div
-              key={i}
+              key={item.id}
               className="p-3 rounded-lg flex items-center gap-4 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors duration-200 shadow-sm"
               style={styleItem} // Apply dynamic styling if needed
               onClick={() => copyToClipboard(item.label1)}
               title="Click to copy item" // Tooltip for copy action
             >
               <FaRegClipboard className="text-xl text-gray-500 dark:text-gray-400 shrink-0" />
-              <p className="text-lg font-medium text-gray-800 dark:text-gray-100 active:cursor-copy break-words">
+              {/* MODIFIED: Added style={{ whiteSpace: 'pre-wrap' }} to preserve formatting */}
+              <p
+                className="text-lg font-medium  active:cursor-copy break-words text-black"
+                style={{ whiteSpace: 'pre-wrap', }}
+              >
                 {item.label1}
               </p>
             </div>
@@ -574,20 +629,21 @@ function EditLayout({
     clearEditColumn();
   };
 
-  const handleItemChange = (index: number, value: string) => {
-    const newItems = [...items];
-    newItems[index].label1 = value;
+  const handleItemChange = (id: string, value: string) => { // MODIFIED: Changed index to id
+    const newItems = items.map(item =>
+      item.id === id ? { ...item, label1: value } : item
+    );
     setItems(newItems);
   };
 
-  const handleDeleteItem = (index: number) => {
-    const newItems = [...items];
-    newItems.splice(index, 1);
+  const handleDeleteItem = (idToDelete: string) => { // MODIFIED: Changed index to id
+    const newItems = items.filter(item => item.id !== idToDelete);
     setItems(newItems);
   };
 
   const handleAddItem = () => {
-    setItems([...items, { label1: "" }]); // Adjust shape as needed
+    // MODIFIED: Generate unique ID for new items
+    setItems([...items, { id: crypto.randomUUID(), label1: "" }]);
   };
 
   return (
@@ -628,6 +684,7 @@ function EditLayout({
             <ColorPicker
               onChange={handleColorChange}
               setColumnColor={setColumnColor}
+              columnColor={columnColor}
             />
           </div>
         </div>
@@ -642,22 +699,21 @@ function EditLayout({
           Column Items
         </label>
         <div className="flex flex-col gap-3 min-h-[150px] max-h-[300px] overflow-y-auto p-1 pr-3 custom-scrollbar"> {/* Enhanced scrollable area */}
-          {items.map((item, index) => (
-            <div key={index} className="flex items-center gap-3 w-full"> {/* Increased gap for items */}
-              <input
+          {items.map((item) => (
+            <div key={item.id} className="flex items-center gap-3 w-full"> {/* Increased gap for items */}
+              <textarea
                 required
-                type="text"
-                placeholder={`Item ${index + 1}`}
+                placeholder={`Item ${item.id.substring(0, 4)}...`} // Use part of ID for placeholder hint
                 value={item.label1}
-                onChange={(e) => handleItemChange(index, e.target.value)}
-                className="flex-grow p-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-gray-100 dark:bg-gray-600 text-gray-800 dark:text-gray-100 focus:outline-none focus:ring-1 focus:ring-blue-500 transition-all duration-200" // Modern input, focus ring
+                onChange={(e) => handleItemChange(item.id, e.target.value)}
+                className="flex-grow p-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-gray-100 dark:bg-gray-600 text-gray-800 dark:text-gray-100 focus:outline-none focus:ring-1 focus:ring-blue-500 transition-all duration-200 min-h-[50px] resize-y" // Added min-h and resize-y for textarea
               />
-              {col[0]?.items.length >= 2 && ( // Added optional chaining for safety
+              {items.length >= 2 && ( // Added optional chaining for safety
                 <button
                   type="button" // Important for buttons inside forms
-                  onClick={() => handleDeleteItem(index)}
+                  onClick={() => handleDeleteItem(item.id)} // MODIFIED: Pass item.id
                   className="p-2 rounded-full bg-red-100 hover:bg-red-200 dark:bg-red-800 dark:hover:bg-red-700 text-red-600 dark:text-red-300 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-red-500" // Circular button, subtle hover, focus ring
-                  aria-label={`Delete item ${index + 1}`} // Accessibility
+                  aria-label={`Delete item ${item.id.substring(0, 4)}`} // Accessibility
                 >
                   <svg
                     xmlns="http://www.w3.org/2000/svg"

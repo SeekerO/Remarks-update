@@ -115,7 +115,3 @@ export const useImageEditor = () => {
     return context;
 };
 
-
-export const removeAllImages = () => {
-
-}

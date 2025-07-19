@@ -36,17 +36,17 @@ const ChatHead = () => {
 
     return (
         // Position the chat bubble/popup fixed at the bottom right
-        <div className="fixed bottom-6 right-6 z-50 select-none">
+        <div className="fixed bottom-6 right-6 z-50 select-none" >
             {chatOpen ? (
                 <ChatLayout handle={closeChatHead} />
             ) : (
                 <div
                     onClick={() => setChatOpen(!chatOpen)}
-                    className="relative flex items-center justify-center w-14 h-14 bg-blue-600 text-white rounded-full shadow-lg cursor-pointer transition-all duration-300 ease-in-out transform hover:scale-110 hover:shadow-xl"
+                    className="relative flex items-center justify-center w-14 h-14 bg-gray-600 text-white rounded-full shadow-lg cursor-pointer transition-all duration-300 ease-in-out transform hover:scale-110 hover:shadow-xl"
                 >
                     <IoChatbubblesSharp className="text-4xl relative z-0" />
-                    <RiRobot2Fill className="absolute z-10 text-blue-600 left-[21px] bottom-[21px] text-xl" />
-                    <span className="absolute top-0 right-0 block h-4 w-4 rounded-full ring-2 ring-white bg-green-500 animate-ping-slow"></span>
+                    <RiRobot2Fill className="absolute z-10 text-gray-600 left-[21px] bottom-[21px] text-xl" />
+                    <span className="absolute top-0 right-0 block h-4 w-4 rounded-full ring-2 ring-white bg-re-500 animate-ping-slow"></span>
                     <span className="absolute top-0 right-0 block h-4 w-4 rounded-full ring-2 ring-white bg-green-500"></span>
                 </div>
             )}
@@ -161,7 +161,7 @@ const ChatLayout = ({ handle }: { handle: () => void }) => {
                 <div className="flex items-center gap-2">
                     <div className="relative gap-1 mt-2 mr-1">
                         <RiRobot2Fill className=" z-10 text-slate-100 text-2xl" />
-                        <div className="absolute bottom-5 -right-1 h-2 w-2 rounded-full bg-green-400 border border-white animate-pulse" />
+                        <div className="absolute bottom-5 -right-1 h-2 w-2 rounded-full bg-red-400 border border-white animate-pulse" />
                     </div>
                     <div className="flex flex-col">
                         <h3 className="font-semibold text-lg">KKK Bot</h3>

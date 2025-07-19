@@ -2,7 +2,7 @@
 
 import DynamicColumn from "./component/dynamicColumn";
 import BreadCrumb from "../component/breadcrumb";
-import { useKeySequence } from "../component/admin";
+import { useKeySequence } from "../component/keySequence";
 import { useState } from "react";
 import AdminUI from "../component/adminUI";
 

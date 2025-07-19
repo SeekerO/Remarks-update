@@ -1,0 +1,82 @@
+{
+  "BSKE": [
+    {
+      "id": "75271d46-9de0-4726-b3e8-7149a7e4ce38",
+      "title": "What are the qualifications for Punong Barangay and Member, Sangguniang Barangay (SB)?",
+      "column": 0,
+      "column_color": "#D5F4E6",
+      "items": [
+        {
+          "id": "959dede6-4cc5-464f-9762-6e67d84a2427",
+          "label1": "\"Magandang araw. Narito ang mga kwalipikasyon para sa Punong Barangay at Miyembro, Sangguniang Barangay (SB):\n\n1. Mamamayan ng Pilipinas;\n\n2. Rehistradong botante sa Barangay kung saan siya nagnanais na mahalal;\n\n3. Residente doon nang hindi bababa sa isang (1) taon bago ang araw ng halalan;\n\n4. Marunong bumasa at sumulat ng Filipino o anumang lokal na wika o diyalekto; at\n\n5. Hindi bababa sa 18 taong gulang sa araw ng halalan.\""
+        }
+      ],
+      "locked": false
+    },
+    {
+      "id": "b94f665a-be71-443c-a084-151371c2143f",
+      "title": "What are the qualifications for Chairperson and Member, SK?",
+      "column": 1,
+      "column_color": "#E0BBE9",
+      "items": [
+        {
+          "id": "ed3c5ead-03c0-4833-93c8-dd1d454ba7e5",
+          "label1": "\"Magandang araw. Narito ang mga kwalipikasyon para sa Tagapangulo at Miyembro, SK:\n\n1. Mamamayan ng Pilipinas;\n\n2. Kwalipikadong botante ng Katipunan ng Kabataan (KK);\n\n3. Residente ng Barangay nang hindi bababa sa isang (1) taon bago ang araw ng halalan;\n\n4. Hindi bababa sa labingwalong (18) taong gulang ngunit hindi hihigit sa dalawampu't apat (24) taong gulang sa araw ng halalan;\n\n5. Marunong magbasa at sumulat ng Filipino, Ingles o lokal na diyalekto;\n\n6. Walang kaugnayan sa loob ng 2nd civil degree of consanguinity o affinity sa sinumang nanunungkulan na halal na opisyal ng bansa o sa sinumang nanunungkulan na halal na opisyal ng rehiyon, probinsiya, lungsod, munisipalidad, o barangay sa lokalidad kung saan nagnanais na mahalal; at\n\n7. Hindi dapat nahatulan ng pinal na paghatol ng anumang krimen na kinasasangkutan ng moral turpitude.\""
+        }
+      ],
+      "locked": false
+    },
+    {
+      "id": "bda6edf4-bbc7-4516-a4a6-26064ac9902a",
+      "title": "SINO ang maaaring MAGPAREHISTRO?",
+      "column": 2,
+      "column_color": "#BAE1FF",
+      "items": [
+        {
+          "id": "706040d9-2e99-4458-ba1e-83b74c16248f",
+          "label1": "\"Sinumang mamamayang Pilipino na HINDI pa rehistradong botante ay maaaring magparehistro, basta't siya ay may mga sumusunod na kwalipikasyon:\n\nA. Barangay Elections:\n\n-Labing-walo (18) taong gulang o higit pa sa araw ng Barangay Elections;\n\n-Naninirahan sa Pilipinas nang hindi bababa sa isang (1) taon at residente ng lugar kung saan siya nagnanais bumoto nang hindi bababa sa anim (6) na buwan bago ang\nBSKE; at\n\n-Hindi diskwalipikado ayon sa batas.\n\n\n\nB. Sangguniang Kabataan (SK) Elections:\n\n-Dapat ay labing-lima (15) hanggang tatlumpung (30) taong gulang at naninirahan sa barangay nang hindi bababa sa anim (6) na buwan bago ang SK Elections; at\n\n-Hindi diskwalipikado ayon sa batas.\n\n\""
+        }
+      ],
+      "locked": false
+    },
+    {
+      "id": "0757249c-4f6e-4834-9c9a-033e86620dac",
+      "title": "ANO ang mga valid IDs na tatanggapin sa pagpaparehistro?",
+      "column": 3,
+      "column_color": "#BAFFC9",
+      "items": [
+        {
+          "id": "fe45fa3f-4037-45a2-a637-993a341fc18e",
+          "label1": "\"Magandang araw. Ang mga sumusunod na dokumento ng pagkakakilanlan na naglalaman ng litrato at lagda ng aplikante ay tatanggapin bilang valid ID para sa Voter Registration/ Reactivation:\n\n1. PhilSys National identification (ID) card);\n2. Postal ID card;\n3. PWD ID Card;\n4. Student's ID card o library card;\n5. Senior Citizen's ID card;\n6. Land Transportation Office (LTO) Driver's license/Student Permit:\n7. National Bureau of Investigation (NBI)\nclearance;\n8. Philippine Passport;\n9. SSS/GSIS o iba pang Unified Multi-Purpose\nID card;\n10. Integrated Bar of the Philippines (IBP) ID card;\nII. Professional Regulatory Commission\n(PRC) license;\n12. Certificate of Confirmation ng National\nCommission on Indigenous Peoples (NCIP) para sa mga myembro ng ICCs or IPs; at\n13. Iba pang government issued valid IDs.\n\nPaalala: HINDi tatanggapin ang barangay identification/certification, cedula, at police clearance.\""
+        }
+      ],
+      "locked": false
+    },
+    {
+      "id": "c0a268a7-43ed-4f3f-98d7-98b15c544a10",
+      "title": "What are the qualifications for Chairperson and Member, SK?",
+      "column": 4,
+      "column_color": "#FFDFBA",
+      "items": [
+        {
+          "id": "7904032a-d27f-4735-864b-1ddd94eb11ed",
+          "label1": "\"Magandang araw. Narito ang mga kwalipikasyon para sa Tagapangulo at Miyembro, SK:\n\n1. Mamamayan ng Pilipinas;\n\n2. Kwalipikadong botante ng Katipunan ng Kabataan (KK);\n\n3. Residente ng Barangay nang hindi bababa sa isang (1) taon bago ang araw ng halalan;\n\n4. Hindi bababa sa labingwalong (18) taong gulang ngunit hindi hihigit sa dalawampu't apat (24) taong gulang sa araw ng halalan;\n\n5. Marunong magbasa at sumulat ng Filipino, Ingles o lokal na diyalekto;\n\n6. Walang kamag-anakhanggang sa 2nd civil degree of consanguinity o affinity sa sinumang kasalukuyang nanunungkulan na nahalal na opisyal ng bansa o ng rehiyon, probinsya, lungsod, munisipalidad o barangay sa lokalidad kung saan nais mahalal: at \n\n7. Hindi dapat nahatulan ng pinal na paghatol ng anumang krimen na kinasasangkutan ng moral turpitude.\""
+        }
+      ],
+      "locked": false
+    },
+    {
+      "id": "c6b933e3-e25a-4808-adf6-d2a2b96872c6",
+      "title": "Kung rehistrado na ako noong nakaraang eleksyon, kailangan ko bang magpa-rehistro ulit",
+      "column": 5,
+      "column_color": "#FFB3BA",
+      "items": [
+        {
+          "id": "b11337ab-8044-43f6-ac8a-56c5af716fbe",
+          "label1": "Magandang araw. Isang beses lamang pwedeng magpa-rehistro. Kung ikaw ay dati nang nakapagpa-rehistro para sa Sangguniang Kabataan (SK), hindi na kailangang magpa-rehistro muli. Maraming salamat."
+        }
+      ],
+      "locked": false
+    }
+  ]
+}
