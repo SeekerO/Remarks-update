@@ -104,7 +104,7 @@ export default function PopupChat({ predefinedChatId }: PopupChatProps) {
                             >
                                 Login with Google
                             </button>
-                            /
+
                         </div>
                     ) : (
                         // This block should show if user is NOT NULL (logged in)
