@@ -181,6 +181,8 @@ export default function ChatRoom({ chatId }: ChatRoomProps) {
                                 {participantProfilePic && (
                                     <div className="relative"> {/* Use a relative container for the dot */}
                                         <Image
+                                            width={32}
+                                            height={32}
                                             src={participantProfilePic}
                                             alt={`${participantName}'s profile`}
                                             className="w-6 h-6 rounded-full mr-2 object-cover"
@@ -218,6 +220,8 @@ export default function ChatRoom({ chatId }: ChatRoomProps) {
                             <div key={msg.id} className={`mb-2 flex items-start ${msg.senderId === user.uid ? 'justify-end' : ''}`}>
                                 {msg.senderId !== user.uid && senderProfilePic && (
                                     <Image
+                                        width={32}
+                                        height={32}
                                         src={senderProfilePic}
                                         alt={`${senderName}'s profile`}
                                         className="w-8 h-8 rounded-full mr-2 object-cover"
