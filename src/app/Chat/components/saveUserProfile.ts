@@ -1,6 +1,6 @@
 // saveUserProfile.ts
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { db } from "./firebase";
+import { db } from "../firebase/firebase";
 import { ref, set, get } from "firebase/database";
 
 /**

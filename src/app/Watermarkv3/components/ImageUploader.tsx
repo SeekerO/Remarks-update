@@ -22,10 +22,18 @@ export default function ImageUploader() {
     const logoInputRef = useRef<HTMLInputElement>(null);
     const footerInputRef = useRef<HTMLInputElement>(null);
 
+    // NEW: Refs for individual logo/footer input elements
+    const individualLogoInputRef = useRef<HTMLInputElement>(null);
+    const individualFooterInputRef = useRef<HTMLInputElement>(null);
+
     // State for drag-and-drop visual feedback
     const [isImageDragOver, setIsImageDragOver] = useState(false);
     const [isLogoDragOver, setIsLogoDragOver] = useState(false);
     const [isFooterDragOver, setIsFooterDragOver] = useState(false);
+
+    // NEW: State for individual drag-and-drop visual feedback
+    const [isIndividualLogoDragOver, setIsIndividualLogoDragOver] = useState(false);
+    const [isIndividualFooterDragOver, setIsIndividualFooterDragOver] = useState(false);
 
 
     // Destructure context functions and states.
@@ -35,219 +43,228 @@ export default function ImageUploader() {
         setFooter,
         images,
         setSelectedImageIndex,
+        selectedImageIndex, // NEW: Get selectedImageIndex
+        setIndividualLogo, // NEW: Get setIndividualLogo from context
+        setIndividualFooter, // NEW: Get setIndividualFooter from context
     } = useImageEditor();
 
-    // Helper function to prevent default drag behavior
-    const preventDefaults = (e: React.DragEvent) => {
-        e.preventDefault();
-        e.stopPropagation();
-    };
-
-    // Generic handler for drag over
-    const handleDragOver = (e: React.DragEvent, setDragOver: React.Dispatch<React.SetStateAction<boolean>>) => {
-        preventDefaults(e);
-        setDragOver(true);
-    };
-
-    // Generic handler for drag leave
-    const handleDragLeave = (e: React.DragEvent, setDragOver: React.Dispatch<React.SetStateAction<boolean>>) => {
-        preventDefaults(e);
-        setDragOver(false);
-    };
-
-    // Generic handler for drop. It passes the FileList to the specific upload handler.
-    const handleDrop = (e: React.DragEvent, uploadHandler: (eventOrFileList: React.ChangeEvent<HTMLInputElement> | React.DragEvent | FileList) => void, setDragOver: React.Dispatch<React.SetStateAction<boolean>>) => {
-        preventDefaults(e);
-        setDragOver(false);
-        const files = e.dataTransfer.files;
-        if (files && files.length > 0) {
-            uploadHandler(files); // Pass the FileList directly to the specific handler
-            console.log("Files dropped:", files); // For debugging
+    // Helper function to handle file selection for main images.
+    const handleImageChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+        if (event.target.files) {
+            const filesArray = Array.from(event.target.files);
+            const newImages = filesArray.map(file => ({
+                file,
+                url: URL.createObjectURL(file),
+                useGlobalSettings: true, // Default to global settings
+            }));
+            setImages(prevImages => [...prevImages, ...newImages]);
+            setSelectedImageIndex(images.length === 0 ? 0 : null); // Select first if new, else deselect
         }
     };
 
-    // Handler for uploading a logo image.
-    // Updated to correctly handle a single File from a drop event or input change.
-    const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement> | React.DragEvent | FileList) => {
-        let file: File | undefined;
-
-        if (e instanceof FileList) {
-            // Case 1: 'e' is directly a FileList (from handleDrop)
-            file = e[0];
-        } else if ('target' in e && e.target instanceof HTMLInputElement && e.target.files?.[0]) {
-            // Case 2: 'e' is a React.ChangeEvent and has a target with files
-            // Check for 'target' property existence and its type
-            file = e.target.files[0];
-        } else if ('dataTransfer' in e && e.dataTransfer.files?.[0]) {
-            // Case 3: 'e' is a React.DragEvent and has dataTransfer with files
-            // Check for 'dataTransfer' property existence
-            file = e.dataTransfer.files[0];
-        }
-
-        if (file) {
-            setLogo(URL.createObjectURL(file)); // Set the logo URL in context.
+    // Helper function to handle logo file selection.
+    const handleLogoChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+        if (event.target.files && event.target.files[0]) {
+            const file = event.target.files[0];
+            const url = URL.createObjectURL(file);
+            setLogo(url);
         }
     };
 
-    // Handler for uploading a footer image. (Identical structure)
-    const handleFooterUpload = (e: React.ChangeEvent<HTMLInputElement> | React.DragEvent | FileList) => {
-        let file: File | undefined;
-
-        if (e instanceof FileList) {
-            file = e[0];
-        } else if ('target' in e && e.target instanceof HTMLInputElement && e.target.files?.[0]) {
-            file = e.target.files[0];
-        } else if ('dataTransfer' in e && e.dataTransfer.files?.[0]) {
-            file = e.dataTransfer.files[0];
-        }
-
-        if (file) {
-            setFooter(URL.createObjectURL(file)); // Set the footer URL in context.
+    // Helper function to handle footer file selection.
+    const handleFooterChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+        if (event.target.files && event.target.files[0]) {
+            const file = event.target.files[0];
+            const url = URL.createObjectURL(file);
+            setFooter(url);
         }
     };
 
-    // And similarly for handleImageUpload if you want to apply the same pattern:
-    const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement> | React.DragEvent | FileList) => {
-        let files: FileList | null = null;
-
-        if (e instanceof FileList) {
-            files = e;
-        } else if ('target' in e && e.target instanceof HTMLInputElement && e.target.files) {
-            files = e.target.files;
-        } else if ('dataTransfer' in e && e.dataTransfer.files) {
-            files = e.dataTransfer.files;
+    // NEW: Helper function to handle individual logo file selection
+    const handleIndividualLogoChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+        if (event.target.files && event.target.files[0]) {
+            const file = event.target.files[0];
+            const url = URL.createObjectURL(file);
+            setIndividualLogo(url);
         }
+    };
 
-        if (!files) return;
+    // NEW: Helper function to handle individual footer file selection
+    const handleIndividualFooterChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+        if (event.target.files && event.target.files[0]) {
+            const file = event.target.files[0];
+            const url = URL.createObjectURL(file);
+            setIndividualFooter(url);
+        }
+    };
 
-        const fileArray = Array.from(files).map(file => ({
-            file,
-            url: URL.createObjectURL(file),
-            useGlobalSettings: true,
-        }));
 
-        setImages((prev: any) => {
-            const newImages = [...prev, ...fileArray];
-            if (fileArray.length > 0) {
-                if (images.length === 0) {
-                    setSelectedImageIndex(0);
-                }
+    // Unified drag event handlers
+    const handleDragOver = (event: React.DragEvent, type: 'image' | 'logo' | 'footer' | 'individualLogo' | 'individualFooter') => {
+        event.preventDefault();
+        if (type === 'image') setIsImageDragOver(true);
+        else if (type === 'logo') setIsLogoDragOver(true);
+        else if (type === 'footer') setIsFooterDragOver(true);
+        else if (type === 'individualLogo') setIsIndividualLogoDragOver(true); // NEW
+        else if (type === 'individualFooter') setIsIndividualFooterDragOver(true); // NEW
+    };
+
+    const handleDragLeave = (event: React.DragEvent, type: 'image' | 'logo' | 'footer' | 'individualLogo' | 'individualFooter') => {
+        event.preventDefault();
+        if (type === 'image') setIsImageDragOver(false);
+        else if (type === 'logo') setIsLogoDragOver(false);
+        else if (type === 'footer') setIsFooterDragOver(false);
+        else if (type === 'individualLogo') setIsIndividualLogoDragOver(false); // NEW
+        else if (type === 'individualFooter') setIsIndividualFooterDragOver(false); // NEW
+    };
+
+    const handleDrop = (event: React.DragEvent, type: 'image' | 'logo' | 'footer' | 'individualLogo' | 'individualFooter') => {
+        event.preventDefault();
+        if (type === 'image') setIsImageDragOver(false);
+        else if (type === 'logo') setIsLogoDragOver(false);
+        else if (type === 'footer') setIsFooterDragOver(false);
+        else if (type === 'individualLogo') setIsIndividualLogoDragOver(false); // NEW
+        else if (type === 'individualFooter') setIsIndividualFooterDragOver(false); // NEW
+
+        if (event.dataTransfer.files && event.dataTransfer.files.length > 0) {
+            const files = Array.from(event.dataTransfer.files);
+
+            if (type === 'image') {
+                const newImages = files.map(file => ({
+                    file,
+                    url: URL.createObjectURL(file),
+                    useGlobalSettings: true,
+                }));
+                setImages(prevImages => [...prevImages, ...newImages]);
+                setSelectedImageIndex(images.length === 0 ? 0 : null);
+            } else if (type === 'logo') {
+                const file = files[0];
+                const url = URL.createObjectURL(file);
+                setLogo(url);
+            } else if (type === 'footer') {
+                const file = files[0];
+                const url = URL.createObjectURL(file);
+                setFooter(url);
+            } else if (type === 'individualLogo') { // NEW
+                const file = files[0];
+                const url = URL.createObjectURL(file);
+                setIndividualLogo(url);
+            } else if (type === 'individualFooter') { // NEW
+                const file = files[0];
+                const url = URL.createObjectURL(file);
+                setIndividualFooter(url);
             }
-            return newImages;
-        });
-    };
-
-    const handleDefault = async () => { // Make the function async
-        try {
-            const imageLOGO = (Logo as StaticImageData).src; // Cast to StaticImageData if TypeScript complains
-            const imageFOOTER = (Footer as StaticImageData).src
-
-            const responseLOGO = await fetch(imageLOGO);
-            const responseFOOTER = await fetch(imageFOOTER)
-
-            if (!responseLOGO.ok || !responseFOOTER.ok) {
-                throw new Error(`HTTP error! status: ${responseLOGO.status}`);
-            }
-
-            const imageBlobLOGO = await responseLOGO.blob();
-            const imageBlobFOOTER = await responseFOOTER.blob()
-            setLogo(URL.createObjectURL(imageBlobLOGO));
-            setFooter(URL.createObjectURL(imageBlobFOOTER))
-
-        } catch (error) {
-            console.error("Error setting default logo:", error);
         }
     };
+
+    // Programmatically trigger file input click.
+    const triggerImageInput = () => imageInputRef.current?.click();
+    const triggerLogoInput = () => logoInputRef.current?.click();
+    const triggerFooterInput = () => footerInputRef.current?.click();
+
+    // NEW: Programmatically trigger individual file input click
+    const triggerIndividualLogoInput = () => individualLogoInputRef.current?.click();
+    const triggerIndividualFooterInput = () => individualFooterInputRef.current?.click();
+
+
+    const handleDefault = (event: React.MouseEvent<HTMLButtonElement>) => {
+        event.preventDefault();
+        // Assuming Logo and Footer are StaticImageData objects from Next.js image imports
+        setLogo(Logo.src);
+        setFooter(Footer.src);
+    }
+
 
     return (
-        <div className="space-y-6 px-">
-            <div
-                className={`flex flex-col items-center justify-center p-6 rounded-xl border-2 transition-all duration-300 ease-in-out
-    ${isImageDragOver ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20' : 'border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800'}
-    shadow-sm hover:shadow-md`}
-                onDragOver={(e) => handleDragOver(e, setIsImageDragOver)}
-                onDragLeave={(e) => handleDragLeave(e, setIsImageDragOver)}
-                onDrop={(e) => handleDrop(e, handleImageUpload, setIsImageDragOver)}
-            >
+        <div className="space-y-6">
+            {/* Main Image Upload Section */}
+            <div>
                 <input
                     type="file"
-                    ref={imageInputRef}
-                    onChange={handleImageUpload}
                     multiple
-                    accept="image/*"
+                    ref={imageInputRef}
+                    onChange={handleImageChange}
                     className="hidden"
-                    id="image-upload-input"
+                    accept="image/*"
                 />
-
                 <label
-                    htmlFor="image-upload-input"
-                    className="cursor-pointer flex flex-col items-center gap-3 text-center"
+                    htmlFor="image-upload"
+                    className={`flex flex-col items-center justify-center p-6 border-2 border-dashed rounded-lg cursor-pointer transition-colors duration-200
+                        ${isImageDragOver
+                            ? "border-blue-500 bg-blue-50 dark:bg-blue-900/20"
+                            : "border-gray-300 bg-gray-50 hover:border-gray-400 dark:border-gray-600 dark:bg-gray-800 dark:hover:border-gray-500"
+                        }`}
+                    onDragOver={(e) => handleDragOver(e, 'image')}
+                    onDragLeave={(e) => handleDragLeave(e, 'image')}
+                    onDrop={(e) => handleDrop(e, 'image')}
+                    onClick={triggerImageInput}
                 >
-                    <FaImage className="text-4xl text-blue-500 dark:text-blue-400" />
-                    <span className="font-semibold text-lg text-gray-700 dark:text-gray-100">Upload Your Images</span>
-                    <p className="text-sm text-gray-500 dark:text-gray-400">Drag & drop or click to browse</p>
+                    <FaImage className="text-4xl text-gray-400 dark:text-gray-500 mb-3" />
+                    <span className="text-lg font-semibold text-gray-700 dark:text-gray-100">Upload Your Images</span>
+                    <p className="text-sm text-gray-500 dark:text-gray-400">(Drag & drop or click to browse)</p>
                     <span
-                        className="mt-3 inline-flex items-center justify-center px-5 py-2 border border-transparent text-base font-medium rounded-full text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors duration-200"
+                        className="mt-3 inline-flex items-center justify-center px-5 py-2 border border-transparent text-base font-medium rounded-full text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors duration-200"
                     >
-                        Browse Files
+                        Select Images
                     </span>
                 </label>
             </div>
 
-            <div
-                className={`flex flex-col items-center justify-center p-6 rounded-xl border-2 transition-all duration-300 ease-in-out
-    ${isLogoDragOver ? 'border-purple-500 bg-purple-50 dark:bg-purple-900/20' : 'border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800'}
-    shadow-sm hover:shadow-md`}
-                onDragOver={(e) => handleDragOver(e, setIsLogoDragOver)}
-                onDragLeave={(e) => handleDragLeave(e, setIsLogoDragOver)}
-                onDrop={(e) => handleDrop(e, handleLogoUpload, setIsLogoDragOver)}
-            >
+            {/* Global Logo Upload Section */}
+            <div>
                 <input
                     type="file"
                     ref={logoInputRef}
-                    onChange={handleLogoUpload}
-                    accept="image/*"
+                    onChange={handleLogoChange}
                     className="hidden"
-                    id="logo-upload-input" />
-
+                    accept="image/*"
+                />
                 <label
-                    htmlFor="logo-upload-input"
-                    className="cursor-pointer flex flex-col items-center gap-3 text-center"
+                    htmlFor="logo-upload"
+                    className={`flex flex-col items-center justify-center p-6 border-2 border-dashed rounded-lg cursor-pointer transition-colors duration-200
+                        ${isLogoDragOver
+                            ? "border-blue-500 bg-blue-50 dark:bg-blue-900/20"
+                            : "border-gray-300 bg-gray-50 hover:border-gray-400 dark:border-gray-600 dark:bg-gray-800 dark:hover:border-gray-500"
+                        }`}
+                    onDragOver={(e) => handleDragOver(e, 'logo')}
+                    onDragLeave={(e) => handleDragLeave(e, 'logo')}
+                    onDrop={(e) => handleDrop(e, 'logo')}
+                    onClick={triggerLogoInput}
                 >
-                    <FaImage className="text-4xl text-purple-500 dark:text-purple-400" />
-                    <span className="font-semibold text-lg text-gray-700 dark:text-gray-100">Upload Your Logo</span>
+                    <FaImage className="text-4xl text-gray-400 dark:text-gray-500 mb-3" />
+                    <span className="text-lg font-semibold text-gray-700 dark:text-gray-100">Upload Your Global Logo</span>
                     <p className="text-sm text-gray-500 dark:text-gray-400">(Optional) Drag & drop or click to browse</p>
                     <span
-                        className="mt-3 inline-flex items-center justify-center px-5 py-2 border border-transparent text-base font-medium rounded-full text-white bg-purple-600 hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500 transition-colors duration-200"
+                        className="mt-3 inline-flex items-center justify-center px-5 py-2 border border-transparent text-base font-medium rounded-full text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors duration-200"
                     >
                         Select Logo
                     </span>
                 </label>
             </div>
 
-            <div
-                className={`flex flex-col items-center justify-center p-6 rounded-xl border-2 transition-all duration-300 ease-in-out
-    ${isFooterDragOver ? 'border-green-500 bg-green-50 dark:bg-green-900/20' : 'border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800'}
-    shadow-sm hover:shadow-md`}
-                onDragOver={(e) => handleDragOver(e, setIsFooterDragOver)}
-                onDragLeave={(e) => handleDragLeave(e, setIsFooterDragOver)}
-                onDrop={(e) => handleDrop(e, handleFooterUpload, setIsFooterDragOver)}
-            >
+            {/* Global Footer Upload Section */}
+            <div>
                 <input
                     type="file"
                     ref={footerInputRef}
-                    onChange={handleFooterUpload}
-                    accept="image/*"
+                    onChange={handleFooterChange}
                     className="hidden"
-                    id="footer-upload-input"
+                    accept="image/*"
                 />
-
                 <label
-                    htmlFor="footer-upload-input"
-                    className="cursor-pointer flex flex-col items-center gap-3 text-center"
+                    htmlFor="footer-upload"
+                    className={`flex flex-col items-center justify-center p-6 border-2 border-dashed rounded-lg cursor-pointer transition-colors duration-200
+                        ${isFooterDragOver
+                            ? "border-blue-500 bg-blue-50 dark:bg-blue-900/20"
+                            : "border-gray-300 bg-gray-50 hover:border-gray-400 dark:border-gray-600 dark:bg-gray-800 dark:hover:border-gray-500"
+                        }`}
+                    onDragOver={(e) => handleDragOver(e, 'footer')}
+                    onDragLeave={(e) => handleDragLeave(e, 'footer')}
+                    onDrop={(e) => handleDrop(e, 'footer')}
+                    onClick={triggerFooterInput}
                 >
-                    <FaImage className="text-4xl text-green-500 dark:text-green-400" />
-                    <span className="font-semibold text-lg text-gray-700 dark:text-gray-100">Upload Your Footer Image</span>
+                    <FaImage className="text-4xl text-gray-400 dark:text-gray-500 mb-3" />
+                    <span className="text-lg font-semibold text-gray-700 dark:text-gray-100">Upload Your Global Footer Image</span>
                     <p className="text-sm text-gray-500 dark:text-gray-400">(Optional) Drag & drop or click to browse</p>
                     <span
                         className="mt-3 inline-flex items-center justify-center px-5 py-2 border border-transparent text-base font-medium rounded-full text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-colors duration-200"
@@ -256,6 +273,76 @@ export default function ImageUploader() {
                     </span>
                 </label>
             </div>
+
+            {/* NEW: Individual Logo Upload Section (Conditionally rendered) */}
+            {selectedImageIndex !== null && (
+                <div>
+                    <input
+                        type="file"
+                        ref={individualLogoInputRef}
+                        onChange={handleIndividualLogoChange}
+                        className="hidden"
+                        accept="image/*"
+                    />
+                    <label
+                        htmlFor="individual-logo-upload"
+                        className={`flex flex-col items-center justify-center p-6 border-2 border-dashed rounded-lg cursor-pointer transition-colors duration-200
+                        ${isIndividualLogoDragOver
+                                ? "border-purple-500 bg-purple-50 dark:bg-purple-900/20"
+                                : "border-gray-300 bg-gray-50 hover:border-gray-400 dark:border-gray-600 dark:bg-gray-800 dark:hover:border-gray-500"
+                            }`}
+                        onDragOver={(e) => handleDragOver(e, 'individualLogo')}
+                        onDragLeave={(e) => handleDragLeave(e, 'individualLogo')}
+                        onDrop={(e) => handleDrop(e, 'individualLogo')}
+                        onClick={triggerIndividualLogoInput}
+                    >
+                        <FaImage className="text-4xl text-gray-400 dark:text-gray-500 mb-3" />
+                        <span className="text-lg font-semibold text-gray-700 dark:text-gray-100">Upload Individual Logo for Selected Image</span>
+                        <p className="text-sm text-gray-500 dark:text-gray-400">(Optional) Drag & drop or click to browse</p>
+                        <span
+                            className="mt-3 inline-flex items-center justify-center px-5 py-2 border border-transparent text-base font-medium rounded-full text-white bg-purple-600 hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500 transition-colors duration-200"
+                        >
+                            Select Individual Logo
+                        </span>
+                    </label>
+                </div>
+            )}
+
+            {/* NEW: Individual Footer Upload Section (Conditionally rendered) */}
+            {selectedImageIndex !== null && (
+                <div>
+                    <input
+                        type="file"
+                        ref={individualFooterInputRef}
+                        onChange={handleIndividualFooterChange}
+                        className="hidden"
+                        accept="image/*"
+                    />
+                    <label
+                        htmlFor="individual-footer-upload"
+                        className={`flex flex-col items-center justify-center p-6 border-2 border-dashed rounded-lg cursor-pointer transition-colors duration-200
+                        ${isIndividualFooterDragOver
+                                ? "border-pink-500 bg-pink-50 dark:bg-pink-900/20"
+                                : "border-gray-300 bg-gray-50 hover:border-gray-400 dark:border-gray-600 dark:bg-gray-800 dark:hover:border-gray-500"
+                            }`}
+                        onDragOver={(e) => handleDragOver(e, 'individualFooter')}
+                        onDragLeave={(e) => handleDragLeave(e, 'individualFooter')}
+                        onDrop={(e) => handleDrop(e, 'individualFooter')}
+                        onClick={triggerIndividualFooterInput}
+                    >
+                        <FaImage className="text-4xl text-gray-400 dark:text-gray-500 mb-3" />
+                        <span className="text-lg font-semibold text-gray-700 dark:text-gray-100">Upload Individual Footer for Selected Image</span>
+                        <p className="text-sm text-gray-500 dark:text-gray-400">(Optional) Drag & drop or click to browse</p>
+                        <span
+                            className="mt-3 inline-flex items-center justify-center px-5 py-2 border border-transparent text-base font-medium rounded-full text-white bg-pink-600 hover:bg-pink-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-pink-500 transition-colors duration-200"
+                        >
+                            Select Individual Footer
+                        </span>
+                    </label>
+                </div>
+            )}
+
+
             <div className="flex justify-center ">
                 <button
                     disabled
@@ -270,12 +357,3 @@ export default function ImageUploader() {
 
 
 }
-
-{/*
-    
-    bg-gradient-to-br from-yellow-500 to-orange-500 rounded-full shadow-lg
-           hover:from-yellow-600 hover:to-orange-600 hover:shadow-xl
-           focus:outline-none focus:ring-4 focus:ring-yellow-300 dark:focus:ring-yellow-800
-           transition-all duration-300 ease-in-out transform hover:-translate-y-0.5
-    
-    */}

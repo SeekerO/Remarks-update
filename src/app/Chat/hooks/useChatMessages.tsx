@@ -3,7 +3,7 @@
 
 import { useState, useEffect } from 'react';
 import { ref, onValue, query, orderByChild } from 'firebase/database';
-import { db } from './firebase';
+import { db } from '../firebase/firebase';
 
 // Interface for a chat message
 interface ChatMessage {

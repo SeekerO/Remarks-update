@@ -3,67 +3,32 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { useUserChats } from './useUserChats';
+import { useUserChats } from './hooks/useUserChats';
 import { useAuth } from './AuthContext';
-import { createChat } from './createChat';
+import { createChat } from './firebase/firebase.actions/createChat';
 import { ref, onValue } from 'firebase/database';
-import { db } from './firebase';
+import { db } from './firebase/firebase';
 import Image from 'next/image';
 
 import { FaUserGroup } from "react-icons/fa6";
 import { IoPersonSharp } from "react-icons/io5";
-import { IoMdNotifications } from "react-icons/io";
-interface ChatListProps {
-    onSelectChat: (chatId: string) => void;
-    currentUserId: string;
-    canChat: boolean;
-}
+import { IoMdNotifications, IoIosArrowBack } from "react-icons/io";
+import { CiSearch } from "react-icons/ci";
+import { MdGroupAdd } from "react-icons/md";
 
-interface UserProfile {
-    uid: string;
-    name: string;
-    profilePic: string | null;
-    email: string;
-    canChat: boolean;
-}
-
-interface ChatMessage {
-    id: string;
-    senderId: string;
-    content: string;
-    timestamp: number;
-}
-
-
-
-interface ChatWithUnread {
-    id: string;
-    name: string | null;
-    participants: Record<string, boolean>;
-    type?: 'one-to-one' | 'group';
-    unreadCount?: number;
-    lastMessageTimestamp?: number;
-    createdAt: number;
-    isGroupChat?: boolean;
-    lastMessageSenderName?: string;
-    lastMessageContent?: string;
-}
+import { YourChatsListProps, CreateGroupChatProps, ChatWithUnread, ChatMessage, UserProfile, ChatListProps } from './types/interfaceChatList';
 
 export default function ChatList({ onSelectChat, currentUserId, canChat }: ChatListProps) {
     const { user } = useAuth();
     const rawUserChats = useUserChats(currentUserId);
-    console.log("ChatList Render - Raw User Chats received:", rawUserChats);
-
-
     const [allUsers, setAllUsers] = useState<UserProfile[]>([]);
     const [selectedUsers, setSelectedUsers] = useState<string[]>([]);
     const [newChatName, setNewChatName] = useState<string>('');
     const [chatsWithUnread, setChatsWithUnread] = useState<ChatWithUnread[]>([]);
     const [onlineUsers, setOnlineUsers] = useState<Record<string, boolean>>({});
+    const [createGroupChat, setCreateGroupChat] = useState<boolean>(false);
 
-    // Effect to fetch all users and their online presence
-    // This hook fetches all users *except* the current user for the selection list.
-    // The current user's profile is handled separately by `user` object from AuthContext.
+
     useEffect(() => {
         const usersRef = ref(db, "users");
         const presenceRef = ref(db, "presence");
@@ -85,10 +50,8 @@ export default function ChatList({ onSelectChat, currentUserId, canChat }: ChatL
                         canChat: usersData[uid].canChat ?? true,
                     }));
                 setAllUsers(usersList);
-                console.log("All OTHER Users Fetched:", usersList.length, "users.");
             } else {
                 setAllUsers([]);
-                console.log("No users data found in Firebase.");
             }
         });
 
@@ -118,7 +81,7 @@ export default function ChatList({ onSelectChat, currentUserId, canChat }: ChatL
             if (chatsWithUnread.length > 0) {
                 setChatsWithUnread([]);
             }
-            console.log("Skipping chat message processing: user, rawUserChats, canChat, or allUsers not ready.", { user: !!user, rawChats: rawUserChats.length, canChat, allUsersReady: allUsers.length > 0 });
+
             return;
         }
 
@@ -126,7 +89,6 @@ export default function ChatList({ onSelectChat, currentUserId, canChat }: ChatL
         const tempChats: Record<string, ChatWithUnread> = {};
 
         rawUserChats.forEach((chat) => {
-            console.log(`Processing chat ID: ${chat.id}, participants:`, (chat as any).participants, `isGroupChat:`, (chat as any).isGroupChat);
 
 
             const userChatMetaRef = ref(db, `userChats/${user.uid}/${chat.id}`);
@@ -187,11 +149,9 @@ export default function ChatList({ onSelectChat, currentUserId, canChat }: ChatL
         });
 
         return () => {
-            console.log("Cleanup for chat listeners.");
             unsubs.forEach(unsub => unsub());
         };
     }, [user, rawUserChats, currentUserId, canChat, allUsers]);
-
 
     const handleCreateChat = async () => {
         if (!user || !canChat) return;
@@ -210,7 +170,6 @@ export default function ChatList({ onSelectChat, currentUserId, canChat }: ChatL
             setSelectedUsers([]);
             setNewChatName('');
         } catch (error: any) {
-            console.error("Error creating chat:", error);
             alert(`Failed to create chat: ${error.message}`);
         }
     };
@@ -229,28 +188,22 @@ export default function ChatList({ onSelectChat, currentUserId, canChat }: ChatL
             setNewChatName('');
             setSelectedUsers([]);
         } catch (error: any) {
-            console.error("Error creating 1-on-1 chat:", error);
             alert(`Failed to create direct chat: ${error.message}`);
         }
     };
 
     const getChatDisplayName = useCallback((chat: ChatWithUnread) => {
-        console.log("getChatDisplayName processing chat:", chat);
-
         if (chat.name) {
             return chat.name;
         }
 
         const chatUserIds = Object.keys(chat.participants || {});
-        console.log(`Chat ID: ${chat.id}, Chat User IDs (from participants):`, chatUserIds);
 
         if (chatUserIds.length === 2) {
             const otherUserId = chatUserIds.find(uId => uId !== user?.uid);
-            console.log(`Other User ID for DM:`, otherUserId);
 
             if (otherUserId) {
                 const otherUser = allUsers.find(u => u.uid === otherUserId);
-                console.log(`Found Other User for DM:`, otherUser);
 
                 if (otherUser) {
                     return otherUser.name;
@@ -275,6 +228,34 @@ export default function ChatList({ onSelectChat, currentUserId, canChat }: ChatL
         return "Unknown Chat";
     }, [allUsers, user?.uid]);
 
+
+
+    const getChatProfilePic = useCallback((chat: ChatWithUnread): string | string[] | null | undefined => {
+        if (chat.isGroupChat || (chat.participants && Object.keys(chat.participants).length > 2)) {
+            const participantIds = Object.keys(chat.participants || {});
+            // Filter out the current user's own profile pic if desired for group display
+            const otherParticipantIds = participantIds.filter(id => id !== user?.uid);
+            // Filter out null/undefined to ensure only string[]
+            const pics = otherParticipantIds
+                .map(pId => allUsers.find(u => u.uid === pId)?.profilePic)
+                .filter((pic): pic is string => typeof pic === "string");
+            return pics;
+        }
+        // For direct chats, return the other user's profilePic
+        const chatUserIds = Object.keys(chat.participants || {});
+        if (chatUserIds.length === 2) {
+            const otherUserId = chatUserIds.find(uId => uId !== user?.uid);
+            if (otherUserId) {
+                const otherUser = allUsers.find(u => u.uid === otherUserId);
+                return otherUser?.profilePic || null;
+            }
+        }
+        return null;
+    }, [allUsers, user?.uid]);
+
+
+
+
     if (!user) {
         return <div className="p-4 text-center text-gray-600">Please log in to view chats.</div>;
     }
@@ -286,118 +267,257 @@ export default function ChatList({ onSelectChat, currentUserId, canChat }: ChatL
             </div>
         );
     }
-
     return (
         <div className="flex h-full font-sans ">
-            {/* Your Chats Section */}
-            <div className="w-1/2 border-r border-gray-200 p-4 overflow-y-auto bg-white dark:bg-gray-800 rounded-l-lg shadow-inner">
-                <h3 className="text-xl font-bold mb-4 text-gray-800 dark:text-white">Your Chats</h3>
-                <ul className="space-y-3">
-                    {chatsWithUnread.length === 0 && (
-                        <li className="text-gray-500 dark:text-white text-sm py-4 text-center">No chats found. Create a new one!</li>
-                    )}
-                    {chatsWithUnread
-                        .sort((a, b) => (b.lastMessageTimestamp || b.createdAt) - (a.lastMessageTimestamp || a.createdAt))
-                        .map((chat) => (
-                            <li
-                                key={chat.id}
-                                onClick={() => onSelectChat(chat.id)}
-                                className="cursor-pointer p-3 rounded-lg hover:dark:bg-blue-500 hover:bg-gray-200 transition-colors duration-200 flex flex-col justify-between items-start border border-gray-100"
-                            >
-                                <div className="flex justify-between w-full items-center">
-                                    <span className="font-medium text-gray-800 dark:text-white text-base flex gap-1 items-center">
-                                        {chat.isGroupChat ? <FaUserGroup /> : <IoPersonSharp />} {getChatDisplayName(chat)}
-                                    </span>
-                                    {chat.unreadCount !== 0 && (
-                                        <div className=' text-white  text-md bg-red-600 rounded-full w-fit px-2 h-7 flex items-center justify-center'>
-                                            <IoMdNotifications size={19} />
-                                            <span className="">
-                                                {chat.unreadCount}
-                                            </span>
-                                        </div>
-                                    )}
-                                </div>
-                                {chat.lastMessageContent && (
-                                    <p className="text-sm text-gray-500 dark:text-gray-200 mt-1 truncate w-full gap-1 flex items-center">
-                                        {/* Simplified logic here as senderName is already resolved */}
-                                        {chat.lastMessageSenderName && (
-                                            <span className="font-semibold">
-                                                {chat.lastMessageSenderName}:
-                                            </span>
-                                        )}
-                                        {chat.lastMessageContent}
-                                    </p>
-                                )}
-                            </li>
-                        ))}
-                </ul>
-            </div>
-
-            {/* Create Chat Section */}
-            <div className="w-1/2 p-4 overflow-y-auto bg-white dark:bg-slate-800 rounded-r-lg shadow-inner">
-                <h3 className="text-xl font-bold mb-4 text-gray-800 dark:text-white">Create New Chat</h3>
-                <div className="mb-5">
-                    <label htmlFor="newChatName" className="block text-sm font-medium text-gray-700 mb-1 dark:text-gray-400">
-                        Group Chat Name (Optional for 1-on-1)
-                    </label>
-                    <input
-                        type="text"
-                        id="newChatName"
-                        value={newChatName}
-                        onChange={(e) => setNewChatName(e.target.value)}
-                        placeholder="e.g., Team Project, Family Chat"
-                        className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 text-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                    />
-                </div>
-                <h4 className="text-base font-semibold mb-3 text-gray-800 dark:text-gray-400">Select Users:</h4>
-                <ul className="space-y-2 max-h-48 overflow-y-auto border border-gray-200 p-3 rounded-md mb-5 bg-gray-50 dark:bg-gray-800 ">
-                    {allUsers.length === 0 && (
-                        <li className="text-gray-500 text-sm py-2 text-center">No other users available to chat with.</li>
-                    )}
-                    {allUsers.map((u) => {
-                        const isOnline = onlineUsers[u.uid];
-                        return (
-                            <li key={u.uid} className="flex items-center justify-between py-1.5 border-b border-gray-100 last:border-b-0">
-                                <label htmlFor={`user-${u.uid}`} className="flex items-center text-sm cursor-pointer flex-grow text-gray-700 dark:text-gray-300">
-                                    {u.profilePic && (
-                                        <div className="relative">
-                                            <Image
-                                                width={32}
-                                                height={32}
-                                                src={u.profilePic}
-                                                alt={u.name}
-                                                className="w-8 h-8 rounded-full mr-3 object-cover border border-gray-200"
-                                            />
-                                            <span className={`absolute bottom-0 right-2 w-3 h-3 ${isOnline ? "bg-green-500" : "bg-gray-400"} rounded-full border-2 border-white`}></span>
-                                        </div>
-                                    )}
-                                    <span className="font-medium">{u.name}</span>
-                                </label>
-                                <button
-                                    onClick={() => handleOneToOneChat(u.uid)}
-                                    className="ml-2 bg-blue-500 text-white text-xs px-5 py-1.5 rounded-full hover:bg-blue-600"
-                                >
-                                    DM
-                                </button>
-                                <input
-                                    type="checkbox"
-                                    id={`user-${u.uid}`}
-                                    checked={selectedUsers.includes(u.uid)}
-                                    onChange={() => handleUserSelect(u.uid)}
-                                    className="ml-3 h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-                                />
-                            </li>
-                        );
-                    })}
-                </ul>
-                <button
-                    onClick={handleCreateChat}
-                    disabled={selectedUsers.length === 0 && newChatName.trim() === ''}
-                    className="w-full bg-green-600 text-white font-semibold rounded-lg px-5 py-2.5 hover:bg-green-700 disabled:opacity-50"
-                >
-                    Create Chat
-                </button>
-            </div>
+            {!createGroupChat ?
+                <YourChatsList
+                    setCreateGroupChat={setCreateGroupChat}
+                    allUsers={allUsers}
+                    handleOneToOneChat={handleOneToOneChat}
+                    chatsWithUnread={chatsWithUnread}
+                    onSelectChat={onSelectChat}
+                    getChatDisplayName={getChatDisplayName}
+                    currentUserId={currentUserId}
+                    getChatProfilePic={getChatProfilePic}
+                />
+                :
+                <CreateGroupChat
+                    setCreateGroupChat={setCreateGroupChat}
+                    newChatName={newChatName}
+                    setNewChatName={setNewChatName}
+                    allUsers={allUsers}
+                    onlineUsers={onlineUsers}
+                    selectedUsers={selectedUsers}
+                    handleUserSelect={handleUserSelect}
+                    handleCreateChat={handleCreateChat}
+                />
+            }
         </div>
     );
 }
+
+
+
+const CreateGroupChat = ({ setCreateGroupChat, newChatName, setNewChatName, allUsers, onlineUsers, selectedUsers, handleUserSelect, handleCreateChat }: CreateGroupChatProps) => {
+
+    const [searchUser, setSearchUser] = useState<string>('');
+    const filteredUsers = allUsers.filter(user => user.name.toLowerCase().includes(searchUser.toLowerCase()));
+
+    return (<div className="w-full p-4 overflow-y-auto bg-white dark:bg-slate-800 rounded-r-lg shadow-inner">
+        <div className="flex items-center mb-4">
+            <button
+                onClick={() => setCreateGroupChat(false)}>
+                <IoIosArrowBack size={24} />
+            </button>
+            <h3 className="text-xl font-bold text-gray-800 dark:text-white">Create New Chat</h3>
+        </div>
+
+        <div className="mb-2">
+            <input
+                type="text"
+                id="newChatName"
+                value={newChatName}
+                onChange={(e) => setNewChatName(e.target.value)}
+                placeholder="e.g., Team Project, Family Chat"
+                className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 text-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+            />
+        </div>
+
+        <div className='mb-2 relative flex items-center gap-2 p-1 border border-gray-200 rounded-md bg-gray-50 dark:bg-gray-700'>
+            <CiSearch size={24} />
+            <input
+                onChange={(e) => setSearchUser(e.target.value)}
+                type='search'
+                className='bg-slate-100 w-full border-l border-slate-300 p-1 outline-none' placeholder='Search User Here..'
+            />
+        </div>
+        <ul className="space-y-2 max-h-48 overflow-y-auto border border-gray-200 p-3 rounded-md mb-5 bg-gray-50 dark:bg-gray-800 ">
+            {allUsers.length === 0 && (
+                <li className="text-gray-500 text-sm py-2 text-center">No other users available to chat with.</li>
+            )}
+            {filteredUsers.map((u: any) => {
+                const isOnline = onlineUsers[u.uid];
+                return (
+                    <li key={u.uid} className="flex items-center justify-between py-1.5 border-b border-gray-100 last:border-b-0">
+                        <label htmlFor={`user-${u.uid}`} className="flex items-center text-sm cursor-pointer flex-grow text-gray-700 dark:text-gray-300">
+                            {u.profilePic && (
+                                <div className="relative">
+                                    <Image
+                                        width={32}
+                                        height={32}
+                                        src={u.profilePic}
+                                        alt={u.name}
+                                        className="w-8 h-8 rounded-full mr-3 object-cover border border-gray-200"
+                                    />
+                                    <span className={`absolute bottom-0 right-2 w-3 h-3 ${isOnline ? "bg-green-500" : "bg-gray-400"} rounded-full border-2 border-white`}></span>
+                                </div>
+                            )}
+                            <span className="font-medium">{u.name}</span>
+                        </label>
+                        <input
+                            type="checkbox"
+                            id={`user-${u.uid}`}
+                            checked={selectedUsers.includes(u.uid)}
+                            onChange={() => handleUserSelect(u.uid)}
+                            className="ml-3 h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                        />
+                    </li>
+                );
+            })}
+            {filteredUsers.length === 0 && <p className="text-gray-500 text-sm py-2 text-center">No users found.</p>}
+        </ul>
+        <button
+            onClick={handleCreateChat}
+            disabled={selectedUsers.length === 0}
+            className="w-full bg-green-600 text-white font-semibold rounded-lg px-5 py-2.5 hover:bg-green-700 disabled:opacity-50"
+        >
+            Create Chat
+        </button>
+    </div>)
+}
+
+
+const YourChatsList = ({ setCreateGroupChat, allUsers, handleOneToOneChat, chatsWithUnread, onSelectChat, getChatDisplayName, getChatProfilePic }: YourChatsListProps) => {
+
+    const [searchUser, setSearchUser] = useState<string>('');
+    const filteredUsers = allUsers.filter(user => user.name.toLowerCase().includes(searchUser.toLowerCase()));
+
+    return (
+        <div className="w-full  p-4 overflow-y-auto bg-white dark:bg-gray-800 rounded-lg shadow-inner">
+            <div className='flex flex-col mb-4 gap-1 '  >
+                <div className='flex items-center justify-between mb-1'>
+                    <h3 className="text-xl font-bold text-gray-800 dark:text-white">Your Chats</h3>
+                    <button
+                        onClick={() => setCreateGroupChat(true)}
+                        className="mt-2 bg-blue-600 text-white rounded-lg px-4 py-2 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors duration-200 shadow-md flex items-center gap-1" >
+                        <MdGroupAdd size={20} />
+                    </button>
+                </div>
+                <div className='relative flex items-center gap-2 p-1 border border-gray-200 rounded-md bg-gray-50 dark:bg-gray-700'>
+                    <CiSearch size={24} />
+                    <input
+                        onChange={(e) => setSearchUser(e.target.value)}
+                        type='search'
+                        className='bg-transparent w-full border-l border-slate-300 p-1 outline-none' placeholder='Search User Here..'
+                    />
+                    {searchUser !== "" && (
+                        <div className='absolute top-12 left-0 w-full bg-black/50 dark:bg-gray-800/90  backdrop-blur-[2px] shadow-lg rounded-lg p-4 z-50'>
+                            {filteredUsers.map((u: any) => {
+                                return (
+                                    <li
+                                        onClick={() => handleOneToOneChat && handleOneToOneChat(u.uid)}
+                                        key={u.uid}
+                                        className="flex items-center justify-between py-1.5 border-b border-gray-100 last:border-b-0">
+                                        <label
+                                            className="flex items-center text-sm cursor-pointer flex-grow text-gray-700 dark:text-gray-300">
+                                            {u.profilePic && (
+                                                <div className="relative">
+                                                    <Image
+                                                        width={32}
+                                                        height={32}
+                                                        src={u.profilePic}
+                                                        alt={u.name}
+                                                        className="w-8 h-8 rounded-full mr-3 object-cover border border-gray-200"
+                                                    />
+
+                                                </div>
+                                            )}
+                                            <span className="font-medium">{u.name}</span>
+                                        </label>
+                                    </li>
+                                );
+                            })}
+
+                            {filteredUsers.length === 0 && <p className="text-gray-100 text-sm py-2 text-center">No users found.</p>}
+                        </div>
+                    )}
+                </div>
+
+            </div>
+            <ul className="space-y-3">
+
+                {(chatsWithUnread || []).length === 0 && (
+                    <li className="text-gray-500 dark:text-white text-sm py-4 text-center">No chats found. Create a new one!</li>
+                )}
+                {(chatsWithUnread || [])
+                    .sort((a: ChatWithUnread, b: ChatWithUnread) => (b.lastMessageTimestamp || b.createdAt) - (a.lastMessageTimestamp || a.createdAt))
+                    .map((chat: any) => (
+                        <li
+                            key={chat.id}
+                            onClick={() => onSelectChat && onSelectChat(chat.id)}
+                            className="cursor-pointer p-3 rounded-lg hover:dark:bg-blue-500 hover:bg-gray-200 transition-colors duration-200 flex flex-col justify-between items-start border border-gray-100"
+                        >
+                            <div className="flex justify-between w-full items-center">
+                                <span className="font-medium text-gray-800 dark:text-white text-base flex gap-1 items-center">
+                                    {chat.isGroupChat ? (
+                                        <div className="relative w-14 h-9 flex items-center">
+                                            {Array.isArray(getChatProfilePic(chat)) &&
+                                                (getChatProfilePic(chat) as string[]).slice(0, 2).map((profilePic: string, idx: number) => (
+                                                    <div
+                                                        key={idx}
+                                                        className="absolute"
+                                                        style={{
+                                                            left: `${idx * 18}px`,
+                                                            zIndex: 2 - idx,
+                                                            transform: `rotate(${idx === 0 ? '-8deg' : '8deg'})`,
+                                                        }}
+                                                    >
+                                                        <Image
+                                                            width={35}
+                                                            height={35}
+                                                            className="rounded-full border-2 border-white shadow"
+                                                            src={profilePic}
+                                                            alt={getChatDisplayName ? getChatDisplayName(chat) : "Chat profile"}
+                                                        />
+                                                    </div>
+                                                ))}
+                                        </div>
+                                    ) : (
+                                        <div>
+                                            <Image
+                                                width={35}
+                                                height={35}
+                                                className="rounded-full border-1 border-slate-400"
+                                                src={
+                                                    Array.isArray(getChatProfilePic(chat))
+                                                        ? (((getChatProfilePic(chat) ?? [])[0] as string) || "/default-profile.png")
+                                                        : ((getChatProfilePic(chat) as string | null) || "/default-profile.png")
+                                                }
+                                                alt={getChatDisplayName ? getChatDisplayName(chat) : "Chat profile"}
+                                            />
+                                        </div>
+                                    )}
+                                    <div className='flex flex-col ml-1'>
+                                        <label> {getChatDisplayName ? getChatDisplayName(chat) : ""}</label>
+                                        {chat.lastMessageContent && (
+                                            <p className="text-sm text-gray-500 dark:text-gray-200 truncate w-full gap-1 flex items-center">
+                                                {/* Simplified logic here as senderName is already resolved */}
+                                                {chat.lastMessageSenderName && (
+                                                    <span className="italic font-light ">
+                                                        {chat.lastMessageSenderName}:
+                                                    </span>
+                                                )}
+                                                {chat.lastMessageContent}
+                                            </p>
+                                        )}
+                                    </div>
+
+                                </span>
+
+                                {chat.unreadCount !== 0 && (
+                                    <div className=' text-white  text-md bg-red-600 rounded-full w-fit px-2 h-7 flex items-center justify-center'>
+                                        <IoMdNotifications size={19} />
+                                        <span className="">
+                                            {chat.unreadCount}
+                                        </span>
+                                    </div>
+                                )}
+                            </div>
+
+                        </li>
+                    ))}
+            </ul>
+        </div>
+    )
+}
+

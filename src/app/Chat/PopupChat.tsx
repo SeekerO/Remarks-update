@@ -3,10 +3,10 @@
 import React, { useState } from 'react';
 import ChatRoom from './ChatRoom'; // Chat room component
 import { useAuth } from './AuthContext'; // Authentication context
-import { CgLogOut } from "react-icons/cg"; // Logout icon
 import ChatList from './ChatList'; // Chat list component
-import { IoArrowBackCircle } from "react-icons/io5"; // Back icon
 import AdminPanel from './AdminPanel'; // Admin panel component
+import { IoArrowBackCircle, IoChatbubblesSharp, IoClose } from "react-icons/io5"; // Back icon
+import { CgLogOut } from "react-icons/cg"; // Logout icon
 
 export default function PopupChat() {
     const [isOpen, setIsOpen] = useState(false); // State to control chat popup visibility
@@ -60,6 +60,10 @@ export default function PopupChat() {
         setCurrentChatId(null); // Clear current chat when opening admin panel
     };
 
+    const handleToggleCloseChat = () => {
+        setCurrentChatId(null); // Clear current chat when opening admin panel
+    }
+
     return (
         <div className="fixed bottom-4 right-4 z-50 font-sans">
             {/* Main button to open/close the chat popup */}
@@ -69,14 +73,15 @@ export default function PopupChat() {
                 aria-expanded={isOpen}
                 aria-controls="chat-popup-window"
             >
-                {isOpen ? 'Close Chat' : 'Open Chat'}
+
+                {isOpen ? <IoClose size={24} /> : <IoChatbubblesSharp size={24} />}
             </button>
 
             {/* Chat Popup Window */}
             {isOpen && (
                 <div
                     id="chat-popup-window"
-                    className="bg-white dark:bg-gray-900 rounded-xl shadow-2xl p-4 w-[90vw] max-w-[800px] h-[70vh] flex flex-col fixed bottom-20 right-4 animate-fade-in-up"
+                    className="bg-white dark:bg-gray-900 rounded-xl shadow-2xl dark:shadow-gray-800/50 p-4 w-[90vw] max-w-[500px] h-[70vh] flex flex-col fixed bottom-20 right-4 animate-fade-in-up"
                     role="dialog"
                     aria-modal="true"
                     aria-labelledby="chat-popup-title"
@@ -93,6 +98,8 @@ export default function PopupChat() {
                                 <IoArrowBackCircle size={30} />
                             </button>
                         )}
+
+
                         <h2 id="chat-popup-title" className="text-xl font-bold text-gray-800 dark:text-white flex-grow text-center">
                             {showAdminPanel ? "Admin Panel" : (currentChatId ? "Chat Room" : "KKK Chats")}
                         </h2>
@@ -123,7 +130,7 @@ export default function PopupChat() {
                             {showAdminPanel ? (
                                 <AdminPanel currentUserId={user.uid} />
                             ) : currentChatId ? (
-                                <ChatRoom chatId={currentChatId} canChat={user.canChat ?? false} />
+                                <ChatRoom chatId={currentChatId} canChat={user.canChat ?? false} toggleChat={handleToggleCloseChat} />
                             ) : (
                                 <ChatList onSelectChat={handleSelectChat} currentUserId={user.uid} canChat={user.canChat ?? false} />
                             )}
@@ -132,7 +139,7 @@ export default function PopupChat() {
 
                     {/* Footer section with user info and action buttons */}
                     {user && (
-                        <div className='flex items-center justify-between mt-4 pt-3 border-t border-gray-200'>
+                        <div className='flex items-center justify-between mt-1 pt-3'>
                             {/* Logout button */}
                             <button
                                 title="Logout"
@@ -142,20 +149,21 @@ export default function PopupChat() {
                                 <CgLogOut size={22} /> Logout
                             </button>
 
-                            {/* Admin Panel button (only for admins) */}
-                            {user.isAdmin && (
-                                <button
-                                    title="Admin Panel"
-                                    onClick={handleToggleAdminPanel}
-                                    className="bg-purple-600 text-white rounded-lg px-4 py-2 hover:bg-purple-700 flex items-center gap-2 ml-auto font-semibold text-sm transition-colors shadow-sm"
-                                >
-                                    Admin Panel
-                                </button>
-                            )}
 
-                            <div className="text-sm text-gray-600 ml-4">
+                            <div className="text-sm text-gray-600 ml-4 flex items-center gap-1">
                                 Logged in as: <span className="font-medium">{user.displayName || user.email}</span>
+                                {/* Admin Panel button (only for admins) */}
+                                {(user?.isAdmin && !showAdminPanel) && (
+                                    <button
+                                        title="Admin Panel"
+                                        onClick={handleToggleAdminPanel}
+                                        className="text-sm px-3  rounded-full bg-slate-400 text-white hover:bg-slate-500 transition-colors flex items-center gap-1 font-light italic"
+                                    >
+                                        Admin
+                                    </button>
+                                )}
                             </div>
+
                         </div>
                     )}
                 </div>

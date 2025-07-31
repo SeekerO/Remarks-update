@@ -3,7 +3,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
 import { createContext, useContext, useEffect, useState } from "react";
-import { auth, db } from "./firebase";
+import { auth, db } from "./firebase/firebase";
 import {
     GoogleAuthProvider,
     onAuthStateChanged,
@@ -12,7 +12,7 @@ import {
     User,
 } from "firebase/auth";
 import { ref, set, onDisconnect, serverTimestamp, get } from "firebase/database";
-import { saveUserProfile } from "./saveUserProfile";
+import { saveUserProfile } from "./components/saveUserProfile";
 
 // Extend User type to include custom properties like isAdmin and canChat
 interface CustomUser extends User {
@@ -25,6 +25,7 @@ interface AuthContextType {
     user: CustomUser | null;
     loginWithGoogle: () => Promise<void>;
     logout: () => void;
+    uid?: string; // Ensure uid is always present
 }
 
 // Create the AuthContext

@@ -1,7 +1,7 @@
 // createChat.ts
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
-import { db } from "./firebase";
+import { db } from "../firebase";
 import {
   push, // Used to generate a unique ID for a new chat
   ref, // Used to create a reference to a specific location in the database
@@ -79,7 +79,8 @@ export async function createChat(
   const chatId = newChatRef.key!; // Get the unique ID for the new chat
 
   // Create a users object where keys are UIDs and values are 'true'
-  const users = Object.fromEntries( // Changed from participants
+  const users = Object.fromEntries(
+    // Changed from participants
     allUserIds.map((id) => [id, true])
   );
 
@@ -95,7 +96,8 @@ export async function createChat(
 
   // Update the 'userChats' node for each user to link them to this new chat
   const updates: Record<string, any> = {};
-  for (const id of allUserIds) { // Changed from allParticipantIds
+  for (const id of allUserIds) {
+    // Changed from allParticipantIds
     updates[`userChats/${id}/${chatId}`] = true; // Link user to chat
   }
   // Perform a multi-path update to efficiently update all userChats nodes

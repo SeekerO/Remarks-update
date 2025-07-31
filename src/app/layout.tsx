@@ -1,8 +1,9 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
-import ThemeWrapper from "./component/night-mode-wrapper";
+import ThemeWrapper from "./component/wrapper/night-mode-wrapper";
 import { AuthProvider } from "./Chat/AuthContext";
+import ChatWrapper from "./component/wrapper/chat-wrapper";
 // import "./Remarks/remarks.css"
 
 const geistSans = Geist({
@@ -17,7 +18,7 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "KKK",
-  description: "Website for KKK works",
+  description: "Website for KKK Tools",
 };
 
 export default function RootLayout({
@@ -31,7 +32,9 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
         <AuthProvider>
-          <ThemeWrapper>{children}</ThemeWrapper>
+          <ChatWrapper>
+            <ThemeWrapper>{children}</ThemeWrapper>
+          </ChatWrapper>
         </AuthProvider>
       </body>
     </html>

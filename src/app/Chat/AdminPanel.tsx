@@ -3,7 +3,7 @@
 
 import React, { useState, useEffect, useCallback } from "react";
 import { ref, onValue, update } from "firebase/database";
-import { db } from "./firebase";
+import { db } from "./firebase/firebase";
 import Image from "next/image";
 
 // Interface for user profile data
@@ -140,7 +140,7 @@ export default function AdminPanel({ currentUserId }: AdminPanelProps) {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {filteredUsers.length === 0 ? (
           <p className="col-span-full text-center text-gray-500 text-lg py-10">
             {allUsers.length === 0

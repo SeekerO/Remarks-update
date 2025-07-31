@@ -1,22 +1,28 @@
-// ChatRoom.tsx
 "use client";
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
 import { useEffect, useState, useRef, useCallback } from "react";
 import { useAuth } from "./AuthContext"; // Authentication context
-import { useChatMessages } from "./useChatMessages"; // Custom hook for messages
-import { sendMessage } from "./sendMessage"; // Function to send messages
-import { editMessage } from "./messageActions"; // Function to edit messages
-import { setTyping } from "./setTyping"; // Function to set typing status
-import { uploadFile } from "./uploadFile"; // Function to upload files
+import { useChatMessages } from "./hooks/useChatMessages"; // Custom hook for messages
+import { sendMessage } from "./firebase/firebase.actions/sendMessage"; // Function to send messages
+import { editMessage } from "./components/messageActions"; // Function to edit messages
+import { setTyping } from "./utils/setTyping"; // Function to set typing status
+import { uploadFile } from "./firebase/firebase.actions/uploadFile"; // Function to upload files
 import { ref, onValue, get, update, serverTimestamp } from "firebase/database"; // Firebase Realtime Database functions
-import { db } from "./firebase"; // Firebase database instance
+import { db } from "./firebase/firebase"; // Firebase database instance
 import Image from "next/image"; // Assuming Next.js Image component for optimization
 import { BiCheckDouble } from "react-icons/bi";
+import { AiFillEdit } from "react-icons/ai";
+import { BsThreeDotsVertical } from "react-icons/bs"; // Icon for the 3-dot menu
+import { deleteChat } from "./firebase/firebase.actions/deleteChat"; // Import the new deleteChat function
+import { useRouter } from "next/navigation"; // For redirection after chat deletion
+import { FaUser } from "react-icons/fa";
+
 // Props for the ChatRoom component
 interface ChatRoomProps {
     chatId: string; // The ID of the current chat room
     canChat: boolean; // Permission flag from AuthContext
+    toggleChat: () => void; // Function to toggle the chat popup
 }
 
 // Interface for user details (for displaying sender info)
@@ -37,7 +43,7 @@ interface ChatMessage {
     // reads?: Record<string, number>; // Granular read receipts (can be heavy, using lastReadMessageId instead)
 }
 
-export default function ChatRoom({ chatId, canChat }: ChatRoomProps) {
+export default function ChatRoom({ chatId, canChat, toggleChat }: ChatRoomProps) {
     const { user } = useAuth(); // Get current user from AuthContext
     const messages = useChatMessages(chatId); // Fetch and listen to messages using custom hook
     const [input, setInput] = useState(""); // State for message input
@@ -47,13 +53,17 @@ export default function ChatRoom({ chatId, canChat }: ChatRoomProps) {
     const [usersInChat, setUsersInChat] = useState<string[]>([]); // UIDs of chat users (Changed from participants)
     const [onlineUsers, setOnlineUsers] = useState<Record<string, boolean>>({}); // Online status of users
     const [chatName, setChatName] = useState<string | null>(null); // State for chat name
-
-
-    console.log(messages)
+    const router = useRouter(); // Initialize Next.js router
 
     // State for message editing
     const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
     const [editingMessageContent, setEditingMessageContent] = useState("");
+
+    // State for 3-dot menu and confirmation dialog
+    const [showMenu, setShowMenu] = useState(false);
+    const [showConfirmDelete, setShowConfirmDelete] = useState(false);
+    const menuRef = useRef<HTMLDivElement>(null); // Ref for the 3-dot menu
+
 
     // State for tracking each user's last read message ID for this chat
     const [userLastReads, setUserLastReads] = useState<Record<string, string | null>>({}); // Changed from participantLastReads
@@ -88,6 +98,20 @@ export default function ChatRoom({ chatId, canChat }: ChatRoomProps) {
         }
     }, [messages, user, chatId, canChat]); // Depend on messages, user, chatId, and canChat
 
+    // Close menu when clicking outside
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+                setShowMenu(false);
+            }
+        };
+        document.addEventListener("mousedown", handleClickOutside);
+        return () => {
+            document.removeEventListener("mousedown", handleClickOutside);
+        };
+    }, []);
+
+
     // Function to fetch user details and cache them
     const fetchUserDetails = useCallback(async (uid: string) => {
         // Return from cache if details already exist
@@ -107,13 +131,11 @@ export default function ChatRoom({ chatId, canChat }: ChatRoomProps) {
                 setUserDetails((prev) => ({ ...prev, [uid]: fetchedDetail }));
                 return fetchedDetail;
             } else {
-                console.warn(`User data not found for UID: ${uid}`);
                 const defaultDetail: UserDetail = { name: `User ${uid.substring(0, 4)}`, profilePic: null };
                 setUserDetails((prev) => ({ ...prev, [uid]: defaultDetail }));
                 return defaultDetail;
             }
         } catch (error) {
-            console.error(`Error fetching user details for UID: ${uid}`, error);
             const defaultDetail: UserDetail = { name: "Error User", profilePic: null };
             setUserDetails((prev) => ({ ...prev, [uid]: defaultDetail }));
             return defaultDetail;
@@ -177,7 +199,13 @@ export default function ChatRoom({ chatId, canChat }: ChatRoomProps) {
                 setUserLastReads({}); // Changed from setParticipantLastReads
                 setChatName(null);
             }
-        });
+        },
+            // Add error handling for the onValue listener itself
+            (error) => {
+                // Optionally redirect or show an error message to the user
+                // router.push('/chats'); // Example: redirect to chat list
+            }
+        );
 
         // Listener for typing status (separate from chat data listener for clarity)
         const typingRef = ref(db, `chats/${chatId}/typing`);
@@ -197,7 +225,7 @@ export default function ChatRoom({ chatId, canChat }: ChatRoomProps) {
             unsubscribeChat();
             unsubscribeTyping();
         };
-    }, [chatId, user, fetchUserDetails]); // Depend on chatId, user, and memoized fetchUserDetails
+    }, [chatId, user, fetchUserDetails, router]); // Depend on chatId, user, and memoized fetchUserDetails
 
     // Ensure user details for message senders are always fetched
     useEffect(() => {
@@ -216,7 +244,6 @@ export default function ChatRoom({ chatId, canChat }: ChatRoomProps) {
             setInput(""); // Clear input field
             setTyping(chatId, user.uid, false); // Turn off typing indicator
         } catch (error) {
-            console.error("Error sending message:", error);
             alert("Failed to send message."); // Use a custom modal in production
         }
     };
@@ -246,7 +273,6 @@ export default function ChatRoom({ chatId, canChat }: ChatRoomProps) {
                 const fileUrl = await uploadFile(file, chatId); // Upload file and get URL
                 await sendMessage(chatId, user.uid, fileUrl, "file"); // Send message with file URL
             } catch (error) {
-                console.error("Error uploading file:", error);
                 alert("Failed to upload file. Please try again."); // Use a custom modal in production
             } finally {
                 e.target.value = ''; // Clear the file input
@@ -280,7 +306,6 @@ export default function ChatRoom({ chatId, canChat }: ChatRoomProps) {
             setEditingMessageId(null); // Clear editing state
             setEditingMessageContent("");
         } catch (error: any) {
-            console.error("Error saving edit:", error);
             alert(`Failed to save edit: ${error.message}`); // Use a custom modal in production
         }
     };
@@ -290,77 +315,147 @@ export default function ChatRoom({ chatId, canChat }: ChatRoomProps) {
         setEditingMessageContent("");
     };
 
-    // Helper to check if a message has been read by a specific user (using lastReadMessageId)
+    // --- Chat Deletion Handlers ---
+    const handleDeleteChat = async () => {
+        if (!user || !canChat) {
+            alert("You do not have permission to delete this chat.");
+            setShowConfirmDelete(false);
+            setShowMenu(false);
+            return;
+        }
+
+        try {
+            await deleteChat(chatId, user.uid);
+        } catch (error: any) {
+            alert(`Failed to delete chat: ${error.message}`);
+        } finally {
+            setShowConfirmDelete(false); // Close confirmation dialog
+            setShowMenu(false); // Close the 3-dot menu
+            toggleChat()
+        }
+    };
+
     const hasBeenReadBy = useCallback((messageId: string, readerId: string) => {
-        const lastReadId = userLastReads[readerId]; // Changed from participantLastReads
-        // Firebase push keys (message IDs) are lexicographically sortable and time-based.
-        // So, if a message's ID is less than or equal to the lastReadId, it means it's been read.
+        const lastReadId = userLastReads[readerId]; // Changed from 
         return lastReadId && messageId <= lastReadId;
     }, [userLastReads]); // Changed from participantLastReads
-
 
     if (!user) {
         return <div className="p-4 text-center text-gray-600">Please log in to chat.</div>;
     }
 
     return (
-        <div className="flex h-full  shadow-md  font-sans">
-            {/* Users Sidebar (Left) */} {/* Changed from Participants Sidebar */}
-            <div className="w-1/4 p-4 border-r border-gray-200 dark:border-gray-600 bg-white dark:bg-slate-800 overflow-y-auto rounded-l-lg">
-
-                <h3 className="text-lg font-semibold mb-4 text-gray-800 dark:text-white border-b pb-2">Users in Chat</h3> {/* Changed from Participants */}
-                <ul>
-                    {usersInChat.map((uid) => { // Changed from participants
-                        const userDetail = userDetails[uid];
-                        const userName = userDetail?.name || `User ${uid.substring(0, 4)}`;
-                        const userProfilePic = userDetail?.profilePic;
-                        const isOnline = onlineUsers[uid]; // Get online status
-
-                        return (
-                            <li key={uid} className="flex items-center mb-3 ">
-                                {userProfilePic && (
-                                    <div className="relative">
-                                        <Image
-                                            width={36}
-                                            height={36}
-                                            src={userProfilePic}
-                                            alt={`${userName}'s profile`}
-                                            className="w-9 h-9 rounded-full mr-3 object-cover border-2 border-blue-200"
-                                        />
-                                        {/* Online/Offline indicator */}
-                                        <span className={`absolute bottom-0 right-2 w-3 h-3 ${isOnline ? "bg-green-500" : "bg-gray-500"} rounded-full border-2 border-white`}></span>
-                                    </div>
-                                )}
-                                <span className="text-sm font-medium text-gray-700 dark:text-white">
-                                    {userName}
-                                    {uid === user.uid && " (You)"}
-                                </span>
-                            </li>
-                        );
-                    })}
-                </ul>
-            </div>
+        <div className="flex  h-full shadow-md font-sans">
 
             {/* Chat Content (Right) */}
-            <div className="flex flex-col flex-grow">
-                {/* Chat Header with Name */}
-                <div className="p-4 border-b border-gray-200 bg-white dark:bg-slate-800 dark:border-gray-600">
-                    <h3 className="text-lg font-semibold text-gray-800 dark:text-white">
-                        {chatName || "Direct Chat"}
-                    </h3>
+            <div className=" flex flex-col flex-grow ">
+                {/* Chat Header with Name and 3-dot menu */}
+                <div className="w-full p-4 border-b border-gray-200 bg-white dark:bg-slate-800 dark:border-gray-600 flex justify-between items-center">
+                    <UserList
+                        usersInChat={usersInChat}
+                        userDetails={userDetails}
+                        onlineUsers={onlineUsers}
+                        user={user}
+                    >
+                        <h3 className="text-lg font-semibold text-gray-800 dark:text-white w-full">
+                            {usersInChat.length === 2 ?
+                                <div>
+                                    {usersInChat.map((uid) => {
+                                        const detail = userDetails[uid];
+                                        const isOnline = onlineUsers[uid]; // Get online status
+                                        if (!detail) return null;
+                                        return (
+                                            <div className="flex items-center " key={uid}>
+                                                {uid !== user.uid &&
+                                                    <div className="relative">
+                                                        <Image
+                                                            width={36}
+                                                            height={36}
+                                                            src={detail.profilePic || ""} // Fallback profile picture
+                                                            alt={`${detail.name}'s profile`}
+                                                            className="w-9 h-9 rounded-full mr-3 object-cover border-2 border-blue-200"
+                                                        />
+                                                        <span className={`absolute bottom-0 right-2 w-3 h-3 ${isOnline ? "bg-green-500" : "bg-gray-500"} rounded-full border-2 border-white`}></span>
+                                                    </div>
+                                                }
+
+                                                <span key={uid} className="font-medium text-gray-700 dark:text-white">
+                                                    {uid !== user.uid && detail.name}
+                                                </span>
+                                            </div>
+
+                                        );
+                                    })}
+                                </div>
+                                :
+                                <>
+                                    {chatName === null ?
+                                        <p className="flex gap-2">
+                                            <span className="flex items-center gap-1 px-2 text-white bg-blue-400 rounded-lg text-md"><FaUser size={15} />
+                                                {usersInChat?.length}
+                                            </span> Group Chat
+                                        </p> : chatName
+                                    }
+                                </>
+                            }
+
+                        </h3>
+                    </UserList>
+                    {/* 3-dot menu button */}
+                    <div className="relative" ref={menuRef}>
+                        <button
+                            onClick={() => setShowMenu(!showMenu)}
+                            className="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            title="Chat options"
+                        >
+                            <BsThreeDotsVertical className="w-5 h-5 text-gray-600 dark:text-gray-300" />
+                        </button>
+
+                        {/* Dropdown Menu */}
+                        {showMenu && (
+                            <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-700 rounded-md shadow-lg py-1 z-10">
+                                <button
+                                    onClick={() => {
+                                        setShowConfirmDelete(true);
+                                        setShowMenu(false); // Close the 3-dot menu immediately
+                                    }}
+                                    className="block px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-gray-100 dark:hover:bg-gray-600 w-full text-left"
+                                    disabled={!canChat} // Disable if user can't chat
+                                >
+                                    Delete Chat
+                                </button>
+                                {/* Add other menu items here if needed */}
+                            </div>
+                        )}
+                    </div>
                 </div>
 
-
-                {/* Typing Indicator */}
-                {typingUsers.length > 0 && (
-                    <div className="text-sm text-gray-600 px-4 py-2 bg-gray-100 border-b border-gray-200 dark:border-gray-600 animate-pulse">
-                        {typingUsers.map((uid) => userDetails[uid]?.name || `User ${uid.substring(0, 4)}`).join(", ")}{" "}
-                        {typingUsers.length === 1 ? "is" : "are"} typing...
+                {/* Confirmation Dialog for Delete Chat */}
+                {showConfirmDelete && (
+                    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                        <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-xl text-center">
+                            <h4 className="text-lg font-bold mb-4 text-gray-900 dark:text-white">Confirm Chat Deletion</h4>
+                            <p className="text-gray-700 dark:text-gray-300 mb-6">Are you sure you want to delete this chat? This action cannot be undone.</p>
+                            <div className="flex justify-center space-x-4">
+                                <button
+                                    onClick={() => setShowConfirmDelete(false)}
+                                    className="px-5 py-2 rounded-md bg-gray-300 text-gray-800 hover:bg-gray-400 dark:bg-gray-600 dark:text-white dark:hover:bg-gray-500 transition-colors"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    onClick={handleDeleteChat}
+                                    className="px-5 py-2 rounded-md bg-red-600 text-white hover:bg-red-700 transition-colors"
+                                >
+                                    Delete
+                                </button>
+                            </div>
+                        </div>
                     </div>
                 )}
 
 
-                <div className="flex-grow overflow-y-auto p-4 bg-white dark:bg-slate-900 border-b border-gray-200 dark:border-gray-600">
+                <div className=" flex-grow overflow-y-auto p-4 bg-white dark:bg-slate-900 ">
                     {messages.length === 0 && (
                         <div className="text-center text-gray-500 mt-10 text-lg">
                             No messages yet. Start the conversation!
@@ -406,11 +501,6 @@ export default function ChatRoom({ chatId, canChat }: ChatRoomProps) {
                                 <div
                                     className="relative"
                                 >
-                                    {/* {!isMyMessage && (
-                                        <div className="text-xs font-semibold text-gray-700 mb-1">
-                                            {senderName}
-                                        </div>
-                                    )} */}
                                     {/* Display message content or edit input */}
                                     {msg.id === editingMessageId ? (
                                         <div className="flex flex-col">
@@ -442,12 +532,13 @@ export default function ChatRoom({ chatId, canChat }: ChatRoomProps) {
                                                         <span className="mr-2 text-lg">📎</span> {msg.content.split('/').pop() || 'File'}
                                                     </a>
                                                 ) : (
-                                                    <p className="whitespace-pre-wrap text-base">
+                                                    <p className="text-base h-auto max-w-[20rem] break-words ">
                                                         {msg.content}
                                                         {msg.isEdited && <span className="text-xs opacity-75 ml-1">(edited)</span>}
                                                     </p>
                                                 )}
                                             </div>
+
                                             <span className={`block text-xs opacity-80 mt-1 ${isMyMessage ? "text-right" : "text-left"}`}>
                                                 {msg.timestamp ? new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Sending...'}
                                             </span>
@@ -484,7 +575,7 @@ export default function ChatRoom({ chatId, canChat }: ChatRoomProps) {
                                                     className="absolute -top-2 -right-2 bg-gray-300 rounded-full w-6 h-6 flex items-center justify-center text-xs text-gray-700 hover:bg-gray-400 transition-colors shadow-sm"
                                                     title="Edit message"
                                                 >
-                                                    ✏️
+                                                    <AiFillEdit />
                                                 </button>
                                             )}
                                         </div>
@@ -506,11 +597,18 @@ export default function ChatRoom({ chatId, canChat }: ChatRoomProps) {
                             </div>
                         );
                     })}
-                    <div ref={messagesEndRef} /> {/* Element to scroll into view */}
-                </div>
 
+                    <div ref={messagesEndRef} /> {/* Element to scroll into view */}
+
+                </div>
+                {typingUsers.length > 0 && (
+                    <div className=" text-sm text-gray-600 px-4 py-2 animate-pulse text-right">
+                        {typingUsers.map((uid) => userDetails[uid]?.name || `User ${uid.substring(0, 4)}`).join(", ")}{" "}
+                        {typingUsers.length === 1 ? "is" : "are"} typing...
+                    </div>
+                )}
                 {/* Input and Send Button Area */}
-                <div className="flex p-4 border-t border-gray-200 bg-white dark:bg-gray-800 dark:border-gray-700 rounded-b-lg">
+                <div className="relative flex p-4 border-t border-gray-200 bg-white dark:bg-gray-800 dark:border-gray-700 rounded-b-lg">
                     <input
                         value={input}
                         onChange={handleTyping}
@@ -540,7 +638,62 @@ export default function ChatRoom({ chatId, canChat }: ChatRoomProps) {
                         Send
                     </button>
                 </div>
+
+
+                {/* Typing Indicator */}
+
+
             </div>
+
         </div>
     );
+}
+
+interface UserListProps {
+    usersInChat: string[];
+    userDetails: Record<string, UserDetail>;
+    onlineUsers: Record<string, boolean>;
+    user: any;
+    children: React.ReactNode;
+}
+
+const UserList: React.FC<UserListProps> = ({ usersInChat, userDetails, onlineUsers, user, children }: UserListProps) => {
+    const [open, setOpen] = useState(false);
+    return (<div onClick={() => setOpen(!open)} className="relative cursor-pointer w-full z-50 select-none">
+        {children}
+        {(open && usersInChat.length !== 2) && (
+            <div className="cursor-default w-full mt-2 absolute p-4 border border-gray-200 bg-black/5  dark:border-gray-600 backdrop-blur-[3px] dark:bg-slate-800/5 overflow-y-auto rounded shadow-lg">
+                <h3 className="text-lg font-semibold mb-4 text-gray-800 dark:text-white border-b pb-2">Users in Chat</h3>
+                <ul>
+                    {usersInChat.map((uid: any) => { // Changed from participants
+                        const userDetail = userDetails[uid];
+                        const userName = userDetail?.name || `User ${uid.substring(0, 4)}`;
+                        const userProfilePic = userDetail?.profilePic;
+                        const isOnline = onlineUsers[uid]; // Get online status
+
+                        return (
+                            <li key={uid} className="flex items-center mb-3 ">
+                                {userProfilePic && (
+                                    <div className="relative">
+                                        <Image
+                                            width={36}
+                                            height={36}
+                                            src={userProfilePic}
+                                            alt={`${userName}'s profile`}
+                                            className="w-9 h-9 rounded-full mr-3 object-cover border-2 border-blue-200"
+                                        />
+                                        <span className={`absolute bottom-0 right-2 w-3 h-3 ${isOnline ? "bg-green-500" : "bg-gray-500"} rounded-full border-2 border-white`}></span>
+                                    </div>
+                                )}
+                                <span className="text-sm font-medium text-gray-700 dark:text-white">
+                                    {userName}
+                                    {uid === user.uid && " (You)"}
+                                </span>
+                            </li>
+                        );
+                    })}
+                </ul>
+            </div>
+        )}
+    </div>)
 }

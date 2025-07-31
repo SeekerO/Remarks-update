@@ -2,17 +2,13 @@
 
 import DynamicColumn from "./component/dynamicColumn";
 import BreadCrumb from "../component/breadcrumb";
-import { useKeySequence } from "../component/keySequence";
-import { useState } from "react";
-import AdminUI from "../component/adminUI";
 
 const Remarks = () => {
+  // const [open, setOpen] = useState<boolean>(false)
 
-  const [open, setOpen] = useState<boolean>(false)
-
-  useKeySequence(() => {
-    setOpen(!open)
-  });
+  // useKeySequence(() => {
+  //   setOpen(!open)
+  // });
 
 
   return (
@@ -21,7 +17,6 @@ const Remarks = () => {
         <BreadCrumb />
       </div>
       <DynamicColumn />
-      {open && <AdminUI />}
     </div>
   );
 };

@@ -1,5 +1,5 @@
 // sendMessage.ts
-import { db } from "./firebase";
+import { db } from "../firebase";
 import { ref, push, serverTimestamp } from "firebase/database";
 
 /**
