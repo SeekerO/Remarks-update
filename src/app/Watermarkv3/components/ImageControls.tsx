@@ -109,8 +109,8 @@ export default function ImageControls() {
                         >
                             {useGlobal ? <FaImages /> : <FaImage />}
                         </div>
-                        <span className={`absolute left-0 w-1/2 text-center text-xs font-semibold transition-colors duration-300 ${useGlobal ? 'text-white' : 'text-gray-200'}`}>Global</span>
-                        <span className={`absolute right-0 w-1/2 text-center text-xs font-semibold transition-colors duration-300 ${useGlobal ? 'text-gray-200' : 'text-white'}`}>Individual</span>
+                        <span className={`absolute left-0 w-1/2 text-center text-xs font-semibold transition-colors duration-300 ${useGlobal ? 'text-white' : 'text-gray-200'}`}>Individual</span>
+                        <span className={`absolute right-0 w-1/2 text-center text-xs font-semibold transition-colors duration-300 ${useGlobal ? 'text-gray-200' : 'text-white'}`}>Global</span>
                     </div>
                 </div>
             )}

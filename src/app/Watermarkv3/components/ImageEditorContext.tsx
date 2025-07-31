@@ -70,8 +70,8 @@ interface ImageEditorContextType {
     removeAllImages: () => void;
 
     // NEW: Functions to update individual logo/footer for the selected image
-    setIndividualLogo: (url: string | null) => void;
-    setIndividualFooter: (url: string | null) => void;
+    setIndividualLogo: (index: number, url: string | null) => void;
+    setIndividualFooter: (index: number, url: string | null) => void;
 
     // NEW: Function to toggle useGlobalSettings for selected image
     toggleUseGlobalSettings: () => void;
@@ -140,39 +140,35 @@ export const ImageEditorProvider = ({ children }: { children: ReactNode }) => {
     };
 
     // NEW: Function to set individual logo for the selected image
-    const setIndividualLogo = (url: string | null) => {
-        if (selectedImageIndex !== null) {
-            setImages(prevImages => {
-                const newImages = [...prevImages];
-                if (newImages[selectedImageIndex]?.individualLogo) {
-                    URL.revokeObjectURL(newImages[selectedImageIndex].individualLogo!);
-                }
-                newImages[selectedImageIndex] = {
-                    ...newImages[selectedImageIndex],
-                    individualLogo: url,
-                    useGlobalSettings: false, // Automatically switch to individual settings
-                };
-                return newImages;
-            });
-        }
+    const setIndividualLogo = (index: number, url: string | null) => {
+        setImages(prevImages => {
+            const newImages = [...prevImages];
+            if (newImages[index]?.individualLogo) {
+                URL.revokeObjectURL(newImages[index].individualLogo!);
+            }
+            newImages[index] = {
+                ...newImages[index],
+                individualLogo: url,
+                useGlobalSettings: false,
+            };
+            return newImages;
+        });
     };
 
     // NEW: Function to set individual footer for the selected image
-    const setIndividualFooter = (url: string | null) => {
-        if (selectedImageIndex !== null) {
-            setImages(prevImages => {
-                const newImages = [...prevImages];
-                if (newImages[selectedImageIndex]?.individualFooter) {
-                    URL.revokeObjectURL(newImages[selectedImageIndex].individualFooter!);
-                }
-                newImages[selectedImageIndex] = {
-                    ...newImages[selectedImageIndex],
-                    individualFooter: url,
-                    useGlobalSettings: false, // Automatically switch to individual settings
-                };
-                return newImages;
-            });
-        }
+    const setIndividualFooter = (index: number, url: string | null) => {
+        setImages(prevImages => {
+            const newImages = [...prevImages];
+            if (newImages[index]?.individualFooter) {
+                URL.revokeObjectURL(newImages[index].individualFooter!);
+            }
+            newImages[index] = {
+                ...newImages[index],
+                individualFooter: url,
+                useGlobalSettings: false,
+            };
+            return newImages;
+        });
     };
 
     // NEW: Function to toggle useGlobalSettings for the selected image

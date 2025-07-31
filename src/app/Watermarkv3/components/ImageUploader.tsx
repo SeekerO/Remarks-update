@@ -57,7 +57,7 @@ export default function ImageUploader() {
                 useGlobalSettings: true, // Default to global settings
             }));
             setImages(prevImages => [...prevImages, ...newImages]);
-            setSelectedImageIndex(images.length === 0 ? 0 : null); // Select first if new, else deselect
+            setSelectedImageIndex(images.length === 0 ? 0 : null);
         }
     };
 
@@ -79,21 +79,21 @@ export default function ImageUploader() {
         }
     };
 
-    // NEW: Helper function to handle individual logo file selection
+    // When uploading an individual logo:
     const handleIndividualLogoChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-        if (event.target.files && event.target.files[0]) {
+        if (event.target.files && event.target.files[0] && selectedImageIndex !== null) {
             const file = event.target.files[0];
             const url = URL.createObjectURL(file);
-            setIndividualLogo(url);
+            setIndividualLogo(selectedImageIndex!, url); // Pass index and url!
         }
     };
 
-    // NEW: Helper function to handle individual footer file selection
+    // When uploading an individual footer:
     const handleIndividualFooterChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-        if (event.target.files && event.target.files[0]) {
+        if (event.target.files && event.target.files[0] && selectedImageIndex !== null) {
             const file = event.target.files[0];
             const url = URL.createObjectURL(file);
-            setIndividualFooter(url);
+            setIndividualFooter(selectedImageIndex, url); // Pass index and url!
         }
     };
 
@@ -147,11 +147,11 @@ export default function ImageUploader() {
             } else if (type === 'individualLogo') { // NEW
                 const file = files[0];
                 const url = URL.createObjectURL(file);
-                setIndividualLogo(url);
+                setIndividualLogo(0, url);
             } else if (type === 'individualFooter') { // NEW
                 const file = files[0];
                 const url = URL.createObjectURL(file);
-                setIndividualFooter(url);
+                setIndividualFooter(0, url);
             }
         }
     };
