@@ -274,6 +274,10 @@ export default function ImageUploader() {
                 </label>
             </div>
 
+
+            <div className="w-full flex items-center justify-center">
+                <div className="h-[1px] w-[80%] dark:bg-slate-600 bg-slate-300" />
+            </div>
             {/* NEW: Individual Logo Upload Section (Conditionally rendered) */}
             {selectedImageIndex !== null && (
                 <div>

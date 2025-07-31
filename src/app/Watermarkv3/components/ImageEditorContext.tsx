@@ -2,6 +2,7 @@
 "use client";
 
 
+import { StdioNull } from "child_process";
 import React, { createContext, useContext, useState, ReactNode } from "react";
 
 // Defines the structure for logo and footer settings
@@ -46,8 +47,8 @@ interface ImageData {
     individualShadowSettings?: ShadowSettings; // NEW: Individual shadow settings
 
     // NEW: Individual logo and footer image URLs
-    individualLogo?: string;
-    individualFooter?: string;
+    individualLogo?: string | null;
+    individualFooter?: string | null;
 }
 
 // Defines the shape of the context values that will be provided.
