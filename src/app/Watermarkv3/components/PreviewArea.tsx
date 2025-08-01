@@ -1,5 +1,7 @@
 // app/components/PreviewArea.tsx
 "use client";
+/* eslint-disable @typescript-eslint/no-explicit-any */
+
 
 import React, { useState, useRef, useEffect, useCallback } from "react";
 import JSZip from "jszip";
