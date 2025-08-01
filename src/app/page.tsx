@@ -61,7 +61,9 @@ export default function Home() {
             />
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-5 w-full">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 w-full">
+
+
             <motion.div variants={itemVariants}>
               <Link
                 href="/Remarks"

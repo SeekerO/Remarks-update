@@ -1,23 +1,20 @@
 // app/components/SingleImageEditor.tsx
 "use client";
 
-/* eslint-disable @typescript-eslint/no-explicit-any */
-
-import React, { useEffect, useRef, useState } from "react"; // Added useState for modal
-// Corrected import path for ImageEditorContext
+import React, { useEffect, useRef, useState, useCallback } from "react";
 import { useImageEditor } from "./ImageEditorContext";
-import ModalPreview from "./ModalPreview"
-// Icons for download, delete, and maximize actions
+import ModalPreview from "./ModalPreview";
 import { MdDelete } from "react-icons/md";
 import { FiDownload, FiMaximize2 } from "react-icons/fi";
 
 interface SingleImageEditorProps {
     image: any;
     index: number;
+    // New prop: A callback function that the parent will provide
+    // It will be called with the index and a function to get the canvas blob.
+    onCanvasReady: (index: number, getBlob: () => Promise<Blob | null>) => void;
 }
 
-
-// Helper function to calculate the position of the logo based on its settings.
 const calculatePosition = (
     position: string,
     imgWidth: number,
@@ -62,16 +59,15 @@ const calculatePosition = (
     return [x, y];
 };
 
-// Main component for editing and displaying a single image.
-export default function SingleImageEditor({ image, index }: SingleImageEditorProps) {
+export default function SingleImageEditor({ image, index, onCanvasReady }: SingleImageEditorProps) { // Add onCanvasReady here
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const {
         logo,
         footer,
         globalLogoSettings,
         globalFooterSettings,
-        globalShadowSettings, // NEW
-        globalShadowTarget,   // NEW
+        globalShadowSettings,
+        globalShadowTarget,
         images,
         setImages,
         selectedImageIndex,
@@ -79,31 +75,102 @@ export default function SingleImageEditor({ image, index }: SingleImageEditorPro
     } = useImageEditor();
 
     const [openPreview, setOpenPreview] = useState<boolean>(false);
-
-    // Get the specific image data from the context's images array
     const currentImage = images[index];
-    // const isSelected = selectedImageIndex === index;
 
-    // Determine which settings and images to use based on useGlobalSettings flag
     const logoToUse = currentImage.useGlobalSettings ? logo : currentImage.individualLogo;
     const footerToUse = currentImage.useGlobalSettings ? footer : currentImage.individualFooter;
-
-    const logoSettingsToUse = currentImage.useGlobalSettings
-        ? globalLogoSettings
-        : currentImage.individualLogoSettings;
-
-    const footerSettingsToUse = currentImage.useGlobalSettings
-        ? globalFooterSettings
-        : currentImage.individualFooterSettings;
-
-    const shadowSettingsToUse = currentImage.useGlobalSettings
-        ? globalShadowSettings
-        : currentImage.individualShadowSettings;
-
+    const logoSettingsToUse = currentImage.useGlobalSettings ? globalLogoSettings : currentImage.individualLogoSettings;
+    const footerSettingsToUse = currentImage.useGlobalSettings ? globalFooterSettings : currentImage.individualFooterSettings;
+    const shadowSettingsToUse = currentImage.useGlobalSettings ? globalShadowSettings : currentImage.individualShadowSettings;
     const shadowTargetToUse = currentImage.useGlobalSettings
         ? globalShadowTarget
-        : (currentImage.individualShadowSettings ? "whole-image" : "none"); // Simplified for individual shadow: assume whole-image if settings exist
+        : (currentImage.individualShadowSettings ? "whole-image" : "none");
 
+    // Memoize the draw operations to avoid recreating them unnecessarily
+    const drawWatermark = useCallback((
+        ctx: CanvasRenderingContext2D,
+        logoUrl: string,
+        imgWidth: number,
+        imgHeight: number,
+        settings: typeof globalLogoSettings
+    ) => {
+        const logoImg = new Image();
+        logoImg.src = logoUrl;
+        return new Promise<void>(resolve => {
+            logoImg.onload = () => {
+                const { position, width, height, paddingX, paddingY } = settings;
+                const [x, y] = calculatePosition(position, imgWidth, imgHeight, width, height, paddingX, paddingY);
+                ctx.drawImage(logoImg, x, y, width, height);
+                resolve();
+            };
+            logoImg.onerror = () => {
+                console.error("Failed to load logo image:", logoUrl);
+                resolve(); // Resolve even on error to not block main drawing
+            };
+        });
+    }, []);
+
+    const drawFooter = useCallback((
+        ctx: CanvasRenderingContext2D,
+        footerUrl: string,
+        imgWidth: number,
+        imgHeight: number,
+        settings: typeof globalFooterSettings,
+        shadowSettings: typeof globalShadowSettings | undefined,
+        shadowTarget: "none" | "footer" | "whole-image"
+    ) => {
+        const footerImg = new Image();
+        footerImg.src = footerUrl;
+        return new Promise<void>(resolve => {
+            footerImg.onload = () => {
+                const { opacity, scale, offsetX, offsetY } = settings;
+                const scaledWidth = footerImg.width * scale;
+                const scaledHeight = footerImg.height * scale;
+                const x = (imgWidth - scaledWidth) / 2 + offsetX;
+                const y = imgHeight - scaledHeight - 20 + offsetY;
+
+                ctx.save();
+                ctx.globalAlpha = opacity;
+
+                if (shadowTarget === "footer" && shadowSettings) {
+                    drawShadow(ctx, scaledWidth, scaledHeight, shadowSettings, "footer", x, y);
+                }
+
+                ctx.drawImage(footerImg, x, y, scaledWidth, scaledHeight);
+                ctx.restore();
+                resolve();
+            };
+            footerImg.onerror = () => {
+                console.error("Failed to load footer image:", footerUrl);
+                resolve(); // Resolve even on error
+            };
+        });
+    }, []);
+
+    const drawShadow = useCallback((
+        ctx: CanvasRenderingContext2D,
+        targetWidth: number,
+        targetHeight: number,
+        settings: typeof globalShadowSettings,
+        targetType: "footer" | "whole-image",
+        targetX: number = 0,
+        targetY: number = 0
+    ) => {
+        const { color, opacity, offsetX, offsetY, blur } = settings;
+        ctx.save();
+        ctx.shadowColor = color;
+        ctx.shadowBlur = blur;
+        ctx.shadowOffsetX = offsetX;
+        ctx.shadowOffsetY = offsetY;
+        ctx.globalAlpha = opacity;
+
+        if (targetType === "whole-image") {
+            ctx.fillRect(0, 0, targetWidth, targetHeight);
+        } else if (targetType === "footer") {
+            ctx.fillRect(targetX, targetY, targetWidth, targetHeight);
+        }
+        ctx.restore();
+    }, []);
 
     // Effect hook to draw the image, logo, and footer on the canvas.
     useEffect(() => {
@@ -115,123 +182,55 @@ export default function SingleImageEditor({ image, index }: SingleImageEditorPro
 
         const img = new Image();
         img.src = image.url;
-        img.onload = () => {
-            canvas.width = img.width;
-            canvas.height = img.height;
 
-            ctx.clearRect(0, 0, canvas.width, canvas.height); // Clear canvas
-            ctx.drawImage(img, 0, 0); // Draw base image
+        // Use a promise to track when all drawing operations are complete
+        const drawImageAndWatermarks = async () => {
+            await new Promise<void>(resolve => {
+                img.onload = () => {
+                    canvas.width = img.width;
+                    canvas.height = img.height;
+                    ctx.clearRect(0, 0, canvas.width, canvas.height); // Clear canvas
+                    ctx.drawImage(img, 0, 0); // Draw base image
 
-            // Apply shadow to the whole image if specified
-            if (shadowTargetToUse === "whole-image" && shadowSettingsToUse) {
-                drawShadow(ctx, canvas.width, canvas.height, shadowSettingsToUse, "whole-image");
-                ctx.drawImage(img, 0, 0); // Redraw image over shadow
-            }
-
+                    // Apply shadow to the whole image if specified
+                    if (shadowTargetToUse === "whole-image" && shadowSettingsToUse) {
+                        drawShadow(ctx, canvas.width, canvas.height, shadowSettingsToUse, "whole-image");
+                        ctx.drawImage(img, 0, 0); // Redraw image over shadow
+                    }
+                    resolve();
+                };
+                img.onerror = () => {
+                    console.error("Failed to load base image:", image.url);
+                    resolve(); // Resolve even on error to allow subsequent operations
+                };
+            });
 
             // Draw logo if available
             if (logoToUse && logoSettingsToUse) {
-                drawWatermark(ctx, logoToUse, img.width, img.height, logoSettingsToUse);
+                await drawWatermark(ctx, logoToUse, img.width, img.height, logoSettingsToUse);
             }
 
             // Draw footer if available
             if (footerToUse && footerSettingsToUse) {
-                drawFooter(ctx, footerToUse, img.width, img.height, footerSettingsToUse, shadowSettingsToUse, shadowTargetToUse);
-            }
-        };
-    }, [image.url, logoToUse, footerToUse, logoSettingsToUse, footerSettingsToUse, shadowSettingsToUse, shadowTargetToUse]);
-
-
-    // Function to draw the logo (watermark) on the canvas.
-    const drawWatermark = (
-        ctx: CanvasRenderingContext2D,
-        logoUrl: string,
-        imgWidth: number,
-        imgHeight: number,
-        settings: typeof globalLogoSettings // Use the specific settings type
-    ) => {
-        const logoImg = new Image();
-        logoImg.src = logoUrl;
-        logoImg.onload = () => {
-            const { position, width, height, paddingX, paddingY } = settings;
-            const [x, y] = calculatePosition(
-                position,
-                imgWidth,
-                imgHeight,
-                width,
-                height,
-                paddingX,
-                paddingY
-            );
-            ctx.drawImage(logoImg, x, y, width, height);
-        };
-    };
-
-    // Function to draw the footer on the canvas.
-    const drawFooter = (
-        ctx: CanvasRenderingContext2D,
-        footerUrl: string,
-        imgWidth: number,
-        imgHeight: number,
-        settings: typeof globalFooterSettings, // Use the specific settings type
-        shadowSettings: typeof globalShadowSettings | undefined,
-        shadowTarget: "none" | "footer" | "whole-image"
-    ) => {
-        const footerImg = new Image();
-        footerImg.src = footerUrl;
-        footerImg.onload = () => {
-            const { opacity, scale, offsetX, offsetY } = settings;
-
-            // Calculate scaled dimensions
-            const scaledWidth = footerImg.width * scale;
-            const scaledHeight = footerImg.height * scale;
-
-            // Calculate position to center the footer image, then apply offsets
-            const x = (imgWidth - scaledWidth) / 2 + offsetX;
-            const y = imgHeight - scaledHeight - 20 + offsetY; // 20px from bottom, adjust as needed
-
-            ctx.save(); // Save the current canvas state
-            ctx.globalAlpha = opacity; // Apply opacity
-
-            // Apply shadow to the footer if specified
-            if (shadowTarget === "footer" && shadowSettings) {
-                drawShadow(ctx, scaledWidth, scaledHeight, shadowSettings, "footer", x, y);
+                await drawFooter(ctx, footerToUse, img.width, img.height, footerSettingsToUse, shadowSettingsToUse, shadowTargetToUse);
             }
 
-            ctx.drawImage(footerImg, x, y, scaledWidth, scaledHeight);
-            ctx.restore(); // Restore the canvas state to remove opacity for subsequent drawings
+            // ALL drawing is now complete. Call the parent's callback.
+            // Provide a function that gets the blob
+            onCanvasReady(index, async () => {
+                return new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
+            });
         };
-    };
 
-    const drawShadow = (
-        ctx: CanvasRenderingContext2D,
-        targetWidth: number,
-        targetHeight: number,
-        settings: typeof globalShadowSettings, // Use the specific settings type
-        targetType: "footer" | "whole-image",
-        targetX: number = 0, // Used for footer shadow positioning
-        targetY: number = 0  // Used for footer shadow positioning
-    ) => {
-        const { color, opacity, offsetX, offsetY, blur } = settings;
+        drawImageAndWatermarks();
 
-        ctx.save();
-        ctx.shadowColor = color;
-        ctx.shadowBlur = blur;
-        ctx.shadowOffsetX = offsetX;
-        ctx.shadowOffsetY = offsetY;
-        ctx.globalAlpha = opacity;
+        // Cleanup function for the effect
+        return () => {
+            // Potentially revoke any object URLs if they are created here, but image.url is likely already handled.
+            // Clean up timers or event listeners if any.
+        };
 
-        if (targetType === "whole-image") {
-            // A small transparent rectangle covering the whole image area to cast shadow
-            ctx.fillRect(0, 0, targetWidth, targetHeight);
-        } else if (targetType === "footer") {
-            // For footer, apply shadow relative to its position
-            ctx.fillRect(targetX, targetY, targetWidth, targetHeight);
-        }
-
-        ctx.restore();
-    };
-
+    }, [image.url, index, logoToUse, footerToUse, logoSettingsToUse, footerSettingsToUse, shadowSettingsToUse, shadowTargetToUse, onCanvasReady, drawWatermark, drawFooter, drawShadow]); // Include useCallback dependencies
 
     const downloadImage = async () => {
         const canvas = canvasRef.current;
@@ -246,16 +245,12 @@ export default function SingleImageEditor({ image, index }: SingleImageEditorPro
     const removeImage = () => {
         setImages((prevImages: any[]) => {
             const newImages = prevImages.filter((_, i) => i !== index);
-            // Revoke object URLs for the removed image to prevent memory leaks
             URL.revokeObjectURL(image.url);
             if (image.individualLogo) URL.revokeObjectURL(image.individualLogo);
             if (image.individualFooter) URL.revokeObjectURL(image.individualFooter);
-            // If the selected image is removed, deselect it
             if (selectedImageIndex === index) {
                 setSelectedImageIndex(null);
-            }
-            // Adjust selected index if an image before it was removed
-            else if (selectedImageIndex !== null && index < selectedImageIndex) {
+            } else if (selectedImageIndex !== null && index < selectedImageIndex) {
                 setSelectedImageIndex(selectedImageIndex - 1);
             }
             return newImages;
@@ -264,10 +259,10 @@ export default function SingleImageEditor({ image, index }: SingleImageEditorPro
 
     const modalCanvasId = `modal-canvas-${index}`;
 
-
     return (
         <div className="relative group">
             <canvas
+                id={`canvas-${index}`} // Make sure the canvas has the ID for PreviewArea's direct access (though we're moving away from this)
                 ref={canvasRef}
                 className="w-full h-auto rounded-md shadow-sm border border-gray-300 dark:border-gray-600"
             />
@@ -306,7 +301,6 @@ export default function SingleImageEditor({ image, index }: SingleImageEditorPro
                 </button>
             </div>
 
-            {/* Pass the new modalCanvasId to the ModalPreview */}
             <ModalPreview canvasRef={canvasRef} open={openPreview} onClose={setOpenPreview} modalCanvasId={modalCanvasId} />
         </div>
     );

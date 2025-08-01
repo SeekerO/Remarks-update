@@ -17,6 +17,8 @@ import { BsThreeDotsVertical } from "react-icons/bs"; // Icon for the 3-dot menu
 import { deleteChat } from "./firebase/firebase.actions/deleteChat"; // Import the new deleteChat function
 import { useRouter } from "next/navigation"; // For redirection after chat deletion
 import { FaUser } from "react-icons/fa";
+import { IoIosVideocam } from "react-icons/io";
+import { MdCallEnd } from "react-icons/md";
 
 // Props for the ChatRoom component
 interface ChatRoomProps {
@@ -54,6 +56,7 @@ export default function ChatRoom({ chatId, canChat, toggleChat }: ChatRoomProps)
     const [onlineUsers, setOnlineUsers] = useState<Record<string, boolean>>({}); // Online status of users
     const [chatName, setChatName] = useState<string | null>(null); // State for chat name
     const router = useRouter(); // Initialize Next.js router
+    const [call, setCall] = useState<any>(null); // State for call management (if needed)
 
     // State for message editing
     const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
@@ -344,310 +347,335 @@ export default function ChatRoom({ chatId, canChat, toggleChat }: ChatRoomProps)
         return lastReadId && messageId <= lastReadId;
     }, [userLastReads]); // Changed from participantLastReads
 
+    const handleCall = useCallback((callidx: any) => {
+        return setCall(callidx);
+    }, [call])
+
+    const handleEndCall = () => {
+        return setCall(null)
+    }
+
     if (!user) {
         return <div className="p-4 text-center text-gray-600">Please log in to chat.</div>;
     }
 
     return (
         <div className="flex  h-full shadow-md font-sans">
-
-            {/* Chat Content (Right) */}
-            <div className=" flex flex-col flex-grow ">
-                {/* Chat Header with Name and 3-dot menu */}
-                <div className="w-full p-4 border-b border-gray-200 bg-white dark:bg-slate-800 dark:border-gray-600 flex justify-between items-center">
-                    <UserList
-                        usersInChat={usersInChat}
-                        userDetails={userDetails}
-                        onlineUsers={onlineUsers}
-                        user={user}
-                    >
-                        <h3 className="text-lg font-semibold text-gray-800 dark:text-white w-full">
-                            {usersInChat.length === 2 ?
-                                <div>
-                                    {usersInChat.map((uid) => {
-                                        const detail = userDetails[uid];
-                                        const isOnline = onlineUsers[uid]; // Get online status
-                                        if (!detail) return null;
-                                        return (
-                                            <div className="flex items-center " key={uid}>
-                                                {uid !== user.uid &&
-                                                    <div className="relative">
-                                                        <Image
-                                                            width={36}
-                                                            height={36}
-                                                            src={detail.profilePic || ""} // Fallback profile picture
-                                                            alt={`${detail.name}'s profile`}
-                                                            className="w-9 h-9 rounded-full mr-3 object-cover border-2 border-blue-200"
-                                                        />
-                                                        <span className={`absolute bottom-0 right-2 w-3 h-3 ${isOnline ? "bg-green-500" : "bg-gray-500"} rounded-full border-2 border-white`}></span>
-                                                    </div>
-                                                }
-
-                                                <span key={uid} className="font-medium text-gray-700 dark:text-white">
-                                                    {uid !== user.uid && detail.name}
-                                                </span>
-                                            </div>
-
-                                        );
-                                    })}
-                                </div>
-                                :
-                                <>
-                                    {chatName === null ?
-                                        <p className="flex gap-2">
-                                            <span className="flex items-center gap-1 px-2 text-white bg-blue-400 rounded-lg text-md"><FaUser size={15} />
-                                                {usersInChat?.length}
-                                            </span> Group Chat
-                                        </p> : chatName
-                                    }
-                                </>
-                            }
-
-                        </h3>
-                    </UserList>
-                    {/* 3-dot menu button */}
-                    <div className="relative" ref={menuRef}>
-                        <button
-                            onClick={() => setShowMenu(!showMenu)}
-                            className="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                            title="Chat options"
+            {call === null ? (
+                <div className=" flex flex-col flex-grow ">
+                    {/* Chat Header with Name and 3-dot menu */}
+                    <div className="w-full p-4 border-b border-gray-200 bg-white dark:bg-slate-800 dark:border-gray-600 flex justify-between items-center">
+                        <UserList
+                            usersInChat={usersInChat}
+                            userDetails={userDetails}
+                            onlineUsers={onlineUsers}
+                            user={user}
                         >
-                            <BsThreeDotsVertical className="w-5 h-5 text-gray-600 dark:text-gray-300" />
-                        </button>
+                            <h3 className="text-lg font-semibold text-gray-800 dark:text-white w-full">
+                                {usersInChat.length === 2 ?
+                                    <div>
+                                        {usersInChat.map((uid) => {
+                                            const detail = userDetails[uid];
+                                            const isOnline = onlineUsers[uid]; // Get online status
+                                            if (!detail) return null;
+                                            return (
+                                                <div className="flex items-center " key={uid}>
+                                                    {uid !== user.uid &&
+                                                        <div className="relative">
+                                                            <Image
+                                                                width={36}
+                                                                height={36}
+                                                                src={detail.profilePic || ""} // Fallback profile picture
+                                                                alt={`${detail.name}'s profile`}
+                                                                className="w-9 h-9 rounded-full mr-3 object-cover border-2 border-blue-200"
+                                                            />
+                                                            <span className={`absolute bottom-0 right-2 w-3 h-3 ${isOnline ? "bg-green-500" : "bg-gray-500"} rounded-full border-2 border-white`}></span>
+                                                        </div>
+                                                    }
 
-                        {/* Dropdown Menu */}
-                        {showMenu && (
-                            <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-700 rounded-md shadow-lg py-1 z-10">
-                                <button
-                                    onClick={() => {
-                                        setShowConfirmDelete(true);
-                                        setShowMenu(false); // Close the 3-dot menu immediately
-                                    }}
-                                    className="block px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-gray-100 dark:hover:bg-gray-600 w-full text-left"
-                                    disabled={!canChat} // Disable if user can't chat
-                                >
-                                    Delete Chat
-                                </button>
-                                {/* Add other menu items here if needed */}
-                            </div>
-                        )}
-                    </div>
-                </div>
+                                                    <span key={uid} className="font-medium text-gray-700 dark:text-white">
+                                                        {uid !== user.uid && detail.name}
+                                                    </span>
+                                                </div>
 
-                {/* Confirmation Dialog for Delete Chat */}
-                {showConfirmDelete && (
-                    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-                        <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-xl text-center">
-                            <h4 className="text-lg font-bold mb-4 text-gray-900 dark:text-white">Confirm Chat Deletion</h4>
-                            <p className="text-gray-700 dark:text-gray-300 mb-6">Are you sure you want to delete this chat? This action cannot be undone.</p>
-                            <div className="flex justify-center space-x-4">
-                                <button
-                                    onClick={() => setShowConfirmDelete(false)}
-                                    className="px-5 py-2 rounded-md bg-gray-300 text-gray-800 hover:bg-gray-400 dark:bg-gray-600 dark:text-white dark:hover:bg-gray-500 transition-colors"
-                                >
-                                    Cancel
-                                </button>
-                                <button
-                                    onClick={handleDeleteChat}
-                                    className="px-5 py-2 rounded-md bg-red-600 text-white hover:bg-red-700 transition-colors"
-                                >
-                                    Delete
-                                </button>
-                            </div>
+                                            );
+                                        })}
+                                    </div>
+                                    :
+                                    <>
+                                        {chatName === null ?
+                                            <p className="flex gap-2">
+                                                <span className="flex items-center gap-1 px-2 text-white bg-blue-400 rounded-lg text-md"><FaUser size={15} />
+                                                    {usersInChat?.length}
+                                                </span> Group Chat
+                                            </p> : chatName
+                                        }
+                                    </>
+                                }
+
+                            </h3>
+                        </UserList>
+                        <div>
+                            <button onClick={() => handleCall(userDetails)} className="rounded-full h-10 w-10 bg-blue-600 text-white flex items-center justify-center hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                <IoIosVideocam size={20} />
+                            </button>
+
+                        </div>
+                        {/* 3-dot menu button */}
+                        <div className="relative" ref={menuRef}>
+                            <button
+                                onClick={() => setShowMenu(!showMenu)}
+                                className="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                title="Chat options"
+                            >
+                                <BsThreeDotsVertical className="w-5 h-5 text-gray-600 dark:text-gray-300" />
+                            </button>
+
+                            {/* Dropdown Menu */}
+                            {showMenu && (
+                                <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-700 rounded-md shadow-lg py-1 z-10">
+                                    <button
+                                        onClick={() => {
+                                            setShowConfirmDelete(true);
+                                            setShowMenu(false); // Close the 3-dot menu immediately
+                                        }}
+                                        className="block px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-gray-100 dark:hover:bg-gray-600 w-full text-left"
+                                        disabled={!canChat} // Disable if user can't chat
+                                    >
+                                        Delete Chat
+                                    </button>
+                                    {/* Add other menu items here if needed */}
+                                </div>
+                            )}
                         </div>
                     </div>
-                )}
 
-
-                <div className=" flex-grow overflow-y-auto p-4 bg-white dark:bg-slate-900 ">
-                    {messages.length === 0 && (
-                        <div className="text-center text-gray-500 mt-10 text-lg">
-                            No messages yet. Start the conversation!
+                    {/* Confirmation Dialog for Delete Chat */}
+                    {showConfirmDelete && (
+                        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                            <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-xl text-center">
+                                <h4 className="text-lg font-bold mb-4 text-gray-900 dark:text-white">Confirm Chat Deletion</h4>
+                                <p className="text-gray-700 dark:text-gray-300 mb-6">Are you sure you want to delete this chat? This action cannot be undone.</p>
+                                <div className="flex justify-center space-x-4">
+                                    <button
+                                        onClick={() => setShowConfirmDelete(false)}
+                                        className="px-5 py-2 rounded-md bg-gray-300 text-gray-800 hover:bg-gray-400 dark:bg-gray-600 dark:text-white dark:hover:bg-gray-500 transition-colors"
+                                    >
+                                        Cancel
+                                    </button>
+                                    <button
+                                        onClick={handleDeleteChat}
+                                        className="px-5 py-2 rounded-md bg-red-600 text-white hover:bg-red-700 transition-colors"
+                                    >
+                                        Delete
+                                    </button>
+                                </div>
+                            </div>
                         </div>
                     )}
 
-                    {messages.map((msg: ChatMessage, index) => {
-                        const senderDetail = userDetails[msg.senderId];
-                        const senderName = senderDetail?.name || msg.senderId;
-                        const senderProfilePic = senderDetail?.profilePic;
-                        const isMyMessage = msg.senderId === user.uid;
-                        const messageTimestamp = msg.timestamp;
-                        // Check if message can be edited (by sender, within 2 mins, and user has chat permission)
-                        const canEdit = isMyMessage && (Date.now() - messageTimestamp) <= (2 * 60 * 1000) && canChat;
 
-                        // Determine if this is the last message in the chat
-                        const isLastMessage = index === messages.length - 1;
+                    <div className=" flex-grow overflow-y-auto p-4 bg-white dark:bg-slate-900 ">
+                        {messages.length === 0 && (
+                            <div className="text-center text-gray-500 mt-10 text-lg">
+                                No messages yet. Start the conversation!
+                            </div>
+                        )}
 
-                        // Get users who have read this specific message (for the last message only)
-                        const readersForLastMessage: UserDetail[] = [];
-                        if (isLastMessage && isMyMessage) {
-                            usersInChat.forEach(uId => { // Changed from participants
-                                if (uId !== user.uid && hasBeenReadBy(msg.id, uId)) {
-                                    const readerDetail = userDetails[uId];
-                                    if (readerDetail) {
-                                        readersForLastMessage.push(readerDetail);
+                        {messages.map((msg: ChatMessage, index) => {
+                            const senderDetail = userDetails[msg.senderId];
+                            const senderName = senderDetail?.name || msg.senderId;
+                            const senderProfilePic = senderDetail?.profilePic;
+                            const isMyMessage = msg.senderId === user.uid;
+                            const messageTimestamp = msg.timestamp;
+                            // Check if message can be edited (by sender, within 2 mins, and user has chat permission)
+                            const canEdit = isMyMessage && (Date.now() - messageTimestamp) <= (2 * 60 * 1000) && canChat;
+
+                            // Determine if this is the last message in the chat
+                            const isLastMessage = index === messages.length - 1;
+
+                            // Get users who have read this specific message (for the last message only)
+                            const readersForLastMessage: UserDetail[] = [];
+                            if (isLastMessage && isMyMessage) {
+                                usersInChat.forEach(uId => { // Changed from participants
+                                    if (uId !== user.uid && hasBeenReadBy(msg.id, uId)) {
+                                        const readerDetail = userDetails[uId];
+                                        if (readerDetail) {
+                                            readersForLastMessage.push(readerDetail);
+                                        }
                                     }
-                                }
-                            });
-                        }
+                                });
+                            }
 
-                        return (
-                            <div key={msg.id} className={`mb-4 flex items-end ${isMyMessage ? 'justify-end' : ''}`}>
-                                {!isMyMessage && senderProfilePic && (
-                                    <Image
-                                        width={36}
-                                        height={36}
-                                        src={senderProfilePic}
-                                        alt={`${senderName}'s profile`}
-                                        className="w-9 h-9 rounded-full mr-3 object-cover border border-gray-200"
-                                    />
-                                )}
-                                <div
-                                    className="relative"
-                                >
-                                    {/* Display message content or edit input */}
-                                    {msg.id === editingMessageId ? (
-                                        <div className="flex flex-col">
-                                            <input
-                                                type="text"
-                                                value={editingMessageContent}
-                                                onChange={(e) => setEditingMessageContent(e.target.value)}
-                                                className="border rounded px-2 py-1 mb-2 w-full text-gray-800"
-                                                onKeyPress={(e) => {
-                                                    if (e.key === 'Enter') handleSaveEdit();
-                                                }}
-                                                disabled={!canChat} // Disable editing input if canChat is false
-                                            />
-                                            <div className="flex justify-end space-x-2">
-                                                <button onClick={handleSaveEdit} className="bg-green-600 text-white text-xs px-3 py-1.5 rounded-md hover:bg-green-700 transition-colors" disabled={!canChat}>Save</button>
-                                                <button onClick={handleCancelEdit} className="bg-red-500 text-white text-xs px-3 py-1.5 rounded-md hover:bg-red-600 transition-colors" disabled={!canChat}>Cancel</button>
-                                            </div>
-                                        </div>
-                                    ) : (
-                                        <div>
-                                            <div className={`${isMyMessage ? 'bg-blue-500 text-white rounded-bl-xl rounded-tr-xl rounded-tl-xl' : 'bg-gray-200 text-gray-800 rounded-br-xl rounded-tr-xl rounded-tl-xl'} p-3 shadow-sm`}>
-                                                {msg.type === "file" ? (
-                                                    <a
-                                                        href={msg.content}
-                                                        target="_blank"
-                                                        rel="noopener noreferrer"
-                                                        className="text-blue-200 hover:underline flex items-center font-medium"
-                                                    >
-                                                        <span className="mr-2 text-lg">📎</span> {msg.content.split('/').pop() || 'File'}
-                                                    </a>
-                                                ) : (
-                                                    <p className="text-base h-auto max-w-[20rem] break-words ">
-                                                        {msg.content}
-                                                        {msg.isEdited && <span className="text-xs opacity-75 ml-1">(edited)</span>}
-                                                    </p>
-                                                )}
-                                            </div>
-
-                                            <span className={`block text-xs opacity-80 mt-1 ${isMyMessage ? "text-right" : "text-left"}`}>
-                                                {msg.timestamp ? new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Sending...'}
-                                            </span>
-
-
-                                            <div className="flex justify-end absolute right-0">
-                                                {isLastMessage && isMyMessage && readersForLastMessage.length > 0 && readersForLastMessage.map((reader, idx) => (
-                                                    reader.profilePic && (
-                                                        <>
-                                                            {usersInChat.length === 2 ? <span className="font-light text-xs text-gray-200 italic">
-                                                                <BiCheckDouble size={20} className="text-gray-500" />
-                                                            </span> :
-                                                                <>
-                                                                    <Image
-                                                                        key={idx}
-                                                                        width={18}
-                                                                        height={18}
-                                                                        src={reader.profilePic}
-                                                                        alt={`${reader.name}'s read receipt`}
-                                                                        className="w-[18px] h-[18px] rounded-full border border-white -ml-1 first:ml-0" // Overlapping effect
-                                                                        title={`Read by ${reader.name}`}
-                                                                    />
-                                                                </>
-                                                            }
-                                                        </>
-                                                    )
-                                                ))}
-                                            </div>
-
-                                            {/* Edit button */}
-                                            {isMyMessage && canEdit && msg.id !== editingMessageId && (
-                                                <button
-                                                    onClick={() => handleEditClick(msg)}
-                                                    className="absolute -top-2 -right-2 bg-gray-300 rounded-full w-6 h-6 flex items-center justify-center text-xs text-gray-700 hover:bg-gray-400 transition-colors shadow-sm"
-                                                    title="Edit message"
-                                                >
-                                                    <AiFillEdit />
-                                                </button>
-                                            )}
-                                        </div>
-                                    )}
-                                </div>
-
-
-                                {isMyMessage && senderProfilePic &&
-                                    <>
+                            return (
+                                <div key={msg.id} className={`mb-4 flex items-end ${isMyMessage ? 'justify-end' : ''}`}>
+                                    {!isMyMessage && senderProfilePic && (
                                         <Image
                                             width={36}
                                             height={36}
                                             src={senderProfilePic}
                                             alt={`${senderName}'s profile`}
-                                            className="w-9 h-9 rounded-full ml-3 object-cover border border-blue-200"
+                                            className="w-9 h-9 rounded-full mr-3 object-cover border border-gray-200"
                                         />
-                                    </>
-                                }
-                            </div>
-                        );
-                    })}
+                                    )}
+                                    <div
+                                        className="relative"
+                                    >
+                                        {/* Display message content or edit input */}
+                                        {msg.id === editingMessageId ? (
+                                            <div className="flex flex-col">
+                                                <input
+                                                    type="text"
+                                                    value={editingMessageContent}
+                                                    onChange={(e) => setEditingMessageContent(e.target.value)}
+                                                    className="border rounded px-2 py-1 mb-2 w-full text-gray-800"
+                                                    onKeyPress={(e) => {
+                                                        if (e.key === 'Enter') handleSaveEdit();
+                                                    }}
+                                                    disabled={!canChat} // Disable editing input if canChat is false
+                                                />
+                                                <div className="flex justify-end space-x-2">
+                                                    <button onClick={handleSaveEdit} className="bg-green-600 text-white text-xs px-3 py-1.5 rounded-md hover:bg-green-700 transition-colors" disabled={!canChat}>Save</button>
+                                                    <button onClick={handleCancelEdit} className="bg-red-500 text-white text-xs px-3 py-1.5 rounded-md hover:bg-red-600 transition-colors" disabled={!canChat}>Cancel</button>
+                                                </div>
+                                            </div>
+                                        ) : (
+                                            <div>
+                                                <div className={`${isMyMessage ? 'bg-blue-500 text-white rounded-bl-xl rounded-tr-xl rounded-tl-xl' : 'bg-gray-200 text-gray-800 rounded-br-xl rounded-tr-xl rounded-tl-xl'} p-3 shadow-sm`}>
+                                                    {msg.type === "file" ? (
+                                                        <a
+                                                            href={msg.content}
+                                                            target="_blank"
+                                                            rel="noopener noreferrer"
+                                                            className="text-blue-200 hover:underline flex items-center font-medium"
+                                                        >
+                                                            <span className="mr-2 text-lg">📎</span> {msg.content.split('/').pop() || 'File'}
+                                                        </a>
+                                                    ) : (
+                                                        <p className="text-base h-auto max-w-[20rem] break-words ">
+                                                            {msg.content}
+                                                            {msg.isEdited && <span className="text-xs opacity-75 ml-1">(edited)</span>}
+                                                        </p>
+                                                    )}
+                                                </div>
 
-                    <div ref={messagesEndRef} /> {/* Element to scroll into view */}
+                                                <span className={`block text-xs opacity-80 mt-1 ${isMyMessage ? "text-right" : "text-left"}`}>
+                                                    {msg.timestamp ? new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Sending...'}
+                                                </span>
 
-                </div>
-                {typingUsers.length > 0 && (
-                    <div className=" text-sm text-gray-600 px-4 py-2 animate-pulse text-right">
-                        {typingUsers.map((uid) => userDetails[uid]?.name || `User ${uid.substring(0, 4)}`).join(", ")}{" "}
-                        {typingUsers.length === 1 ? "is" : "are"} typing...
+
+                                                <div className="flex justify-end absolute right-0">
+                                                    {isLastMessage && isMyMessage && readersForLastMessage.length > 0 && readersForLastMessage.map((reader, idx) => (
+                                                        reader.profilePic && (
+                                                            <>
+                                                                {usersInChat.length === 2 ? <span className="font-light text-xs text-gray-200 italic">
+                                                                    <BiCheckDouble size={20} className="text-gray-500" />
+                                                                </span> :
+                                                                    <>
+                                                                        <Image
+                                                                            key={idx}
+                                                                            width={18}
+                                                                            height={18}
+                                                                            src={reader.profilePic}
+                                                                            alt={`${reader.name}'s read receipt`}
+                                                                            className="w-[18px] h-[18px] rounded-full border border-white -ml-1 first:ml-0" // Overlapping effect
+                                                                            title={`Read by ${reader.name}`}
+                                                                        />
+                                                                    </>
+                                                                }
+                                                            </>
+                                                        )
+                                                    ))}
+                                                </div>
+
+                                                {/* Edit button */}
+                                                {isMyMessage && canEdit && msg.id !== editingMessageId && (
+                                                    <button
+                                                        onClick={() => handleEditClick(msg)}
+                                                        className="absolute -top-2 -right-2 bg-gray-300 rounded-full w-6 h-6 flex items-center justify-center text-xs text-gray-700 hover:bg-gray-400 transition-colors shadow-sm"
+                                                        title="Edit message"
+                                                    >
+                                                        <AiFillEdit />
+                                                    </button>
+                                                )}
+                                            </div>
+                                        )}
+                                    </div>
+
+
+                                    {isMyMessage && senderProfilePic &&
+                                        <>
+                                            <Image
+                                                width={36}
+                                                height={36}
+                                                src={senderProfilePic}
+                                                alt={`${senderName}'s profile`}
+                                                className="w-9 h-9 rounded-full ml-3 object-cover border border-blue-200"
+                                            />
+                                        </>
+                                    }
+                                </div>
+                            );
+                        })}
+
+                        <div ref={messagesEndRef} /> {/* Element to scroll into view */}
+
                     </div>
-                )}
-                {/* Input and Send Button Area */}
-                <div className="relative flex p-4 border-t border-gray-200 bg-white dark:bg-gray-800 dark:border-gray-700 rounded-b-lg">
-                    <input
-                        value={input}
-                        onChange={handleTyping}
-                        onKeyPress={(e) => {
-                            if (e.key === 'Enter') handleSend();
-                        }}
-                        placeholder={canChat ? "Type a message..." : "You do not have permission to send messages."}
-                        className="flex-grow border border-gray-300  rounded-l-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-base text-black"
-                        disabled={!canChat} // Disable input if canChat is false
-                    />
-                    <input
-                        type="file"
-                        onChange={handleFileChange}
-                        className="hidden"
-                        id="file-upload"
-                        disabled={!canChat} // Disable file upload if canChat is false
-                    />
-                    <label htmlFor="file-upload" className={`cursor-pointer bg-gray-200 text-gray-700 px-4 py-2 rounded-none hover:bg-gray-300 flex items-center justify-center text-xl ${!canChat ? 'opacity-50 cursor-not-allowed' : ''}`}>
-                        📎
-                    </label>
+                    {typingUsers.length > 0 && (
+                        <div className=" text-sm text-gray-600 px-4 py-2 animate-pulse text-right">
+                            {typingUsers.map((uid) => userDetails[uid]?.name || `User ${uid.substring(0, 4)}`).join(", ")}{" "}
+                            {typingUsers.length === 1 ? "is" : "are"} typing...
+                        </div>
+                    )}
+                    {/* Input and Send Button Area */}
+                    <div className="relative flex p-4 border-t border-gray-200 bg-white dark:bg-gray-800 dark:border-gray-700 rounded-b-lg">
+                        <input
+                            value={input}
+                            onChange={handleTyping}
+                            onKeyPress={(e) => {
+                                if (e.key === 'Enter') handleSend();
+                            }}
+                            placeholder={canChat ? "Type a message..." : "You do not have permission to send messages."}
+                            className="flex-grow border border-gray-300  rounded-l-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-base text-black"
+                            disabled={!canChat} // Disable input if canChat is false
+                        />
+                        <input
+                            type="file"
+                            onChange={handleFileChange}
+                            className="hidden"
+                            id="file-upload"
+                            disabled={!canChat} // Disable file upload if canChat is false
+                        />
+                        <label htmlFor="file-upload" className={`cursor-pointer bg-gray-200 text-gray-700 px-4 py-2 rounded-none hover:bg-gray-300 flex items-center justify-center text-xl ${!canChat ? 'opacity-50 cursor-not-allowed' : ''}`}>
+                            📎
+                        </label>
 
+                        <button
+                            onClick={handleSend}
+                            className="bg-blue-600 text-white rounded-r-lg px-5 py-2 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed text-base font-semibold transition-colors shadow-md"
+                            disabled={!canChat || !input.trim()} // Disable send button if no permission or empty input
+                        >
+                            Send
+                        </button>
+                    </div>
+
+
+                    {/* Typing Indicator */}
+
+
+                </div>
+            ) : <>
+                <div>
                     <button
-                        onClick={handleSend}
-                        className="bg-blue-600 text-white rounded-r-lg px-5 py-2 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed text-base font-semibold transition-colors shadow-md"
-                        disabled={!canChat || !input.trim()} // Disable send button if no permission or empty input
+                        className="bg-red-700 text-white rounded-full flex items-center justify-center h-10 w-10"
+                        onClick={handleEndCall}
                     >
-                        Send
+                        <MdCallEnd size={20} />
                     </button>
+                    <pre>{JSON.stringify(call, null, 2)}</pre>
                 </div>
 
-
-                {/* Typing Indicator */}
-
-
-            </div>
+            </>}
 
         </div>
     );

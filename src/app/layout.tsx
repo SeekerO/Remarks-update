@@ -33,7 +33,11 @@ export default function RootLayout({
       >
         <AuthProvider>
           <ChatWrapper>
-            <ThemeWrapper>{children}</ThemeWrapper>
+            <ThemeWrapper>
+
+              {children}
+
+            </ThemeWrapper>
           </ChatWrapper>
         </AuthProvider>
       </body>
