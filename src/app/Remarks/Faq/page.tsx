@@ -229,7 +229,7 @@ const App = () => {
   };
 
   // Handle click on the FAQ topic to start timer and copy
-
+  console.log("Version 1.0.2")
   const handleTopicClick = (faq: FaqItem, index: number): void => {
 
     copyToClipboard(faq.details, index); // Attempt to copy first
