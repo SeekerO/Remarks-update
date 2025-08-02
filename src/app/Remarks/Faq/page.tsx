@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import faqData from '@/lib/json/faq.json';
+import BreadCrumb from '@/app/component/breadcrumb';
 
 // Define the type for a single FAQ item
 interface FaqItem {
@@ -143,7 +144,10 @@ const App = () => {
     <div className="min-h-screen bg-gray-100 dark:bg-gray-900 p-8 flex flex-col items-center font-sans">
       <div className="max-w-4xl w-full">
         {/* Title */}
-        <h1 className="text-4xl font-extrabold text-gray-900 dark:text-white mb-6 text-center">FAQ</h1>
+        <div>
+          <BreadCrumb />
+        </div>
+        <h1 className="text-4xl font-extrabold text-gray-900 dark:text-white mb-6 text-center">FAQ KKK</h1>
 
         {/* Search Bar */}
         <div className="mb-8 w-full">

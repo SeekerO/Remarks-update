@@ -37,6 +37,7 @@ import {
   MdAdd,
 } from "react-icons/md";
 import { IoSearchOutline } from "react-icons/io5";
+import Link from "next/link";
 
 // MODIFIED: Added 'id' to Item type for better key management
 type Item = { id: string; label1: string };
@@ -351,6 +352,7 @@ export default function DynamicColumn() {
 
                   <div className="flex flex-col">
                     <button onClick={storeMETA_DATA_BSKE_QUESTIONS}>fetch</button>
+                    <Link href="/Remarks/Faq">FAQ</Link>
                   </div>
                 </>
               ) : (
