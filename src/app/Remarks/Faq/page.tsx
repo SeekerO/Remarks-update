@@ -1,6 +1,6 @@
-"use client"
+"use client";
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import faqData from '@/lib/json/faq.json';
 import BreadCrumb from '@/app/component/breadcrumb';
 
@@ -38,12 +38,30 @@ const parseTimeToSeconds = (timeString: string): number => {
   return isNaN(totalSeconds) ? 0 : totalSeconds;
 };
 
+const useDebounce = (value: any, delay: number) => {
+  const [debouncedValue, setDebouncedValue] = useState<any>(value);
+
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedValue(value);
+    }, delay);
+
+    // Cleanup function to clear the timeout if value or delay changes
+    return () => {
+      clearTimeout(handler);
+    };
+  }, [value, delay]); // Re-run effect if value or delay changes
+
+  return debouncedValue;
+};
 // Main App component
-const App = () => {
+const FAQ = () => {
   // State for the FAQ data, initialized from localStorage or the default data
   const [faqs, setFaqs] = useState<FaqItem[]>(faqData as FaqItem[]);
-  // State for the search query
+  // State for the raw search query input
   const [searchQuery, setSearchQuery] = useState<string>('');
+  // Debounced search query for efficient filtering
+  const debouncedSearchQuery = useDebounce(searchQuery, 300); // Debounce by 300ms
   // State to track which card is expanded (index or null)
   const [expandedCard, setExpandedCard] = useState<number | null>(null);
   // State to track which card is in edit mode (index or null)
@@ -57,25 +75,15 @@ const App = () => {
   const [globalTimerDuration, setGlobalTimerDuration] = useState<number>(300); // Default to 5 minutes
   const [globalTimerInput, setGlobalTimerInput] = useState<string>(formatTime(300)); // Input field value
 
-  // State to force re-render for timer updates
+  // State to force re-render for timer updates (only for display)
   const [currentTime, setCurrentTime] = useState<number>(Date.now());
-
-  // New state to manage if copying is allowed for each card (index -> boolean)
-  const [canCopy, setCanCopy] = useState<Record<number, boolean>>({});
 
   // Effect to load data and global timer from local storage on component mount
   useEffect(() => {
     try {
       const savedFaqs = localStorage.getItem('faqData');
       if (savedFaqs) {
-        const loadedFaqs: FaqItem[] = JSON.parse(savedFaqs);
-        setFaqs(loadedFaqs);
-        // Initialize canCopy state for loaded FAQs
-        const initialCanCopy: Record<number, boolean> = {};
-        loadedFaqs.forEach((_, index) => {
-          initialCanCopy[index] = true; // Assume can copy initially
-        });
-        setCanCopy(initialCanCopy);
+        setFaqs(JSON.parse(savedFaqs));
       }
       const savedTimerDuration = localStorage.getItem('globalTimerDuration');
       if (savedTimerDuration) {
@@ -85,213 +93,185 @@ const App = () => {
       }
     } catch (e) {
       console.error("Failed to load data from local storage", e);
+      setMessage('Failed to load saved data.');
+      setTimeout(() => setMessage(''), 3000);
     }
   }, []);
 
-  // Effect to update current time every second for timers
+  // Effect to save FAQ data to local storage whenever `faqs` state changes
+  useEffect(() => {
+    try {
+      localStorage.setItem('faqData', JSON.stringify(faqs));
+    } catch (e) {
+      console.error("Failed to save FAQs to local storage", e);
+    }
+  }, [faqs]);
+
+  // Effect to save global timer duration to local storage whenever it changes
+  useEffect(() => {
+    try {
+      localStorage.setItem('globalTimerDuration', globalTimerDuration.toString());
+    } catch (e) {
+      console.error("Failed to save global timer duration to local storage", e);
+    }
+  }, [globalTimerDuration]);
+
+  // Effect to update current time every second and manage expired timers
   useEffect(() => {
     const interval = setInterval(() => {
       setCurrentTime(Date.now());
-      // Also check timers and update canCopy state
+
       setFaqs(prevFaqs => {
         let changed = false;
-        const updatedFaqs = prevFaqs.map((faq, index) => {
-          // Ensure timerStartTime is a valid number before using it in calculations
-          if (typeof faq.timerStartTime === 'number') {
+        const updatedFaqs = prevFaqs.map(faq => {
+          if (typeof faq.timerStartTime === 'number' && faq.timerStartTime !== null) {
             const elapsedTime = (Date.now() - faq.timerStartTime) / 1000;
             const remainingTime = globalTimerDuration - elapsedTime;
-            // If timer was active and now expired, allow copying and reset timer
-            if (remainingTime <= 0) { // Check if timer expired
-              if (canCopy[index] === false) { // Only change state if it was previously false
-                setCanCopy(prev => ({ ...prev, [index]: true }));
-                changed = true;
-              }
-              // Reset the timer for this card
-              if (faq.timerStartTime !== null) { // Ensure it's not already null to avoid unnecessary updates
-                // Create a new faq object to trigger state update
-                const newFaq = { ...faq, timerStartTime: null };
-                changed = true;
-                return newFaq;
-              }
+
+            // If timer expired, reset timerStartTime to null
+            if (remainingTime <= 0 && faq.timerStartTime !== null) {
+              changed = true;
+              return { ...faq, timerStartTime: null };
             }
           }
-          return faq; // Return original faq if no changes for this item
+          return faq;
         });
+        // Only return new array if a change occurred to prevent unnecessary re-renders
         return changed ? updatedFaqs : prevFaqs;
       });
     }, 1000); // Update every second
 
     return () => clearInterval(interval); // Cleanup on unmount
-  }, [globalTimerDuration, canCopy]); // Depend on globalTimerDuration and canCopy
+  }, [globalTimerDuration]);
 
-  // Function to save data to local storage
-  const saveToLocalStorage = (data: FaqItem[]): void => {
-    try {
-      localStorage.setItem('faqData', JSON.stringify(data));
-      setMessage('Changes saved successfully!');
-      setTimeout(() => setMessage(''), 3000);
-    } catch (e) {
-      console.error("Failed to save FAQs to local storage", e);
-      setMessage('Failed to save changes.');
-      setTimeout(() => setMessage(''), 3000);
-    }
-  };
-
-  // Function to save global timer duration to local storage
-  const saveGlobalTimerDurationToLocalStorage = (duration: number): void => {
-    try {
-      localStorage.setItem('globalTimerDuration', duration.toString());
-      setMessage('Global timer duration saved!');
-      setTimeout(() => setMessage(''), 3000);
-    } catch (e) {
-      console.error("Failed to save global timer duration to local storage", e);
-      setMessage('Failed to save global timer duration.');
-      setTimeout(() => setMessage(''), 3000);
-    }
-  };
 
   // Function to copy text to clipboard
   const copyToClipboard = useCallback((text: string, index: number): void => {
-    if (!canCopy[index]) {
+    const faq = faqs[index];
+    const elapsedTime = faq.timerStartTime ? (currentTime - faq.timerStartTime) / 1000 : 0;
+    const remainingTime = globalTimerDuration - elapsedTime;
+
+    if (remainingTime > 0 && faq.timerStartTime !== null) {
       setMessage('Copying is disabled while the timer is active for this topic.');
       setTimeout(() => setMessage(''), 3000);
       return; // Prevent copy action
     }
 
-    const copyText = (t: string): void => {
-      if (navigator.clipboard && navigator.clipboard.writeText) {
-        navigator.clipboard.writeText(t)
-          .then(() => {
-            setMessage('Details copied to clipboard!');
-            setTimeout(() => setMessage(''), 3000);
-          })
-          .catch(err => {
-            console.error('Failed to copy using clipboard API:', err);
-            fallbackCopyText(t);
-          });
-      } else {
-        fallbackCopyText(t);
-      }
-    };
-
-    const fallbackCopyText = (t: string): void => {
-      const textarea = document.createElement('textarea');
-      textarea.value = t;
-      textarea.style.position = 'fixed';
-      document.body.appendChild(textarea);
-      textarea.focus();
-      textarea.select();
+    const copyText = async (t: string): Promise<void> => {
       try {
-        const success = document.execCommand('copy');
-        if (success) {
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          await navigator.clipboard.writeText(t);
           setMessage('Details copied to clipboard!');
         } else {
-          setMessage('Failed to copy to clipboard.');
+          // Fallback for older browsers
+          const textarea = document.createElement('textarea');
+          textarea.value = t;
+          textarea.style.position = 'fixed';
+          document.body.appendChild(textarea);
+          textarea.focus();
+          textarea.select();
+          document.execCommand('copy');
+          document.body.removeChild(textarea);
+          setMessage('Details copied to clipboard!');
         }
+        setTimeout(() => setMessage(''), 3000);
       } catch (err) {
-        console.error('Failed to copy using fallback:', err);
+        console.error('Failed to copy:', err);
         setMessage('Failed to copy to clipboard.');
+        setTimeout(() => setMessage(''), 3000);
       }
-      document.body.removeChild(textarea);
-      setTimeout(() => setMessage(''), 3000);
     };
 
     copyText(text);
-  }, [canCopy]); // Depend on canCopy state
+
+    // Start timer only if it's not already running
+    if (!faq.timerStartTime) {
+      setFaqs(prevFaqs => {
+        const newFaqs = [...prevFaqs];
+        newFaqs[index] = { ...newFaqs[index], timerStartTime: Date.now() };
+        return newFaqs;
+      });
+      setMessage('Timer started. Copying disabled for this topic until timer expires.');
+      setTimeout(() => setMessage(''), 3000);
+    }
+  }, [faqs, globalTimerDuration, currentTime]); // Dependencies for useCallback
 
   // Handle search input change
-  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>): void => {
+  const handleSearchChange = useCallback((e: React.ChangeEvent<HTMLInputElement>): void => {
     setSearchQuery(e.target.value);
-  };
+  }, []);
 
   // Handle global timer input change
-  const handleGlobalTimerInputChange = (e: React.ChangeEvent<HTMLInputElement>): void => {
+  const handleGlobalTimerInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>): void => {
     setGlobalTimerInput(e.target.value);
-  };
+  }, []);
 
   // Apply global timer duration
-  const applyGlobalTimer = (): void => {
+  const applyGlobalTimer = useCallback((): void => {
     const newDuration = parseTimeToSeconds(globalTimerInput);
     if (!isNaN(newDuration) && newDuration >= 0) {
       setGlobalTimerDuration(newDuration);
-      saveGlobalTimerDurationToLocalStorage(newDuration);
       setMessage(`Timer set to ${formatTime(newDuration)} for all cards.`);
       setTimeout(() => setMessage(''), 3000);
     } else {
       setMessage('Invalid time format. Please use HH:MM:SS or MM:SS or SSS.');
       setTimeout(() => setMessage(''), 3000);
     }
-  };
+  }, [globalTimerInput]);
 
   // Handle expand/collapse logic ONLY
-  const handleToggleDetails = (index: number): void => {
+  const handleToggleDetails = useCallback((index: number): void => {
     setExpandedCard(prevExpanded => (prevExpanded === index ? null : index));
-  };
-
-  // Handle click on the FAQ topic to start timer and copy
-  console.log("Version 1.0.2")
-  const handleTopicClick = (faq: FaqItem, index: number): void => {
-
-    copyToClipboard(faq.details, index); // Attempt to copy first
-
-    if (!faq.timerStartTime && canCopy[index]) {
-      setFaqs(prevFaqs => {
-        const newFaqs = [...prevFaqs];
-        newFaqs[index] = { ...newFaqs[index], timerStartTime: Date.now() };
-        return newFaqs;
-      });
-      setCanCopy(prev => ({ ...prev, [index]: false })); // Disable copying when timer start
-      setMessage('Timer started. Copying disabled for this topic until timer expires.');
-      setTimeout(() => setMessage(''), 3000);
-    } else if (faq.timerStartTime) {
-      setMessage('Timer is already active for this topic. Copying disabled.');
-      setTimeout(() => setMessage(''), 3000);
-    }
-  };
-
+  }, []);
 
   // Handle edit button click
-  const handleEditClick = (faq: FaqItem, index: number): void => {
+  const handleEditClick = useCallback((faq: FaqItem, index: number): void => {
     setEditingCard(index);
     setEditFormData({ topic: faq.topic, details: faq.details });
-  };
+  }, []);
 
   // Handle form data change during editing
-  const handleEditFormChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>): void => {
+  const handleEditFormChange = useCallback((e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>): void => {
     const { name, value } = e.target;
     setEditFormData(prev => ({
       ...prev,
       [name]: value
     }));
-  };
+  }, []);
 
   // Handle save button click
-  const handleSaveClick = (index: number): void => {
-    const updatedFaqs = [...faqs];
-    updatedFaqs[index].topic = editFormData.topic;
-    updatedFaqs[index].details = editFormData.details;
-    setFaqs(updatedFaqs);
+  const handleSaveClick = useCallback((index: number): void => {
+    setFaqs(prevFaqs => {
+      const updatedFaqs = [...prevFaqs];
+      updatedFaqs[index] = { ...updatedFaqs[index], topic: editFormData.topic, details: editFormData.details };
+      return updatedFaqs;
+    });
     setEditingCard(null);
     setEditFormData({ topic: '', details: '' });
-    saveToLocalStorage(updatedFaqs);
-  };
+    setMessage('Changes saved successfully!');
+    setTimeout(() => setMessage(''), 3000);
+  }, [editFormData]);
 
   // Handle reset timer click for a specific card
-  const handleResetTimer = (index: number): void => {
+  const handleResetTimer = useCallback((index: number): void => {
     setFaqs(prevFaqs => {
       const newFaqs = [...prevFaqs];
       newFaqs[index] = { ...newFaqs[index], timerStartTime: null }; // Reset timer for this card
       return newFaqs;
     });
-    setCanCopy(prev => ({ ...prev, [index]: true })); // Re-enable copying on reset
     setMessage(`Timer for "${faqs[index].topic}" reset. Copying re-enabled.`);
     setTimeout(() => setMessage(''), 3000);
-  };
+  }, [faqs]);
 
-  // Filter the FAQs based on the search query
-  const filteredFaqs = faqs.filter((faq) =>
-    faq.topic.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  // Filter the FAQs based on the debounced search query
+  const filteredFaqs = useMemo(() => {
+    if (!debouncedSearchQuery) {
+      return faqs;
+    }
+    return faqs.filter((faq) =>
+      faq.topic.toLowerCase().includes(debouncedSearchQuery.toLowerCase())
+    );
+  }, [faqs, debouncedSearchQuery]);
 
   return (
     <div className="min-h-screen bg-gray-100 dark:bg-gray-900 p-8 flex flex-col items-center font-sans">
@@ -303,7 +283,6 @@ const App = () => {
 
         <div className='flex items-center justify-between mb-6'>
           <h1 className="text-4xl font-extrabold text-gray-900 dark:text-white text-center">FAQ KKK</h1>
-          {/* Global Timer Display - You can keep this as a general clock or remove if not needed */}
           <label className='text-2xl text-gray-700 dark:text-gray-300'>
             Current Time: {new Date(currentTime).toLocaleTimeString()}
           </label>
@@ -331,7 +310,7 @@ const App = () => {
           <input
             type="text"
             placeholder="Search for a topic..."
-            value={searchQuery}
+            value={searchQuery} // Bind to raw searchQuery
             onChange={handleSearchChange}
             className="w-full px-4 py-3 border border-gray-300 dark:border-gray-700 rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all duration-300 text-gray-900 dark:text-gray-100 bg-white dark:bg-gray-800"
           />
@@ -352,21 +331,21 @@ const App = () => {
               const remainingTime = globalTimerDuration - elapsedTime;
               const displayTime = formatTime(remainingTime);
 
-
               // Determine if copy button/action should be visually disabled or show tooltip
-              const currentCanCopy = canCopy[index] === undefined ? true : canCopy[index]; // Default to true if not set
+              const canCopyCurrent = faq.timerStartTime === null;
 
               return (
                 <div
                   key={index}
                   className={`bg-white dark:bg-gray-800 rounded-xl shadow-lg transition-all duration-300 hover:shadow-xl overflow-hidden
-                  ${faq.timerStartTime === null || faq?.timerStartTime === undefined ? "border-green-500 border-2" : "border-red-500 border-2"}
+                  ${canCopyCurrent ? "border-green-500 border-2" : "border-red-500 border-2"}
                   `}
                 >
+
                   {/* Topic/Header Section */}
                   <div
                     className="flex justify-between items-center p-6 cursor-pointer select-none border-b border-gray-200 dark:border-gray-700"
-                    onClick={() => handleToggleDetails(index)} // This now ONLY toggles expansion
+                    onClick={() => handleToggleDetails(index)}
                   >
                     {editingCard === index ? (
                       <input
@@ -378,15 +357,15 @@ const App = () => {
                       />
                     ) : (
                       <h2
-                        className={`text-xl font-bold flex flex-col truncate overflow-hidden ${currentCanCopy ? 'text-gray-900 dark:text-white' : 'text-gray-500 dark:text-gray-400 cursor-not-allowed'}`}
+                        className={`text-xl font-bold flex flex-col truncate overflow-hidden ${canCopyCurrent ? 'text-gray-900 dark:text-white' : 'text-gray-500 dark:text-gray-400 cursor-not-allowed'}`}
                         onClick={(e) => {
                           e.stopPropagation(); // Prevent parent div's click from firing
-                          handleTopicClick(faq, index); // This now starts timer and attempts to copy
+                          copyToClipboard(faq.details, index); // This now attempts to copy and starts timer if allowed
                         }}
-                        title={currentCanCopy ? "Click to copy details and start timer" : "Copying disabled while timer is active"}
+                        title={canCopyCurrent ? "Click to copy details and start timer" : "Copying disabled while timer is active"}
                       >
                         {faq.topic}
-                        <span className={`text-md font-medium italic ${remainingTime <= 10 ? 'text-red-500' : 'text-blue-500'} dark:text-blue-400`}>
+                        <span className={`text-md font-medium italic ${remainingTime <= 10 && !canCopyCurrent ? 'text-red-500' : 'text-blue-500'} dark:text-blue-400`}>
                           Timer: {displayTime}
                         </span>
                       </h2>
@@ -405,7 +384,7 @@ const App = () => {
                         </button>
                       ) : (
                         <>
-                          {faq.timerStartTime && (
+                          {!canCopyCurrent && ( // Show reset button only if timer is active
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
@@ -469,4 +448,4 @@ const App = () => {
   );
 };
 
-export default App;
+export default FAQ;
