@@ -142,7 +142,7 @@ export default function ImageControls() {
                         <input
                             type="range"
                             min="10"
-                            max="500"
+                            max="1000"
                             value={currentLogoSettings?.width || 0}
                             onChange={(e) => updateLogoSettings({ width: parseInt(e.target.value) })}
                             className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer range-thumb-blue dark:bg-gray-700 transition duration-150 ease-in-out"
@@ -156,7 +156,7 @@ export default function ImageControls() {
                         <input
                             type="range"
                             min="10"
-                            max="500"
+                            max="1000"
                             value={currentLogoSettings?.height || 0}
                             onChange={(e) => updateLogoSettings({ height: parseInt(e.target.value) })}
                             className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer range-thumb-blue dark:bg-gray-700 transition duration-150 ease-in-out"
