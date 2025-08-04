@@ -27,7 +27,7 @@ export default function PreviewArea() {
     // Callback from SingleImageEditor when its canvas is ready
     const handleCanvasReady = useCallback((index: number, getBlobFunc: () => Promise<Blob | null>) => {
         imageBlobGetters.current.set(index, getBlobFunc);
-        console.log(`Canvas ${index} ready and getter stored.`);
+        // console.log(`Canvas ${index} ready and getter stored.`);
     }, []); // Dependencies are empty because getBlobFunc changes on each render of child, but we only care about the latest
 
     const downloadAll = async () => {

@@ -47,6 +47,8 @@ export default function ImageUploader() {
         setIndividualFooter, // NEW: Get setIndividualFooter from context
     } = useImageEditor();
 
+
+
     // Helper function to handle file selection for main images.
     const handleImageChange = (event: React.ChangeEvent<HTMLInputElement>) => {
         if (event.target.files) {
@@ -84,7 +86,7 @@ export default function ImageUploader() {
         if (event.target.files && event.target.files[0] && selectedImageIndex !== null) {
             const file = event.target.files[0];
             const url = URL.createObjectURL(file);
-            setIndividualLogo(selectedImageIndex!, url); // Pass index and url!
+            setIndividualLogo(selectedImageIndex, url); // Pass index and url!
         }
     };
 
@@ -144,14 +146,18 @@ export default function ImageUploader() {
                 const file = files[0];
                 const url = URL.createObjectURL(file);
                 setFooter(url);
-            } else if (type === 'individualLogo') { // NEW
+            } else if (type === 'individualLogo') {
                 const file = files[0];
                 const url = URL.createObjectURL(file);
-                setIndividualLogo(0, url);
-            } else if (type === 'individualFooter') { // NEW
+                if (selectedImageIndex !== null) { // Added check for selectedImageIndex
+                    setIndividualLogo(selectedImageIndex, url);
+                }
+            } else if (type === 'individualFooter') {
                 const file = files[0];
                 const url = URL.createObjectURL(file);
-                setIndividualFooter(0, url);
+                if (selectedImageIndex !== null) { // Added check for selectedImageIndex
+                    setIndividualFooter(selectedImageIndex, url);
+                }
             }
         }
     };
@@ -277,6 +283,8 @@ export default function ImageUploader() {
             <div className="w-full flex items-center justify-center">
                 <div className="h-[1px] w-[80%] dark:bg-slate-600 bg-slate-300" />
             </div>
+
+
             {/* NEW: Individual Logo Upload Section (Conditionally rendered) */}
             {selectedImageIndex !== null && (
                 <div>
@@ -312,6 +320,7 @@ export default function ImageUploader() {
             )}
 
             {/* NEW: Individual Footer Upload Section (Conditionally rendered) */}
+
             {selectedImageIndex !== null && (
                 <div>
                     <input

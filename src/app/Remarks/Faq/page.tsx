@@ -1,7 +1,7 @@
 "use client";
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import faqData from '@/lib/json/faq.json';
 import BreadCrumb from '@/app/component/breadcrumb';
 
@@ -78,6 +78,22 @@ const FAQ = () => {
 
   // State to force re-render for timer updates (only for display)
   const [currentTime, setCurrentTime] = useState<number>(Date.now());
+
+  // State for new FAQ form
+  const [newFaqFormData, setNewFaqFormData] = useState<FaqItem>({ topic: '', details: '' });
+
+  // State to manage the visibility of the Add FAQ modal
+  const [isAddModalOpen, setIsAddModalOpen] = useState<boolean>(false);
+  // State to manage the visibility of the Delete confirmation modal
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState<boolean>(false);
+  // State to store the index of the FAQ to be deleted
+  const [faqToDelete, setFaqToDelete] = useState<number | null>(null);
+
+  // New state to manage the open state of the three-dot menu for each card
+  const [openMenuIndex, setOpenMenuIndex] = useState<number | null>(null);
+  // Reference for the menu container to detect outside clicks
+  const menuRef = useRef<HTMLDivElement>(null);
+
 
   // Effect to load data and global timer from local storage on component mount
   useEffect(() => {
@@ -244,6 +260,7 @@ const FAQ = () => {
   const handleEditClick = useCallback((faq: FaqItem, index: number): void => {
     setEditingCard(index);
     setEditFormData({ topic: faq.topic, details: faq.details });
+    setOpenMenuIndex(null); // Close menu after clicking
   }, []);
 
   // Handle form data change during editing
@@ -278,6 +295,91 @@ const FAQ = () => {
     setMessage(`Timer for "${faqs[index].topic}" reset. Copying re-enabled.`);
     setTimeout(() => setMessage(''), 3000);
   }, [faqs]);
+
+  // Handle new FAQ form data change
+  const handleNewFaqFormChange = useCallback((e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>): void => {
+    const { name, value } = e.target;
+    setNewFaqFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  }, []);
+
+  // Handle adding a new FAQ
+  const handleAddFaq = useCallback(() => {
+    if (newFaqFormData.topic.trim() === '' || newFaqFormData.details.trim() === '') {
+      setMessage('Topic and Details cannot be empty.');
+      setTimeout(() => setMessage(''), 3000);
+      return;
+    }
+
+    setFaqs(prevFaqs => [
+      ...prevFaqs,
+      { ...newFaqFormData, timerStartTime: null } // New FAQs start with no active timer
+    ]);
+    setNewFaqFormData({ topic: '', details: '' }); // Clear the form
+    setMessage('New FAQ added successfully!');
+    setTimeout(() => setMessage(''), 3000);
+    setIsAddModalOpen(false); // Close the modal after adding
+  }, [newFaqFormData]);
+
+
+  // Handle opening the Add FAQ modal
+  const handleOpenAddModal = useCallback(() => {
+    setIsAddModalOpen(true);
+  }, []);
+
+  // Handle closing the Add FAQ modal
+  const handleCloseAddModal = useCallback(() => {
+    setIsAddModalOpen(false);
+    setNewFaqFormData({ topic: '', details: '' }); // Reset form when closing
+  }, []);
+
+  // Handle opening the Delete confirmation modal
+  const handleOpenDeleteModal = useCallback((index: number) => {
+    setFaqToDelete(index);
+    setIsDeleteModalOpen(true);
+    setOpenMenuIndex(null); // Close menu after clicking
+  }, []);
+
+  // Handle closing the Delete confirmation modal
+  const handleCloseDeleteModal = useCallback(() => {
+    setFaqToDelete(null);
+    setIsDeleteModalOpen(false);
+  }, []);
+
+  // Handle deleting an FAQ after confirmation
+  const confirmDelete = useCallback(() => {
+    if (faqToDelete !== null) {
+      setFaqs(prevFaqs => {
+        const newFaqs = prevFaqs.filter((_, i) => i !== faqToDelete);
+        return newFaqs;
+      });
+      setMessage('FAQ deleted successfully!');
+      setTimeout(() => setMessage(''), 3000);
+      handleCloseDeleteModal(); // Close the modal
+    }
+  }, [faqToDelete, handleCloseDeleteModal]);
+
+  // Handle opening/closing the three-dot menu
+  const handleMenuToggle = useCallback((index: number, e: React.MouseEvent) => {
+    e.stopPropagation(); // Prevent the parent card's onClick from firing
+    setOpenMenuIndex(openMenuIndex === index ? null : index);
+  }, [openMenuIndex]);
+
+  // Close the menu when clicking outside of it
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+        setOpenMenuIndex(null);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [menuRef]);
+
 
   // Filter the FAQs based on the debounced search query
   const filteredFaqs = useMemo(() => {
@@ -321,8 +423,8 @@ const FAQ = () => {
           </button>
         </div>
 
-        {/* Search Bar */}
-        <div className="mb-8 w-full">
+        {/* Search Bar & Add FAQ Button */}
+        <div className="mb-8 w-full flex space-x-4">
           <input
             type="text"
             placeholder="Search for a topic..."
@@ -330,6 +432,12 @@ const FAQ = () => {
             onChange={handleSearchChange}
             className="w-full px-4 py-3 border border-gray-300 dark:border-gray-700 rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all duration-300 text-gray-900 dark:text-gray-100 bg-white dark:bg-gray-800"
           />
+          <button
+            onClick={handleOpenAddModal}
+            className="bg-green-600 text-white px-10 py-3 rounded-xl shadow-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 transition-colors duration-200"
+          >
+            ADD
+          </button>
         </div>
 
         {/* Message Box */}
@@ -349,7 +457,7 @@ const FAQ = () => {
 
               // Determine if copy button/action should be visually disabled or show tooltip
               const canCopyCurrent = faq.timerStartTime === null || undefined;
-              // hmmms
+
               return (
                 <div
                   key={index}
@@ -357,7 +465,6 @@ const FAQ = () => {
                   ${canCopyCurrent ? "border-green-500 border-2" : "border-red-500 border-2"}
                   `}
                 >
-
                   {/* Topic/Header Section */}
                   <div
                     className="flex justify-between items-center p-6 cursor-pointer select-none border-b border-gray-200 dark:border-gray-700"
@@ -373,7 +480,7 @@ const FAQ = () => {
                       />
                     ) : (
                       <h2
-                        className={`text-xl font-bold flex flex-col truncate w-[25rem] ${canCopyCurrent ? 'text-gray-900 dark:text-white' : 'text-gray-500 dark:text-gray-400 cursor-not-allowed'}`}
+                        className={`text-xl font-bold flex flex-col truncate w-full ${canCopyCurrent ? 'text-gray-900 dark:text-white' : 'text-gray-500 dark:text-gray-400 cursor-not-allowed'}`}
                         onClick={(e) => {
                           e.stopPropagation(); // Prevent parent div's click from firing
                           copyToClipboard(faq.details, faq.topic); // This now attempts to copy and starts timer if allowed
@@ -387,7 +494,7 @@ const FAQ = () => {
                       </h2>
                     )}
 
-                    <div className="flex items-center space-x-2">
+                    <div className="flex items-center space-x-2 relative z-0" ref={menuRef}>
                       {editingCard === index ? (
                         <button
                           onClick={(e) => {
@@ -412,14 +519,31 @@ const FAQ = () => {
                             </button>
                           )}
                           <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleEditClick(faq, index);
-                            }}
-                            className="bg-blue-500 text-white px-3 py-1 rounded-full text-sm hover:bg-blue-600 transition-colors duration-200"
+                            onClick={(e) => handleMenuToggle(index, e)}
+                            className="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500"
                           >
-                            Edit
+                            <svg className="w-6 h-6 text-gray-500 dark:text-gray-400" fill="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                              <path d="M12 8c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z"></path>
+                            </svg>
                           </button>
+                          {openMenuIndex === index && (
+                            <div className="absolute z-50 right-0 top-12 w-48 rounded-md shadow-lg bg-white dark:bg-gray-700 ring-1 ring-black ring-opacity-5 focus:outline-none">
+                              <div className="py-1">
+                                <button
+                                  onClick={(e) => handleEditClick(faq, index)}
+                                  className="text-gray-700 dark:text-gray-300 block w-full text-left px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-600"
+                                >
+                                  Edit
+                                </button>
+                                <button
+                                  onClick={(e) => handleOpenDeleteModal(index)}
+                                  className="text-gray-700 dark:text-gray-300 block w-full text-left px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-600"
+                                >
+                                  Delete
+                                </button>
+                              </div>
+                            </div>
+                          )}
                         </>
                       )}
                       <svg
@@ -460,6 +584,71 @@ const FAQ = () => {
           )}
         </div>
       </div>
+
+      {/* Add New FAQ Modal */}
+      {isAddModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 w-full max-w-md mx-4">
+            <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">Add FAQ</h2>
+            <div className="space-y-4">
+              <input
+                type="text"
+                name="topic"
+                placeholder="New Topic"
+                value={newFaqFormData.topic}
+                onChange={handleNewFaqFormChange}
+                className="w-full px-4 py-3 border border-gray-300 dark:border-gray-700 rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all duration-300 text-gray-900 dark:text-gray-100 bg-white dark:bg-gray-700"
+              />
+              <textarea
+                name="details"
+                placeholder="New Details"
+                value={newFaqFormData.details}
+                onChange={handleNewFaqFormChange}
+                rows={5}
+                className="w-full px-4 py-3 border border-gray-300 dark:border-gray-700 rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all duration-300 text-gray-900 dark:text-gray-100 bg-white dark:bg-gray-700 resize-y"
+              />
+              <div className="flex justify-end space-x-2">
+                <button
+                  onClick={handleCloseAddModal}
+                  className="bg-gray-500 text-white px-6 py-3 rounded-xl shadow-md hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-500 transition-colors duration-200"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleAddFaq}
+                  className="bg-green-600 text-white px-6 py-3 rounded-xl shadow-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 transition-colors duration-200"
+                >
+                  Add FAQ
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {isDeleteModalOpen && faqToDelete !== null && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 w-full max-w-sm mx-4 text-center">
+            <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">Delete FAQ</h2>
+            <p className="text-gray-700 dark:text-gray-300 mb-6">Are you sure you want to delete the topic: **{faqs[faqToDelete]?.topic}**?</p>
+            <div className="flex justify-center space-x-4">
+              <button
+                onClick={handleCloseDeleteModal}
+                className="bg-gray-500 text-white px-6 py-3 rounded-xl shadow-md hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-500 transition-colors duration-200"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmDelete}
+                className="bg-red-600 text-white px-6 py-3 rounded-xl shadow-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 transition-colors duration-200"
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

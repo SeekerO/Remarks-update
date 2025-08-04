@@ -260,7 +260,6 @@ export default function SingleImageEditor({ image, index, onCanvasReady }: Singl
     };
 
     const modalCanvasId = `modal-canvas-${index}`;
-
     return (
         <div className="relative group">
             <canvas
