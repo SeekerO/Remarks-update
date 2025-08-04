@@ -147,13 +147,25 @@ const FAQ = () => {
 
 
   // Function to copy text to clipboard
-  const copyToClipboard = useCallback((text: string, index: number): void => {
-    const faq = faqs[index];
-    const elapsedTime = faq.timerStartTime ? (currentTime - faq.timerStartTime) / 1000 : 0;
+  const copyToClipboard = useCallback((text: string, topicToFind: string): void => {
+    // Find the FAQ item in the ORIGINAL array based on the topic
+    const faqToUpdateIndex = faqs.findIndex((faq) => faq.topic === topicToFind);
+
+    if (faqToUpdateIndex === -1) {
+      // This should ideally not happen if topicToFind comes from an existing FAQ
+      console.error('FAQ topic not found:', topicToFind);
+      setMessage('Error: Topic not found.');
+      setTimeout(() => setMessage(''), 3000);
+      return;
+    }
+
+    const faqToUpdate = faqs[faqToUpdateIndex];
+
+    const elapsedTime = faqToUpdate.timerStartTime ? (currentTime - faqToUpdate.timerStartTime) / 1000 : 0;
     const remainingTime = globalTimerDuration - elapsedTime;
 
-    if (remainingTime > 0 && faq.timerStartTime !== null) {
-      setMessage('Copying is disabled while the timer is active for this topic.');
+    if (remainingTime > 0 && faqToUpdate.timerStartTime !== null) {
+      setMessage(`Copying is disabled while the timer is active for "${faqToUpdate.topic}". Remaining: ${Math.ceil(remainingTime)}s`);
       setTimeout(() => setMessage(''), 3000);
       return; // Prevent copy action
     }
@@ -183,20 +195,22 @@ const FAQ = () => {
       }
     };
 
-
     copyText(text);
 
-    // Start timer only if it's not already running
-    if (!faq.timerStartTime) {
+    // Start timer only if it's not already running for this specific topic
+    if (faqToUpdate.timerStartTime === null) {
       setFaqs(prevFaqs => {
         const newFaqs = [...prevFaqs];
-        newFaqs[index] = { ...newFaqs[index], timerStartTime: Date.now() };
+        // Update the specific FAQ item using its found index
+        newFaqs[faqToUpdateIndex] = { ...newFaqs[faqToUpdateIndex], timerStartTime: Date.now() };
         return newFaqs;
       });
-      setMessage('Timer started. Copying disabled for this topic until timer expires.');
+      setMessage(`Timer started for "${faqToUpdate.topic}". Copying disabled until timer expires.`);
       setTimeout(() => setMessage(''), 3000);
     }
+
   }, [faqs, globalTimerDuration, currentTime]); // Dependencies for useCallback
+
 
   // Handle search input change
   const handleSearchChange = useCallback((e: React.ChangeEvent<HTMLInputElement>): void => {
@@ -362,7 +376,7 @@ const FAQ = () => {
                         className={`text-xl font-bold flex flex-col truncate overflow-hidden ${canCopyCurrent ? 'text-gray-900 dark:text-white' : 'text-gray-500 dark:text-gray-400 cursor-not-allowed'}`}
                         onClick={(e) => {
                           e.stopPropagation(); // Prevent parent div's click from firing
-                          copyToClipboard(faq.details, index); // This now attempts to copy and starts timer if allowed
+                          copyToClipboard(faq.details, faq.topic); // This now attempts to copy and starts timer if allowed
                         }}
                         title={canCopyCurrent ? "Click to copy details and start timer" : "Copying disabled while timer is active"}
                       >
