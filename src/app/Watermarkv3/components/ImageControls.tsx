@@ -217,7 +217,7 @@ export default function ImageControls() {
                         <input
                             type="range"
                             min="0.1"
-                            max="2"
+                            max="20"
                             step="0.01"
                             value={currentFooterSettings?.scale || 0}
                             onChange={(e) => updateFooterSettings({ scale: parseFloat(e.target.value) })}
