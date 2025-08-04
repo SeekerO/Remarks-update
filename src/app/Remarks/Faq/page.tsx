@@ -341,7 +341,7 @@ const FAQ = () => {
 
         {/* FAQ Cards */}
         <div className="space-y-4">
-          {filteredFaqs.sort((a) => a.timerStartTime === null ? -1 : 1).length > 0 ? (
+          {filteredFaqs.length > 0 ? (
             filteredFaqs.map((faq, index) => {
               const elapsedTime = faq.timerStartTime ? (currentTime - faq.timerStartTime) / 1000 : 0; // in seconds
               const remainingTime = globalTimerDuration - elapsedTime;
