@@ -4,7 +4,8 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import faqData from '@/lib/json/faq.json';
 import BreadCrumb from '@/app/component/breadcrumb';
-
+import { IoIosTimer } from "react-icons/io"
+import { MdFormatListBulletedAdd } from "react-icons/md";
 // Define the type for a single FAQ item
 interface FaqItem {
   topic: string;
@@ -93,6 +94,12 @@ const FAQ = () => {
   const [openMenuIndex, setOpenMenuIndex] = useState<number | null>(null);
   // Reference for the menu container to detect outside clicks
   const menuRef = useRef<HTMLDivElement>(null);
+
+  // State for timer Hour, Minutes and Seconds
+  const [hours, setHours] = useState<string>('00');
+  const [minutes, setMinutes] = useState<string>('05');
+  const [seconds, setSeconds] = useState<string>('00');
+
 
 
   // Effect to load data and global timer from local storage on component mount
@@ -240,16 +247,21 @@ const FAQ = () => {
 
   // Apply global timer duration
   const applyGlobalTimer = useCallback((): void => {
-    const newDuration = parseTimeToSeconds(globalTimerInput);
-    if (!isNaN(newDuration) && newDuration >= 0) {
-      setGlobalTimerDuration(newDuration);
-      setMessage(`Timer set to ${formatTime(newDuration)} for all cards.`);
+    const h = parseInt(hours) || 0;
+    const m = parseInt(minutes) || 0;
+    const s = parseInt(seconds) || 0;
+
+    if (h < 0 || m < 0 || s < 0 || m > 59 || s > 59) {
+      setMessage('Invalid time values. Please use non-negative numbers, with minutes and seconds under 60.');
       setTimeout(() => setMessage(''), 3000);
-    } else {
-      setMessage('Invalid time format. Please use HH:MM:SS or MM:SS or SSS.');
-      setTimeout(() => setMessage(''), 3000);
+      return;
     }
-  }, [globalTimerInput]);
+
+    const newDuration = h * 3600 + m * 60 + s;
+    setGlobalTimerDuration(newDuration);
+    setMessage(`Timer set to ${h}h ${m}m ${s}s for all cards.`);
+    setTimeout(() => setMessage(''), 3000);
+  }, [hours, minutes, seconds]);
 
   // Handle expand/collapse logic ONLY
   const handleToggleDetails = useCallback((index: number): void => {
@@ -407,19 +419,41 @@ const FAQ = () => {
         </div>
 
         {/* Global Timer Setting */}
-        <div className="mb-8 w-full flex items-center space-x-4">
+        <div className="mb-8 w-full flex items-center space-x-2">
           <input
-            type="text"
-            placeholder="Set timer (HH:MM:SS)"
-            value={globalTimerInput}
-            onChange={handleGlobalTimerInputChange}
-            className="flex-grow px-4 py-3 border border-gray-300 dark:border-gray-700 rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all duration-300 text-gray-900 dark:text-gray-100 bg-white dark:bg-gray-800"
+            type="number"
+            placeholder="HH"
+            value={hours}
+            onChange={(e) => setHours(e.target.value)}
+            className="w-1/3 px-4 py-3 border border-gray-300 dark:border-gray-700 rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all duration-300 text-gray-900 dark:text-gray-100 bg-white dark:bg-gray-800 text-center"
+            min="0"
+            max="99"
+          />
+          <span className="text-xl dark:text-gray-400">:</span>
+          <input
+            type="number"
+            placeholder="MM"
+            value={minutes}
+            onChange={(e) => setMinutes(e.target.value)}
+            className="w-1/3 px-4 py-3 border border-gray-300 dark:border-gray-700 rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all duration-300 text-gray-900 dark:text-gray-100 bg-white dark:bg-gray-800 text-center"
+            min="0"
+            max="59"
+          />
+          <span className="text-xl dark:text-gray-400">:</span>
+          <input
+            type="number"
+            placeholder="SS"
+            value={seconds}
+            onChange={(e) => setSeconds(e.target.value)}
+            className="w-1/3 px-4 py-3 border border-gray-300 dark:border-gray-700 rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all duration-300 text-gray-900 dark:text-gray-100 bg-white dark:bg-gray-800 text-center"
+            min="0"
+            max="59"
           />
           <button
             onClick={applyGlobalTimer}
             className="bg-purple-600 text-white px-6 py-3 rounded-xl shadow-md hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500 transition-colors duration-200"
           >
-            Apply Timer
+            <IoIosTimer size={25} />
           </button>
         </div>
 
@@ -436,7 +470,7 @@ const FAQ = () => {
             onClick={handleOpenAddModal}
             className="bg-green-600 text-white px-6 py-3 rounded-xl shadow-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 transition-colors duration-200"
           >
-            Add
+            <MdFormatListBulletedAdd size={25} />
           </button>
         </div>
 
