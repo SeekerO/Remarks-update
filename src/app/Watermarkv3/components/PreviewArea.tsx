@@ -154,10 +154,10 @@ export default function PreviewArea() {
     return (
         <div className="space-y-8 p-6 bg-gray-50 dark:bg-gray-900 min-h-screen rounded-lg shadow-inner">
             <div className="flex flex-col sm:flex-row justify-between items-center mb-6 gap-4">
-                <h2 className="text-3xl font-extrabold text-gray-900 dark:text-white flex items-center gap-3">
+                <h2 className="text-3xl font-extrabold text-gray-900 dark:text-white flex px-2 items-center gap-3">
                     Image Previews
                     <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 shadow-sm">
-                        <IoImage className="mr-1 text-base" />
+                        <IoImage className="mr-1 text-base" size={20} />
                         {images.length}
                     </span>
                 </h2>
@@ -167,25 +167,25 @@ export default function PreviewArea() {
                             type="text"
                             placeholder="Enter file name (optional)"
                             onChange={(e) => setFileName(e.target.value)}
-                            className="flex-grow px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-700 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 transition-all duration-200 w-full sm:w-auto"
+                            className="flex-grow px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-700 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 transition-all duration-200 w-full"
                         />
                         <button
                             onClick={downloadAll}
-                            className="px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-lg shadow-lg transition duration-300 ease-in-out transform hover:scale-105 flex items-center justify-center gap-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-opacity-75 disabled:opacity-50 disabled:cursor-not-allowed w-full sm:w-auto"
+                            className="px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-lg shadow-lg transition duration-300 ease-in-out transform hover:scale-105 flex items-center justify-center gap-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-opacity-75 disabled:opacity-50 disabled:cursor-not-allowed w-full"
                             disabled={images.length === 0 || processing}
                         >
-                            <HiOutlineFolderDownload className="text-2xl" /> Download All as ZIP
+                            <HiOutlineFolderDownload className="text-2xl" /> Download as ZIP
                         </button>
                     </div>
                 )}
             </div>
 
             {images.length === 0 ? (
-                <p className="text-gray-500 dark:text-gray-400 text-xl text-center bg-white dark:bg-gray-800 p-8 rounded-2xl shadow-inner border border-gray-200 dark:border-gray-700">
+                <p className="text-gray-500 dark:text-gray-400 text-xl text-center bg-white dark:bg-gray-800 p-8 rounded-2xl shadow-inner border border-gray-200 dark:border-gray-700 overflow-hidden">
                     No images uploaded yet. Please use the uploader on the left.
                 </p>
             ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                <div className="grid grid-cols-1 sm:grid-cols-1 lg:grid-cols-3 gap-6">
                     {images.map((image, index) => (
                         <div
                             key={index}

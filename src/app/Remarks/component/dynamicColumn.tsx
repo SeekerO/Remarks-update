@@ -202,7 +202,7 @@ export default function DynamicColumn() {
     <div className="w-full h-full flex flex-col overflow-hidden justify-center select-none p-4 md:p-8 bg-gray-50 dark:bg-gray-900 font-sans">
       <ToastContainer position="bottom-right" autoClose={3000} hideProgressBar newestOnTop closeOnClick rtl={false} pauseOnFocusLoss draggable pauseOnHover theme="colored" />
 
-      <div className="w-full h-full flex flex-col md:flex-row gap-6">
+      <div className="w-full h-full flex  gap-6">
         {/* Sidebar / Column Manager */}
         <div
           className={`
@@ -210,13 +210,14 @@ export default function DynamicColumn() {
           ${sideMenu ? "w-full md:w-[420px]" : "w-[80px]"}
           flex-shrink-0
           duration-300
-          h-[90vh] md:h-full
+          h-full
           flex flex-col items-center
           shadow-xl rounded-2xl
           border overflow-auto
           ${editColumn.length === 1 ? "border-blue-500 ring-2 ring-blue-500" : "border-gray-200 dark:border-gray-700"}
         `}
         >
+
           {sideMenu ? (
             <>
               <h1
@@ -234,7 +235,9 @@ export default function DynamicColumn() {
                   className="text-3xl cursor-pointer text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors duration-200"
                 />
               </h1>
-
+              <div className="flex flex-col gap-1 w-full justify-center mb-4 items-center">
+                <Link href="/Remarks/Faq" className=" text-blue-500 font-semibold w-fit hover:underline">GO TO FAQ</Link>
+              </div>
               {editColumn.length === 0 ? (
                 <>
                   <form
@@ -335,10 +338,7 @@ export default function DynamicColumn() {
                     </button>
                   </form>
 
-                  <div className="flex flex-col gap-1 w-full justify-center items-center mt-4">
-                    <div className="h-[1px] w-[40%] bg-slate-500 mb-2" />
-                    <Link href="/Remarks/Faq" className="px-20 py-2 text-[20px] bg-green-500 rounded-full text-white font-semibold w-fit">GO TO FAQ</Link>
-                  </div>
+
                 </>
               ) : (
                 <EditLayout
@@ -356,12 +356,12 @@ export default function DynamicColumn() {
         </div>
 
         {/* Main Content Area (Sortable Columns) */}
-        <div className="w-full h-full flex flex-col flex-grow bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-6">
+        <div className="w-full overflow-hidden h-full flex flex-col flex-grow bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-6">
           <div className="flex gap-2 mb-4">
             <h2 className="text-2xl font-bold text-gray-800 dark:text-white ">Your Columns</h2>
             <div className="flex gap-1 items-center text-white border border-white rounded-md px-2 py-1">
               <IoSearchOutline className="text-[25px] " />
-              <input type="search" placeholder="Search title here.." onChange={(e) => setSearchTerm(e.target.value)} className="px-1 bg-transparent border-l-2 border-slate-400 outline-none w-[300px]" />
+              <input type="search" placeholder="Search title here.." onChange={(e) => setSearchTerm(e.target.value)} className="px-1 bg-transparent border-l-2 border-slate-400 outline-none w-[300px] text-slate-900" />
             </div>
           </div>
           {/* <pre className="select-text">{JSON.stringify(columns, null, 2)}</pre> */}

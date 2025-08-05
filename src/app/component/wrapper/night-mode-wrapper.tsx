@@ -18,6 +18,9 @@ const ThemeWrapper: React.FC<WrapperProps> = ({ children }) => {
             </div>
 
             {children}
+            <div className='fixed left-1 bottom-1 text-[10px] italic font-thin text-slate-500'>
+                <span>Version 1.5.0</span>
+            </div>
 
         </>
     );

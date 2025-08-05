@@ -399,7 +399,7 @@ const FAQ = () => {
           <BreadCrumb />
         </div>
 
-        <div className='flex items-center justify-between mb-6'>
+        <div className='flex items-center justify-between mb-6 mt-6'>
           <h1 className="text-4xl font-extrabold text-gray-900 dark:text-white text-center">FAQ KKK</h1>
           <label className='text-2xl text-gray-700 dark:text-gray-300'>
             Current Time: {new Date(currentTime).toLocaleTimeString()}
@@ -434,9 +434,9 @@ const FAQ = () => {
           />
           <button
             onClick={handleOpenAddModal}
-            className="bg-green-600 text-white px-10 py-3 rounded-xl shadow-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 transition-colors duration-200"
+            className="bg-green-600 text-white px-6 py-3 rounded-xl shadow-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 transition-colors duration-200"
           >
-            ADD
+            Add
           </button>
         </div>
 
@@ -461,7 +461,7 @@ const FAQ = () => {
               return (
                 <div
                   key={index}
-                  className={`bg-white dark:bg-gray-800 rounded-xl shadow-lg transition-all duration-300 hover:shadow-xl overflow-hidden
+                  className={`bg-white dark:bg-gray-800 rounded-xl shadow-lg transition-all duration-300 hover:shadow-xl overflow-hidden relative 
                   ${canCopyCurrent ? "border-green-500 border-2" : "border-red-500 border-2"}
                   `}
                 >
@@ -494,7 +494,7 @@ const FAQ = () => {
                       </h2>
                     )}
 
-                    <div className="flex items-center space-x-2 relative z-0" ref={menuRef}>
+                    <div className="flex items-center space-x-2 relative" ref={menuRef}>
                       {editingCard === index ? (
                         <button
                           onClick={(e) => {
@@ -527,10 +527,10 @@ const FAQ = () => {
                             </svg>
                           </button>
                           {openMenuIndex === index && (
-                            <div className="absolute z-50 right-0 top-12 w-48 rounded-md shadow-lg bg-white dark:bg-gray-700 ring-1 ring-black ring-opacity-5 focus:outline-none">
+                            <div className="absolute right-20 z-20 w-48 rounded-md shadow-lg bg-white dark:bg-gray-700 ring-1 ring-black ring-opacity-5">
                               <div className="py-1">
                                 <button
-                                  onClick={(e) => handleEditClick(faq, index)}
+                                  onClick={() => handleEditClick(faq, index)}
                                   className="text-gray-700 dark:text-gray-300 block w-full text-left px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-600"
                                 >
                                   Edit
@@ -589,7 +589,7 @@ const FAQ = () => {
       {isAddModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
           <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 w-full max-w-md mx-4">
-            <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">Add FAQ</h2>
+            <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">Add New FAQ</h2>
             <div className="space-y-4">
               <input
                 type="text"

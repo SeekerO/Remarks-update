@@ -31,23 +31,19 @@ interface AuthContextType {
 // Create the AuthContext
 const AuthContext = createContext<AuthContextType | null>(null);
 
-// AuthProvider component to wrap your application and provide authentication context
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     const [user, setUser] = useState<CustomUser | null>(null);
 
     useEffect(() => {
-        // Subscribe to Firebase authentication state changes
-        // This listener will fire on initial load, and whenever the user's sign-in state changes.
         const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
             if (currentUser) {
-                // If a user is logged in, save/update their profile in the Realtime Database
                 await saveUserProfile(currentUser);
 
-                // Fetch user-specific roles (isAdmin, canChat) from their profile
+
                 const userProfileRef = ref(db, `users/${currentUser.uid}`);
                 const snapshot = await get(userProfileRef);
                 let isAdmin = false;
-                let canChat = false; // Default chat permission to true
+                let canChat = false;
 
                 if (snapshot.exists()) {
                     const userData = snapshot.val();
@@ -55,34 +51,31 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
                     canChat = userData.canChat !== undefined ? userData.canChat : true;
                 }
 
-                // Update the user state with the fetched custom properties
+
                 const userWithRoles: CustomUser = {
                     ...currentUser,
                     isAdmin,
                     canChat,
                 };
                 setUser(userWithRoles);
-
-                // Set user's online status in the 'presence' node
+                5
                 const userStatusRef = ref(db, `presence/${currentUser.uid}`);
-                set(userStatusRef, true); // Set status to online (true)
-                // Set up onDisconnect to update status to a timestamp when the user disconnects
+                set(userStatusRef, true);
                 onDisconnect(userStatusRef).set(serverTimestamp());
                 console.log(`User ${currentUser.uid} set to online. onDisconnect set.`);
             } else {
-                // If user logs out, explicitly set their status offline if they were previously logged in
-                // Only attempt to set offline if there was a user logged in previously
-                if (user && user.uid) { // Check if 'user' state was previously set
+
+                if (user && user.uid) {
                     const userStatusRef = ref(db, `presence/${user.uid}`);
-                    set(userStatusRef, serverTimestamp()); // Set LastOnline timestamp on logout
+                    set(userStatusRef, serverTimestamp());
                     console.log(`User ${user.uid} set to offline on logout.`);
                 }
-                setUser(null); // Clear user state
+                setUser(null);
             }
         });
-        // Unsubscribe from auth state changes when the component unmounts
+
         return () => unsubscribe();
-    }, []); // Removed 'user' from dependency array to prevent excessive re-renders
+    }, []);
 
     // Function to handle Google login
     const loginWithGoogle = async () => {

@@ -1,6 +1,6 @@
 // components/Wrapper.tsx
 "use client"
-import PopupChat from '../../Chat/PopupChat';
+import PopupChat from "@/app/Chat/PopupChat";
 
 interface ChatWrapper {
     children: React.ReactNode;
