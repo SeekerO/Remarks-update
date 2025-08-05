@@ -4,6 +4,7 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import faqData from '@/lib/json/faq.json';
 import BreadCrumb from '@/app/component/breadcrumb';
+import TimerSettingsModal from './component/TimeSetter';
 import { IoIosTimer } from "react-icons/io"
 import { MdFormatListBulletedAdd } from "react-icons/md";
 // Define the type for a single FAQ item
@@ -96,9 +97,13 @@ const FAQ = () => {
   const menuRef = useRef<HTMLDivElement>(null);
 
   // State for timer Hour, Minutes and Seconds
-  const [hours, setHours] = useState<string>('00');
-  const [minutes, setMinutes] = useState<string>('05');
-  const [seconds, setSeconds] = useState<string>('00');
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [hours, setHours] = useState<string>('');
+  const [minutes, setMinutes] = useState<string>('');
+  const [seconds, setSeconds] = useState<string>('');
+
+  // ... (Other state and functions like setGlobalTimerDuration, setMessage)
+
 
 
 
@@ -240,28 +245,6 @@ const FAQ = () => {
     setSearchQuery(e.target.value);
   }, []);
 
-  // Handle global timer input change
-  const handleGlobalTimerInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>): void => {
-    setGlobalTimerInput(e.target.value);
-  }, []);
-
-  // Apply global timer duration
-  const applyGlobalTimer = useCallback((): void => {
-    const h = parseInt(hours) || 0;
-    const m = parseInt(minutes) || 0;
-    const s = parseInt(seconds) || 0;
-
-    if (h < 0 || m < 0 || s < 0 || m > 59 || s > 59) {
-      setMessage('Invalid time values. Please use non-negative numbers, with minutes and seconds under 60.');
-      setTimeout(() => setMessage(''), 3000);
-      return;
-    }
-
-    const newDuration = h * 3600 + m * 60 + s;
-    setGlobalTimerDuration(newDuration);
-    setMessage(`Timer set to ${h}h ${m}m ${s}s for all cards.`);
-    setTimeout(() => setMessage(''), 3000);
-  }, [hours, minutes, seconds]);
 
   // Handle expand/collapse logic ONLY
   const handleToggleDetails = useCallback((index: number): void => {
@@ -403,6 +386,24 @@ const FAQ = () => {
     );
   }, [faqs, debouncedSearchQuery]);
 
+  const handleApplyTimer = useCallback((): void => {
+    const h = parseInt(hours) || 0;
+    const m = parseInt(minutes) || 0;
+    const s = parseInt(seconds) || 0;
+
+    if (h < 0 || m < 0 || s < 0 || m > 59 || s > 59) {
+      setMessage('Invalid time values. Please use non-negative numbers, with minutes and seconds under 60.');
+      setTimeout(() => setMessage(''), 3000);
+      return;
+    }
+
+    const newDuration = h * 3600 + m * 60 + s;
+    setGlobalTimerDuration(newDuration);
+    setMessage(`Timer set to ${h}h ${m}m ${s}s for all cards.`);
+    setTimeout(() => setMessage(''), 3000);
+    setIsModalOpen(false); // Close the modal after applying the timer
+  }, [hours, minutes, seconds]);
+
   return (
     <div className="min-h-screen bg-gray-100 dark:bg-gray-900 p-8 flex flex-col items-center font-sans">
       <div className="max-w-4xl w-full">
@@ -419,43 +420,8 @@ const FAQ = () => {
         </div>
 
         {/* Global Timer Setting */}
-        <div className="mb-8 w-full flex items-center space-x-2">
-          <input
-            type="number"
-            placeholder="HH"
-            value={hours}
-            onChange={(e) => setHours(e.target.value)}
-            className="w-1/3 px-4 py-3 border border-gray-300 dark:border-gray-700 rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all duration-300 text-gray-900 dark:text-gray-100 bg-white dark:bg-gray-800 text-center"
-            min="0"
-            max="99"
-          />
-          <span className="text-xl dark:text-gray-400">:</span>
-          <input
-            type="number"
-            placeholder="MM"
-            value={minutes}
-            onChange={(e) => setMinutes(e.target.value)}
-            className="w-1/3 px-4 py-3 border border-gray-300 dark:border-gray-700 rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all duration-300 text-gray-900 dark:text-gray-100 bg-white dark:bg-gray-800 text-center"
-            min="0"
-            max="59"
-          />
-          <span className="text-xl dark:text-gray-400">:</span>
-          <input
-            type="number"
-            placeholder="SS"
-            value={seconds}
-            onChange={(e) => setSeconds(e.target.value)}
-            className="w-1/3 px-4 py-3 border border-gray-300 dark:border-gray-700 rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all duration-300 text-gray-900 dark:text-gray-100 bg-white dark:bg-gray-800 text-center"
-            min="0"
-            max="59"
-          />
-          <button
-            onClick={applyGlobalTimer}
-            className="bg-purple-600 text-white px-6 py-3 rounded-xl shadow-md hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500 transition-colors duration-200"
-          >
-            <IoIosTimer size={25} />
-          </button>
-        </div>
+
+
 
         {/* Search Bar & Add FAQ Button */}
         <div className="mb-8 w-full flex space-x-4">
@@ -472,6 +438,27 @@ const FAQ = () => {
           >
             <MdFormatListBulletedAdd size={25} />
           </button>
+
+          <button
+            onClick={() => setIsModalOpen(true)}
+            className="bg-purple-600 text-white px-6 py-3 rounded-xl shadow-md hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500 transition-colors duration-200"
+          >
+            <IoIosTimer size={25} />
+          </button>
+
+          {/* The new modal component */}
+          <TimerSettingsModal
+            isOpen={isModalOpen}
+            onClose={() => setIsModalOpen(false)}
+            hours={hours}
+            setHours={setHours}
+            minutes={minutes}
+            setMinutes={setMinutes}
+            seconds={seconds}
+            setSeconds={setSeconds}
+            onApply={handleApplyTimer}
+          />
+
         </div>
 
         {/* Message Box */}
