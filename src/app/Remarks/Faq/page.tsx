@@ -536,7 +536,7 @@ const FAQ = () => {
                                   Edit
                                 </button>
                                 <button
-                                  onClick={(e) => handleOpenDeleteModal(index)}
+                                  onClick={() => handleOpenDeleteModal(index)}
                                   className="text-gray-700 dark:text-gray-300 block w-full text-left px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-600"
                                 >
                                   Delete
