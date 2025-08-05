@@ -579,7 +579,7 @@ const FAQ = () => {
                         className="w-full text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 p-2 rounded-lg resize-y focus:outline-none focus:ring-2 focus:ring-blue-500"
                       />
                     ) : (
-                      <pre className="text-gray-700 dark:text-gray-300 whitespace-pre-wrap leading-relaxed">
+                      <pre className="select-none text-gray-700 dark:text-gray-300 whitespace-pre-wrap leading-relaxed">
                         {faq.details}
                       </pre>
                     )}

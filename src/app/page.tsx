@@ -4,11 +4,11 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
 import kkk from '../lib/image/KKK.png'; // adjust if needed
-
-// ✅ No "use client" needed in Pages Router
-// ✅ global styles should be imported in _app.tsx, not here
-
+import { ImSpinner9 } from "react-icons/im";
+import { useState } from 'react';
 export default function Home() {
+
+  const [loading, setLoading] = useState<boolean>(false)
   const containerVariants = {
     hidden: { opacity: 0, y: -50 },
     visible: {
@@ -37,6 +37,10 @@ export default function Home() {
     },
   };
 
+  const handleLoading = () => {
+    return setLoading(true)
+  }
+
   return (
     <>
       <Head>
@@ -63,8 +67,7 @@ export default function Home() {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3 w-full">
 
-
-            <motion.div variants={itemVariants}>
+            <motion.div onClick={handleLoading} variants={itemVariants}>
               <Link
                 href="/Remarks"
                 className="flex items-center justify-center px-8 py-4 bg-gradient-to-r from-blue-600 to-blue-700 text-white font-bold rounded-full shadow-lg hover:shadow-xl transition-all duration-300 ease-in-out transform hover:-translate-y-1 hover:scale-105 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-gray-800 uppercase tracking-wide"
@@ -73,7 +76,7 @@ export default function Home() {
               </Link>
             </motion.div>
 
-            <motion.div variants={itemVariants}>
+            <motion.div onClick={handleLoading} variants={itemVariants}>
               <Link
                 href="/Evaluation"
                 className="flex items-center justify-center px-8 py-4 bg-gradient-to-r from-blue-600 to-blue-700 text-white font-bold rounded-full shadow-lg hover:shadow-xl transition-all duration-300 ease-in-out transform hover:-translate-y-1 hover:scale-105 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-gray-800 uppercase tracking-wide"
@@ -83,7 +86,7 @@ export default function Home() {
               </Link>
             </motion.div>
 
-            <motion.div variants={itemVariants}>
+            <motion.div onClick={handleLoading} variants={itemVariants}>
               <Link
                 href="/Matcher"
                 className="flex items-center justify-center px-8 py-4 bg-gradient-to-r from-blue-600 to-blue-700 text-white font-bold rounded-full shadow-lg hover:shadow-xl transition-all duration-300 ease-in-out transform hover:-translate-y-1 hover:scale-105 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-gray-800 uppercase tracking-wide"
@@ -92,7 +95,7 @@ export default function Home() {
               </Link>
             </motion.div>
 
-            <motion.div variants={itemVariants}>
+            <motion.div onClick={handleLoading} variants={itemVariants}>
               <Link
                 href="/Watermarkv3"
                 className="flex items-center justify-center px-8 py-4 bg-gradient-to-r from-blue-600 to-blue-700 text-white font-bold rounded-full shadow-lg hover:shadow-xl transition-all duration-300 ease-in-out transform hover:-translate-y-1 hover:scale-105 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-gray-800 uppercase tracking-wide"
@@ -102,6 +105,11 @@ export default function Home() {
             </motion.div>
           </div>
         </motion.div>
+        {loading &&
+          <div className='fixed inset-0 z-50 h-screen w-screen bg-black/40 flex items-center justify-center'>
+            <ImSpinner9 className='animate-spin text-red-500' size={50} />
+          </div>
+        }
       </div>
     </>
   );
