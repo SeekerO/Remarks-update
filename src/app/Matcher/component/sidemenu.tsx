@@ -36,52 +36,63 @@ const SideMenu = ({
     <>
       <button
         onClick={() => setSide(!side)}
-        className="hover:scale-110 duration-300 hover:rotate-210 relative w-fit z-50"
+        className="flex items-center justify-center w-10 h-10 rounded-full bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 transition-all duration-300 hover:bg-gray-300 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+        aria-label={side ? "Close menu" : "Open menu"}
       >
         {!side ? (
-          <AiOutlineMenuFold className="text-[1.5rem] text-gray-700 dark:text-gray-300" />
+          <AiOutlineMenuFold className="text-2xl" />
         ) : (
-          <RiCloseFill className="text-[1.5rem] text-red-700" />
+          <RiCloseFill className="text-2xl text-red-500" />
         )}
       </button>
+
+      <UnmatchedList
+        data={res?.unmatched}
+        open={openUnmatchedList}
+        set={setOpenUnmatchedList}
+      />
 
       {/* Side Menu */}
       <div
         ref={ref}
-        className={`absolute duration-500 overflow-hidden justify-between flex flex-col right-0 mr-10 w-[200px] bg-slate-200 dark:bg-slate-700 shadow-md rounded-l-md ${
-          side ? "h-[300px] px-2 py-2" : "h-[0px]"
-        }`}
+        className={`absolute top-20 right-4 lg:right-8 w-64 lg:w-72 bg-white dark:bg-gray-800 shadow-xl shadow-gray-800 rounded-lg p-6 flex flex-col gap-6 transition-all duration-500 transform
+          ${side ? "opacity-100 scale-100 visible" : "opacity-0 scale-95 invisible"
+          } z-40`}
       >
-        <div className="flex gap-1 items-center mt-5">
-          <label className="font-semibold tracking-wide">Threshold</label>
-          <input
-            type="number"
-            className="text-center rounded-sm w-full px-1 py-0.5 border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-400"
-            value={threshold}
-            onChange={(e) => SetThreshold(Number(e.target.value))}
-            min={0}
-            max={100}
-          />
+        <div className="flex flex-col gap-2">
+          <label htmlFor="threshold" className="font-semibold text-gray-800 dark:text-gray-100 text-sm">
+            Fuzzy Match Threshold
+          </label>
+          <div className="flex items-center gap-2">
+            <input
+              id="threshold"
+              type="number"
+              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-gray-50 dark:bg-gray-700 text-gray-800 dark:text-gray-200 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200 text-sm"
+              value={threshold}
+              onChange={(e) => SetThreshold(Number(e.target.value))}
+              min={0}
+              max={100}
+            />
+            <span className="text-gray-600 dark:text-gray-400 font-medium">%</span>
+          </div>
         </div>
 
         {res?.unmatched?.length > 0 ? (
-          <div className="w-full flex items-center justify-center mt-4">
+          <div className="w-full flex justify-center">
             <button
               onClick={() => setOpenUnmatchedList(true)}
-              className="border px-3 rounded-md border-blue-600 text-blue-600 hover:text-white hover:bg-blue-500 hover:scale-110 duration-500"
+              className="w-full px-4 py-2 text-sm font-medium rounded-md text-blue-600 border border-blue-600 transition-all duration-300 hover:bg-blue-600 hover:text-white dark:text-blue-400 dark:border-blue-400 dark:hover:bg-blue-400 dark:hover:text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
-              UnMatched List
+              View Unmatched List ({res.unmatched.length})
             </button>
-            <UnmatchedList
-              data={res.unmatched}
-              open={openUnmatchedList}
-              set={setOpenUnmatchedList}
-            />
+
           </div>
         ) : (
-          <label className="w-full italic font-thin text-center">
-            No Unmatched Data
-          </label>
+          <div className="w-full text-center p-4">
+            <p className="italic text-gray-500 dark:text-gray-400 text-sm">
+              No unmatched data to display.
+            </p>
+          </div>
         )}
       </div>
     </>

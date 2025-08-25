@@ -415,7 +415,7 @@ const YourChatsList = ({ setCreateGroupChat, allUsers, handleOneToOneChat, chats
                                                         height={32}
                                                         src={u.profilePic}
                                                         alt={u.name}
-                                                        className="w-8 h-8 rounded-full mr-3 object-cover border border-gray-200"
+                                                        className="w-8 h-8 rounded-full mr-3 object-cover border border-gray-200 overflow-hidden"
                                                     />
 
                                                 </div>
@@ -460,10 +460,11 @@ const YourChatsList = ({ setCreateGroupChat, allUsers, handleOneToOneChat, chats
                                                             transform: `rotate(${idx === 0 ? '-8deg' : '8deg'})`,
                                                         }}
                                                     >
+
                                                         <Image
                                                             width={35}
                                                             height={35}
-                                                            className="rounded-full border-2 border-white shadow"
+                                                            className="rounded-full border-2 border-white shadow overflow-hidden"
                                                             src={profilePic}
                                                             alt={getChatDisplayName ? getChatDisplayName(chat) : "Chat profile"}
                                                         />

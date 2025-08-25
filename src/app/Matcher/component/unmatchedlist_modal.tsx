@@ -22,7 +22,7 @@ const UnmatchedList = ({ data, open, set }: Props) => {
     }
   };
 
-  const filteredItems = data.filter((item: string) =>
+  const filteredItems = data?.filter((item: string) =>
     item[0].toLowerCase().includes(inputSearch.toLowerCase())
   );
 
@@ -36,7 +36,7 @@ const UnmatchedList = ({ data, open, set }: Props) => {
   if (!open) return null;
 
   return (
-    <div className=" fixed inset-0 z-50 backdrop-blur-sm h-screen w-screen flex items-center justify-center">
+    <div className="fixed inset-0 h-screen w-screen flex items-center justify-center backdrop-blur-[2px]">
       <div
         ref={ref}
         className="h-[80vh] w-[70vh] bg-slate-100 dark:bg-slate-900 shadow-inner rounded-md overflow-hidden p-5"
@@ -45,7 +45,7 @@ const UnmatchedList = ({ data, open, set }: Props) => {
           <IoSearch className="text-white text-[1.2rem]" />
           <SearchBar searchText={inputSearch} searchSetter={setInputSearch} />
         </div>
-        <div className="h-full overflow-y-auto overflow-x-hidden flex flex-col gap-y-2 mt-2">
+        <div className="h-[90%] mt-4 overflow-y-auto overflow-x-hidden flex flex-col gap-y-2">
           {filteredItems.map((value: string, index: number) => (
             <div
               key={index}
@@ -57,7 +57,7 @@ const UnmatchedList = ({ data, open, set }: Props) => {
           ))}
         </div>
       </div>
-    </div>
+    </div >
   );
 };
 
