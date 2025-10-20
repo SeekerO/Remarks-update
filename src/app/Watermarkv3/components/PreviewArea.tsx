@@ -11,28 +11,33 @@ import SingleImageEditor from "./SingleImageEditor"; // Ensure this is the updat
 import ModalLoading from "./ModalLoading";
 import { HiOutlineFolderDownload } from "react-icons/hi";
 import { IoImage } from "react-icons/io5";
+import { useTemplateActions } from "./saveTemplate";
 
 export default function PreviewArea() {
-    const { images, selectedImageIndex, setSelectedImageIndex } = useImageEditor();
+    const {
+        images,
+        selectedImageIndex,
+        setSelectedImageIndex,
+    } = useImageEditor();
     const [processing, setProcessing] = useState<boolean>(false);
     const [downloadProgress, setDownloadProgress] = useState<number>(0);
     const [fileName, setFileName] = useState<string>("watermarked_images.zip");
 
     const abortControllerRef = useRef<AbortController | null>(null);
 
-    // New: Store functions to get blobs from each SingleImageEditor
-    // Map index to a function that returns a Promise<Blob | null>
     const imageBlobGetters = useRef<Map<number, () => Promise<Blob | null>>>(new Map());
 
-    // Callback from SingleImageEditor when its canvas is ready
+    const { saveTemplate, loadTemplate } = useTemplateActions();
+
+
     const handleCanvasReady = useCallback((index: number, getBlobFunc: () => Promise<Blob | null>) => {
         imageBlobGetters.current.set(index, getBlobFunc);
         // console.log(`Canvas ${index} ready and getter stored.`);
-    }, []); // Dependencies are empty because getBlobFunc changes on each render of child, but we only care about the latest
+    }, []);
 
     const downloadAll = async () => {
+        saveTemplate()
         if (images.length === 0) return;
-
         setProcessing(true);
         setDownloadProgress(0);
 
@@ -151,9 +156,17 @@ export default function PreviewArea() {
         };
     }, []);
 
+
+    const handleSave = () => {
+        // Save a template on a button click
+        saveTemplate();
+    };
+
     return (
         <div className="space-y-8 p-6 bg-gray-50 dark:bg-gray-900 min-h-screen rounded-lg shadow-inner">
+
             <div className="flex flex-col sm:flex-row justify-between items-center mb-6 gap-4">
+                <button onClick={handleSave}>TesT</button>
                 <h2 className="text-3xl font-extrabold text-gray-900 dark:text-white flex px-2 items-center gap-3">
                     Image Previews
                     <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 shadow-sm">
@@ -174,41 +187,43 @@ export default function PreviewArea() {
                             className="px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-lg shadow-lg transition duration-300 ease-in-out transform hover:scale-105 flex items-center justify-center gap-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-opacity-75 disabled:opacity-50 disabled:cursor-not-allowed w-full"
                             disabled={images.length === 0 || processing}
                         >
-                            <HiOutlineFolderDownload className="text-2xl" /> Download as ZIP
+                            <HiOutlineFolderDownload className="text-2xl" /> <p className="truncate">Download as ZIP</p>
                         </button>
                     </div>
                 )}
             </div>
 
-            {images.length === 0 ? (
-                <p className="text-gray-500 dark:text-gray-400 text-xl text-center bg-white dark:bg-gray-800 p-8 rounded-2xl shadow-inner border border-gray-200 dark:border-gray-700 overflow-hidden">
-                    No images uploaded yet. Please use the uploader on the left.
-                </p>
-            ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-1 lg:grid-cols-3 gap-6">
-                    {images.map((image, index) => (
-                        <div
-                            key={index}
-                            className={`relative rounded-xl overflow-hidden transition-all duration-300 ease-in-out cursor-pointer
+            {
+                images.length === 0 ? (
+                    <p className="text-gray-500 dark:text-gray-400 text-xl text-center bg-white dark:bg-gray-800 p-8 rounded-2xl shadow-inner border border-gray-200 dark:border-gray-700 overflow-hidden">
+                        No images uploaded yet. Please use the uploader on the left.
+                    </p>
+                ) : (
+                    <div className="grid grid-cols-1 sm:grid-cols-1 lg:grid-cols-3 gap-6">
+                        {images.map((image, index) => (
+                            <div
+                                key={index}
+                                className={`relative rounded-xl overflow-hidden transition-all duration-300 ease-in-out cursor-pointer
                             ${selectedImageIndex === index
-                                    ? "border-4 border-blue-500 shadow-xl scale-102"
-                                    : "border-2 border-transparent hover:border-gray-300 dark:hover:border-gray-600 shadow-md hover:shadow-lg"
-                                } h-fit`}
-                            onClick={() => handleSelectImage(index)}
-                        >
-                            {/* Pass the new callback to SingleImageEditor */}
-                            <SingleImageEditor image={image} index={index} onCanvasReady={handleCanvasReady} />
-                            {selectedImageIndex === index && (
-                                <div className="select-none absolute inset-0 bg-blue-600 bg-opacity-30 rounded-xl flex items-center justify-center text-white font-bold text-3xl opacity-100 transition-opacity duration-300 pointer-events-none">
-                                    SELECTED
-                                </div>
-                            )}
-                        </div>
-                    ))}
-                </div>
-            )}
+                                        ? "border-4 border-blue-500 shadow-xl scale-102"
+                                        : "border-2 border-transparent hover:border-gray-300 dark:hover:border-gray-600 shadow-md hover:shadow-lg"
+                                    } h-fit`}
+                                onClick={() => handleSelectImage(index)}
+                            >
+                                {/* Pass the new callback to SingleImageEditor */}
+                                <SingleImageEditor image={image} index={index} onCanvasReady={handleCanvasReady} />
+                                {selectedImageIndex === index && (
+                                    <div className="select-none absolute inset-0 bg-blue-600 bg-opacity-30 rounded-xl flex items-center justify-center text-white font-bold text-3xl opacity-100 transition-opacity duration-300 pointer-events-none">
+                                        SELECTED
+                                    </div>
+                                )}
+                            </div>
+                        ))}
+                    </div>
+                )
+            }
 
             <ModalLoading open={processing} cancelProcess={cancelDownload} progress={downloadProgress} totalImages={images.length} />
-        </div>
+        </div >
     );
 }

@@ -8,6 +8,7 @@ import { useImageEditor } from "./ImageEditorContext";
 import ModalPreview from "./ModalPreview";
 import { MdDelete } from "react-icons/md";
 import { FiDownload, FiMaximize2 } from "react-icons/fi";
+import { useTemplateActions } from "./saveTemplate";
 
 interface SingleImageEditorProps {
     image: any;
@@ -78,6 +79,8 @@ export default function SingleImageEditor({ image, index, onCanvasReady }: Singl
 
     const [openPreview, setOpenPreview] = useState<boolean>(false);
     const currentImage = images[index];
+
+    const { saveTemplate, loadTemplate } = useTemplateActions();
 
 
     const logoToUse = currentImage.useGlobalSettings ? logo : currentImage.individualLogo;
@@ -238,6 +241,7 @@ export default function SingleImageEditor({ image, index, onCanvasReady }: Singl
     const downloadImage = async () => {
         const canvas = canvasRef.current;
         if (canvas) {
+            saveTemplate()
             const link = document.createElement('a');
             link.download = `watermarked_${image.file.name}`;
             link.href = canvas.toDataURL(image.file.type);

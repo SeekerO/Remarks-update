@@ -24,15 +24,6 @@ export default function PopupChat() {
         }
     };
 
-    // Handles Google login click
-    const handleLoginClick = async () => {
-        try {
-            await loginWithGoogle();
-        } catch (error) {
-            console.error("Google login failed:", error);
-            // In a real app, you'd show a user-friendly error message here (e.g., a toast notification)
-        }
-    };
 
     // Handles logout click
     const handleLogoutClick = () => {
@@ -114,18 +105,7 @@ export default function PopupChat() {
                     </div>
 
                     {/* Conditional rendering based on authentication status */}
-                    {!user ? (
-                        <div className="flex flex-col items-center justify-center h-full space-y-6">
-                            <p className="text-lg text-gray-700">Please log in to access the chat.</p>
-                            <button
-                                onClick={handleLoginClick}
-                                className="bg-green-600 text-white rounded-lg px-6 py-3 text-lg font-semibold hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 transition-colors duration-200 shadow-md"
-                            >
-                                Login with Google
-                            </button>
-                        </div>
-                    ) : (
-                        // Render ChatList, ChatRoom, or AdminPanel based on state
+                    {user && <>
                         <div className="flex-grow overflow-hidden">
                             {showAdminPanel ? (
                                 <AdminPanel currentUserId={user.uid} />
@@ -135,10 +115,7 @@ export default function PopupChat() {
                                 <ChatList onSelectChat={handleSelectChat} currentUserId={user.uid} canChat={user.canChat ?? false} />
                             )}
                         </div>
-                    )}
 
-                    {/* Footer section with user info and action buttons */}
-                    {user && (
                         <div className='flex items-center justify-between mt-1 pt-3'>
                             {/* Logout button */}
                             <button
@@ -165,7 +142,7 @@ export default function PopupChat() {
                             </div>
 
                         </div>
-                    )}
+                    </>}
                 </div>
             )}
         </div>

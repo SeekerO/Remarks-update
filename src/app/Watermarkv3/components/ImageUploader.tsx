@@ -4,13 +4,14 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
 
-import React, { useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { useImageEditor } from "./ImageEditorContext";
 
 import { FaImage } from "react-icons/fa6";
 
 import Logo from "@/lib/image/COMELEC.png"
 import Footer from "@/lib/image/FOOTER.png"
+import ConfirmationModal from "./ConfirmationModal";
 
 export default function ImageUploader() {
     const imageInputRef = useRef<HTMLInputElement>(null);
@@ -28,6 +29,8 @@ export default function ImageUploader() {
     const [isIndividualLogoDragOver, setIsIndividualLogoDragOver] = useState(false);
     const [isIndividualFooterDragOver, setIsIndividualFooterDragOver] = useState(false);
 
+    const [openConfirmationModal, setOpenConfirmationModal] = useState<boolean>(false)
+
     const {
         setImages,
         setLogo,
@@ -41,6 +44,12 @@ export default function ImageUploader() {
 
     // ADDED: Logic to determine if individual settings are active for the selected image
     const isIndividual = selectedImageIndex !== null && !images[selectedImageIndex].useGlobalSettings;
+
+
+    useEffect(() => {
+        if (images.length > 0)
+            return setOpenConfirmationModal(true)
+    }, [images])
 
     const handleImageChange = (event: React.ChangeEvent<HTMLInputElement>) => {
         if (event.target.files) {
@@ -162,8 +171,20 @@ export default function ImageUploader() {
         setFooter(Footer.src);
     }
 
+    const closeConfirmationModal = () => {
+        return setOpenConfirmationModal(!openConfirmationModal)
+    }
+
+    const UsePreview = () => {
+
+        const previewSettings = window.localStorage.getItem("PreviewSettings")
+        return alert(true)
+    }
+
     return (
         <div className="space-y-6">
+            <ConfirmationModal open={openConfirmationModal} setOpen={closeConfirmationModal} UsePreivew={UsePreview} />
+
             <div>
                 <input
                     type="file"

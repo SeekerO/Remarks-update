@@ -264,16 +264,13 @@ export const ImageEditorProvider = ({ children }: { children: ReactNode }) => {
                 setGlobalLogoSettings,
                 globalFooterSettings,
                 setGlobalFooterSettings,
-                // NEW: Add global shadow settings to context
                 globalShadowSettings,
                 setGlobalShadowSettings,
                 globalShadowTarget,
                 setGlobalShadowTarget,
                 removeAllImages,
-                // NEW: Add individual logo/footer setters to context
                 setIndividualLogo,
                 setIndividualFooter,
-                // NEW: Add toggle and individual settings updaters
                 toggleUseGlobalSettings,
                 updateIndividualLogoSettings,
                 updateIndividualFooterSettings,
