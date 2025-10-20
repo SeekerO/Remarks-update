@@ -46,7 +46,7 @@ const useDebounce = (value: any, delay: number) => {
 };
 // Main App component
 const FAQ = () => {
-  // State for the FAQ data, initialized from localStorage or the default data
+  // State for the FAQ data, initialized with default data (will be updated by useEffect on client)
   const [faqs, setFaqs] = useState<FaqItem[]>(faqData as FaqItem[]);
   // State for the raw search query input
   const [searchQuery, setSearchQuery] = useState<string>('');
@@ -62,17 +62,8 @@ const FAQ = () => {
   const [message, setMessage] = useState<string>('');
 
   // New state for global timer duration (in seconds)
-  const [globalTimerDuration, setGlobalTimerDuration] = useState<number>(() => {
-    try {
-      const savedDuration = localStorage.getItem('globalTimerDuration');
-      // Return the parsed value if it exists, otherwise return the default 300
-      return savedDuration ? parseInt(savedDuration, 10) : 300;
-    } catch (e) {
-      console.error("Failed to load global timer from localStorage, using default.", e);
-      // Fallback to default in case of an error
-      return 300;
-    }
-  });
+  // FIX: Initialize with a server-safe default value. localStorage access is moved to useEffect.
+  const [globalTimerDuration, setGlobalTimerDuration] = useState<number>(300);
 
   // State for timer Hour, Minutes and Seconds
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -99,9 +90,11 @@ const FAQ = () => {
   const menuRef = useRef<HTMLDivElement>(null);
 
 
-
-  // Effect to load data and global timer from local storage on component mount
+  // ********************************************
+  // ** FIX 1: Initial Load Effect (Runs only on client mount) **
+  // ********************************************
   useEffect(() => {
+    // 1. Load FAQs
     try {
       const savedFaqs = localStorage.getItem('faqData');
       if (savedFaqs) {
@@ -112,7 +105,17 @@ const FAQ = () => {
       setMessage('Failed to load saved data.');
       setTimeout(() => setMessage(''), 3000);
     }
-  }, []);
+
+    // 2. Load Global Timer Duration
+    try {
+      const savedDuration = localStorage.getItem('globalTimerDuration');
+      if (savedDuration) {
+        setGlobalTimerDuration(parseInt(savedDuration, 10));
+      }
+    } catch (e) {
+      console.error("Failed to load global timer from localStorage, using default.", e);
+    }
+  }, []); // Empty dependency array ensures it runs once on mount
 
   // Effect to save FAQ data to local storage whenever `faqs` state changes
   useEffect(() => {
@@ -274,7 +277,9 @@ const FAQ = () => {
       newFaqs[index] = { ...newFaqs[index], timerStartTime: null }; // Reset timer for this card
       return newFaqs;
     });
-    setMessage(`Timer for "${faqs[index].topic}" reset. Copying re-enabled.`);
+    // Use an index-safe check for the message
+    const topic = faqs[index]?.topic || 'FAQ item';
+    setMessage(`Timer for "${topic}" reset. Copying re-enabled.`);
     setTimeout(() => setMessage(''), 3000);
   }, [faqs]);
 
@@ -334,14 +339,41 @@ const FAQ = () => {
   const confirmDelete = useCallback(() => {
     if (faqToDelete !== null) {
       setFaqs(prevFaqs => {
+        // Since filteredFaqs is not the state, we must ensure we delete the correct index from the main 'faqs' state.
+        // However, given your current logic, the index passed to handleOpenDeleteModal is the index in the filtered/mapped array.
+        // For simple CRUD operations like this, it's safer to pass the unique ID or the FAQ object itself, but since you're using index:
+        // *Correction*: The index passed to handleOpenDeleteModal is the index within the *filtered* list. 
+        // This is complex to resolve if editing a filtered list. For a simple index-based delete, we'll assume the index is correct 
+        // for the original array if filtering isn't active or if we're dealing with the full list. 
+        // A robust solution would involve finding the original index based on the topic/unique ID.
+
+        // *For simplicity and to maintain current functionality (assuming the index passed is the one in the state array):*
         const newFaqs = prevFaqs.filter((_, i) => i !== faqToDelete);
+
+        // *If you were only displaying the filtered list, this would be the necessary logic:*
+        /*
+        const faqToDeleteTopic = filteredFaqs[faqToDelete].topic;
+        const originalIndex = prevFaqs.findIndex(faq => faq.topic === faqToDeleteTopic);
+        
+        if (originalIndex !== -1) {
+             const newFaqs = prevFaqs.filter((_, i) => i !== originalIndex);
+             // ...
+        }
+        */
+
+        // Sticking to original index logic for now to avoid major refactor:
         return newFaqs;
       });
-      setMessage('FAQ deleted successfully!');
+
+      // Use the topic from the main faqs state before it's deleted
+      const topic = faqs[faqToDelete]?.topic || 'FAQ item';
+
+      setMessage(`FAQ deleted successfully! Topic: ${topic}`);
       setTimeout(() => setMessage(''), 3000);
       handleCloseDeleteModal(); // Close the modal
     }
-  }, [faqToDelete, handleCloseDeleteModal]);
+  }, [faqToDelete, handleCloseDeleteModal, faqs]);
+
 
   // Handle opening/closing the three-dot menu
   const handleMenuToggle = useCallback((index: number, e: React.MouseEvent) => {
@@ -409,7 +441,6 @@ const FAQ = () => {
         {/* Global Timer Setting */}
 
 
-
         {/* Search Bar & Add FAQ Button */}
         <div className="mb-8 w-full flex space-x-4">
           <input
@@ -459,16 +490,28 @@ const FAQ = () => {
         <div className="space-y-4">
           {filteredFaqs.length > 0 ? (
             filteredFaqs.map((faq, index) => {
+              // NOTE: This 'index' is the index in the *filteredFaqs* array, not the main 'faqs' state array.
+              // For editing/deleting, you need to find the index in the original 'faqs' array.
+
+              // Find the original index for state updates (Edit/Delete/Reset Timer)
+              // NOTE: This assumes that topic names are unique identifiers.
+              const originalIndex = faqs.findIndex(item => item.topic === faq.topic && item.details === faq.details);
+
               const elapsedTime = faq.timerStartTime ? (currentTime - faq.timerStartTime) / 1000 : 0; // in seconds
               const remainingTime = globalTimerDuration - elapsedTime;
               const displayTime = formatTime(remainingTime);
 
               // Determine if copy button/action should be visually disabled or show tooltip
-              const canCopyCurrent = faq.timerStartTime === null || undefined;
+              const canCopyCurrent = faq.timerStartTime === null || undefined || remainingTime <= 0;
+
+              // Check if the card currently in edit mode is the one corresponding to the original index
+              const isEditing = editingCard === originalIndex;
+              const isExpanded = expandedCard === originalIndex;
+
 
               return (
                 <div
-                  key={index}
+                  key={originalIndex} // Use originalIndex as key for stability
                   className={`bg-white dark:bg-gray-800 rounded-xl shadow-lg transition-all duration-300 hover:shadow-xl overflow-hidden relative 
                   ${canCopyCurrent ? "border-green-500 border-2" : "border-red-500 border-2"}
                   `}
@@ -476,9 +519,9 @@ const FAQ = () => {
                   {/* Topic/Header Section */}
                   <div
                     className="flex justify-between items-center p-6 cursor-pointer select-none border-b border-gray-200 dark:border-gray-700"
-                    onClick={() => handleToggleDetails(index)}
+                    onClick={() => handleToggleDetails(originalIndex)} // Use originalIndex
                   >
-                    {editingCard === index ? (
+                    {isEditing ? (
                       <input
                         type="text"
                         name="topic"
@@ -493,7 +536,7 @@ const FAQ = () => {
                           e.stopPropagation(); // Prevent parent div's click from firing
                           copyToClipboard(faq.details, faq.topic); // This now attempts to copy and starts timer if allowed
                         }}
-                        title={canCopyCurrent ? "Click to copy details and start timer" : "Copying disabled while timer is active"}
+                        title={canCopyCurrent ? "Click to copy details and start timer" : `Copying disabled while timer is active. Expires in ${Math.ceil(remainingTime)}s.`}
                       >
                         {faq.topic}
                         <span className={`text-md font-medium italic ${remainingTime <= 10 && !canCopyCurrent ? 'text-red-500' : 'text-blue-500'} dark:text-blue-400`}>
@@ -503,11 +546,11 @@ const FAQ = () => {
                     )}
 
                     <div className="flex items-center space-x-2 relative" ref={menuRef}>
-                      {editingCard === index ? (
+                      {isEditing ? (
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
-                            handleSaveClick(index);
+                            handleSaveClick(originalIndex); // Use originalIndex
                           }}
                           className="bg-green-500 text-white px-3 py-1 rounded-full text-sm hover:bg-green-600 transition-colors duration-200"
                         >
@@ -519,7 +562,7 @@ const FAQ = () => {
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
-                                handleResetTimer(index);
+                                handleResetTimer(originalIndex); // Use originalIndex
                               }}
                               className="bg-yellow-500 text-white px-3 py-1 rounded-full text-sm hover:bg-yellow-600 transition-colors duration-200"
                             >
@@ -527,24 +570,24 @@ const FAQ = () => {
                             </button>
                           )}
                           <button
-                            onClick={(e) => handleMenuToggle(index, e)}
+                            onClick={(e) => handleMenuToggle(originalIndex, e)} // Use originalIndex
                             className="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500"
                           >
                             <svg className="w-6 h-6 text-gray-500 dark:text-gray-400" fill="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                               <path d="M12 8c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z"></path>
                             </svg>
                           </button>
-                          {openMenuIndex === index && (
+                          {openMenuIndex === originalIndex && (
                             <div className="absolute right-20 z-20 w-48 rounded-md shadow-lg bg-white dark:bg-gray-700 ring-1 ring-black ring-opacity-5">
                               <div className="py-1">
                                 <button
-                                  onClick={() => handleEditClick(faq, index)}
+                                  onClick={() => handleEditClick(faq, originalIndex)} // Use originalIndex
                                   className="text-gray-700 dark:text-gray-300 block w-full text-left px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-600"
                                 >
                                   Edit
                                 </button>
                                 <button
-                                  onClick={() => handleOpenDeleteModal(index)}
+                                  onClick={() => handleOpenDeleteModal(originalIndex)} // Use originalIndex
                                   className="text-gray-700 dark:text-gray-300 block w-full text-left px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-600"
                                 >
                                   Delete
@@ -555,7 +598,7 @@ const FAQ = () => {
                         </>
                       )}
                       <svg
-                        className={`w-6 h-6 text-gray-500 dark:text-gray-400 transform transition-transform duration-300 ${expandedCard === index ? 'rotate-180' : 'rotate-0'}`}
+                        className={`w-6 h-6 text-gray-500 dark:text-gray-400 transform transition-transform duration-300 ${isExpanded ? 'rotate-180' : 'rotate-0'}`}
                         fill="none"
                         stroke="currentColor"
                         viewBox="0 0 24 24"
@@ -568,9 +611,9 @@ const FAQ = () => {
 
                   {/* Details Section (Dropdown) */}
                   <div
-                    className={`transition-all duration-500 ease-in-out overflow-hidden ${expandedCard === index ? 'max-h-96 opacity-100 p-6 pt-0' : 'max-h-0 opacity-0'}`}
+                    className={`transition-all duration-500 ease-in-out overflow-hidden ${isExpanded ? 'max-h-96 opacity-100 p-6 pt-0' : 'max-h-0 opacity-0'}`}
                   >
-                    {editingCard === index ? (
+                    {isEditing ? (
                       <textarea
                         name="details"
                         value={editFormData.details}
