@@ -489,7 +489,7 @@ const FAQ = () => {
         {/* FAQ Cards */}
         <div className="space-y-4">
           {filteredFaqs.length > 0 ? (
-            filteredFaqs.map((faq, index) => {
+            filteredFaqs.map((faq) => {
               // NOTE: This 'index' is the index in the *filteredFaqs* array, not the main 'faqs' state array.
               // For editing/deleting, you need to find the index in the original 'faqs' array.
 
