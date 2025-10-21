@@ -171,9 +171,9 @@ export default function ImageUploader() {
         setFooter(Footer.src);
     }
 
-    const closeConfirmationModal = () => {
-        return setOpenConfirmationModal(!openConfirmationModal)
-    }
+    // const closeConfirmationModal = () => {
+    //     return setOpenConfirmationModal(!openConfirmationModal)
+    // }
 
     const UsePreview = () => {
 
@@ -183,7 +183,7 @@ export default function ImageUploader() {
 
     return (
         <div className="space-y-6">
-            <ConfirmationModal open={openConfirmationModal} setOpen={closeConfirmationModal} UsePreivew={UsePreview} />
+            {/* <ConfirmationModal open={openConfirmationModal} setOpen={closeConfirmationModal} UsePreivew={UsePreview} /> */}
 
             <div>
                 <input

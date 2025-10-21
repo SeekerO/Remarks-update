@@ -98,7 +98,7 @@ export default function ImageControls() {
     };
 
 
-    if (logo && footer)
+    if (logo || footer)
         return (
             <div className="space-y-6">
                 {isImageSelected && (
@@ -118,191 +118,195 @@ export default function ImageControls() {
                         </div>
                     </div>
                 )}
+                {logo &&
+                    <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-md space-y-4">
+                        <h2 className="text-lg font-semibold text-gray-800 dark:text-gray-100 border-b pb-2 mb-3 border-gray-200 dark:border-gray-700">Logo Controls</h2>
 
-                <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-md space-y-4">
-                    <h2 className="text-lg font-semibold text-gray-800 dark:text-gray-100 border-b pb-2 mb-3 border-gray-200 dark:border-gray-700">Logo Controls</h2>
+                        <div className="space-y-2">
+                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                                Position:
+                                <select
+                                    value={currentLogoSettings?.position || "bottom-right"}
+                                    onChange={(e) => updateLogoSettings({ position: e.target.value as WatermarkSettings["position"] })}
+                                    className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white transition duration-150 ease-in-out"
+                                >
+                                    <option value="top-left">Top-Left</option>
+                                    <option value="top-center">Top-Center</option>
+                                    <option value="top-right">Top-Right</option>
+                                    <option value="bottom-left">Bottom-Left</option>
+                                    <option value="bottom-center">Bottom-Center</option>
+                                    <option value="bottom-right">Bottom-Right</option>
+                                </select>
+                            </label>
+                        </div>
+                        <div className="space-y-2">
+                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                                Width: {currentLogoSettings?.width || 0}px
+                                <input type="range" min="10" max="1000" value={currentLogoSettings?.width || 0} onChange={(e) => updateLogoSettings({ width: parseInt(e.target.value) })} className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer range-thumb-blue dark:bg-gray-700 transition duration-150 ease-in-out" />
+                            </label>
+                        </div>
+                        <div className="space-y-2">
+                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                                Height: {currentLogoSettings?.height || 0}px
+                                <input type="range" min="10" max="1000" value={currentLogoSettings?.height || 0} onChange={(e) => updateLogoSettings({ height: parseInt(e.target.value) })} className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer range-thumb-blue dark:bg-gray-700 transition duration-150 ease-in-out" />
+                            </label>
+                        </div>
+                        <div className="space-y-2">
+                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                                Padding X: {currentLogoSettings?.paddingX || 0}px
+                                <input type="range" min="0" max="100" value={currentLogoSettings?.paddingX || 0} onChange={(e) => updateLogoSettings({ paddingX: parseInt(e.target.value) })} className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer range-thumb-blue dark:bg-gray-700 transition duration-150 ease-in-out" />
+                            </label>
+                        </div>
+                        <div className="space-y-2">
+                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                                Padding Y: {currentLogoSettings?.paddingY || 0}px
+                                <input type="range" min="0" max="100" value={currentLogoSettings?.paddingY || 0} onChange={(e) => updateLogoSettings({ paddingY: parseInt(e.target.value) })} className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer range-thumb-blue dark:bg-gray-700 transition duration-150 ease-in-out" />
+                            </label>
+                        </div>
+                    </div>
+                }
 
-                    <div className="space-y-2">
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                            Position:
-                            <select
-                                value={currentLogoSettings?.position || "bottom-right"}
-                                onChange={(e) => updateLogoSettings({ position: e.target.value as WatermarkSettings["position"] })}
-                                className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white transition duration-150 ease-in-out"
-                            >
-                                <option value="top-left">Top-Left</option>
-                                <option value="top-center">Top-Center</option>
-                                <option value="top-right">Top-Right</option>
-                                <option value="bottom-left">Bottom-Left</option>
-                                <option value="bottom-center">Bottom-Center</option>
-                                <option value="bottom-right">Bottom-Right</option>
-                            </select>
-                        </label>
-                    </div>
-                    <div className="space-y-2">
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                            Width: {currentLogoSettings?.width || 0}px
-                            <input type="range" min="10" max="1000" value={currentLogoSettings?.width || 0} onChange={(e) => updateLogoSettings({ width: parseInt(e.target.value) })} className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer range-thumb-blue dark:bg-gray-700 transition duration-150 ease-in-out" />
-                        </label>
-                    </div>
-                    <div className="space-y-2">
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                            Height: {currentLogoSettings?.height || 0}px
-                            <input type="range" min="10" max="1000" value={currentLogoSettings?.height || 0} onChange={(e) => updateLogoSettings({ height: parseInt(e.target.value) })} className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer range-thumb-blue dark:bg-gray-700 transition duration-150 ease-in-out" />
-                        </label>
-                    </div>
-                    <div className="space-y-2">
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                            Padding X: {currentLogoSettings?.paddingX || 0}px
-                            <input type="range" min="0" max="100" value={currentLogoSettings?.paddingX || 0} onChange={(e) => updateLogoSettings({ paddingX: parseInt(e.target.value) })} className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer range-thumb-blue dark:bg-gray-700 transition duration-150 ease-in-out" />
-                        </label>
-                    </div>
-                    <div className="space-y-2">
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                            Padding Y: {currentLogoSettings?.paddingY || 0}px
-                            <input type="range" min="0" max="100" value={currentLogoSettings?.paddingY || 0} onChange={(e) => updateLogoSettings({ paddingY: parseInt(e.target.value) })} className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer range-thumb-blue dark:bg-gray-700 transition duration-150 ease-in-out" />
-                        </label>
-                    </div>
-                </div>
+                {footer && <>
 
-                <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-md space-y-4">
-                    <h2 className="text-lg font-semibold text-gray-800 dark:text-gray-100 border-b pb-2 mb-3 border-gray-200 dark:border-gray-700">Footer Controls</h2>
-                    <div className="space-y-2">
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                            Opacity: {((currentFooterSettings?.opacity || 0) * 100).toFixed(0)}%
-                            <input
-                                type="range"
-                                min="0"
-                                max="1"
-                                step="0.01"
-                                value={currentFooterSettings?.opacity || 0}
-                                onChange={(e) => updateFooterSettings({ opacity: parseFloat(e.target.value) })}
-                                className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer range-thumb-blue dark:bg-gray-700 transition duration-150 ease-in-out"
-                            />
-                        </label>
+                    <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-md space-y-4">
+                        <h2 className="text-lg font-semibold text-gray-800 dark:text-gray-100 border-b pb-2 mb-3 border-gray-200 dark:border-gray-700">Footer Controls</h2>
+                        <div className="space-y-2">
+                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                                Opacity: {((currentFooterSettings?.opacity || 0) * 100).toFixed(0)}%
+                                <input
+                                    type="range"
+                                    min="0"
+                                    max="1"
+                                    step="0.01"
+                                    value={currentFooterSettings?.opacity || 0}
+                                    onChange={(e) => updateFooterSettings({ opacity: parseFloat(e.target.value) })}
+                                    className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer range-thumb-blue dark:bg-gray-700 transition duration-150 ease-in-out"
+                                />
+                            </label>
+                        </div>
+                        <div className="space-y-2">
+                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                                Scale: {((currentFooterSettings?.scale || 0) * 100).toFixed(0)}%
+                                <input
+                                    type="range"
+                                    min="0.1"
+                                    max="10"
+                                    step="0.01"
+                                    value={currentFooterSettings?.scale || 0}
+                                    onChange={(e) => updateFooterSettings({ scale: parseFloat(e.target.value) })}
+                                    className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer range-thumb-blue dark:bg-gray-700 transition duration-150 ease-in-out"
+                                />
+                            </label>
+                        </div>
+                        <div className="space-y-2">
+                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                                Offset X: {currentFooterSettings?.offsetX || 0}px
+                                <input
+                                    type="range"
+                                    min="-100"
+                                    max="100"
+                                    value={currentFooterSettings?.offsetX || 0}
+                                    onChange={(e) => updateFooterSettings({ offsetX: parseInt(e.target.value) })}
+                                    className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer range-thumb-blue dark:bg-gray-700 transition duration-150 ease-in-out"
+                                />
+                            </label>
+                        </div>
+                        <div className="space-y-2">
+                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                                Offset Y: {currentFooterSettings?.offsetY || 0}px
+                                <input
+                                    type="range"
+                                    min="-100"
+                                    max="100"
+                                    value={currentFooterSettings?.offsetY || 0}
+                                    onChange={(e) => updateFooterSettings({ offsetY: parseInt(e.target.value) })}
+                                    className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer range-thumb-blue dark:bg-gray-700 transition duration-150 ease-in-out"
+                                />
+                            </label>
+                        </div>
                     </div>
-                    <div className="space-y-2">
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                            Scale: {((currentFooterSettings?.scale || 0) * 100).toFixed(0)}%
-                            <input
-                                type="range"
-                                min="0.1"
-                                max="10"
-                                step="0.01"
-                                value={currentFooterSettings?.scale || 0}
-                                onChange={(e) => updateFooterSettings({ scale: parseFloat(e.target.value) })}
-                                className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer range-thumb-blue dark:bg-gray-700 transition duration-150 ease-in-out"
-                            />
-                        </label>
-                    </div>
-                    <div className="space-y-2">
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                            Offset X: {currentFooterSettings?.offsetX || 0}px
-                            <input
-                                type="range"
-                                min="-100"
-                                max="100"
-                                value={currentFooterSettings?.offsetX || 0}
-                                onChange={(e) => updateFooterSettings({ offsetX: parseInt(e.target.value) })}
-                                className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer range-thumb-blue dark:bg-gray-700 transition duration-150 ease-in-out"
-                            />
-                        </label>
-                    </div>
-                    <div className="space-y-2">
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                            Offset Y: {currentFooterSettings?.offsetY || 0}px
-                            <input
-                                type="range"
-                                min="-100"
-                                max="100"
-                                value={currentFooterSettings?.offsetY || 0}
-                                onChange={(e) => updateFooterSettings({ offsetY: parseInt(e.target.value) })}
-                                className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer range-thumb-blue dark:bg-gray-700 transition duration-150 ease-in-out"
-                            />
-                        </label>
-                    </div>
-                </div>
 
-                <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-md space-y-4">
-                    <h2 className="text-lg font-semibold text-gray-800 dark:text-gray-100 border-b pb-2 mb-3 border-gray-200 dark:border-gray-700">Shadow Controls</h2>
-                    <div className="space-y-2">
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                            Target:
-                            <select
-                                value={currentShadowTarget}
-                                onChange={(e) => updateShadowTarget(e.target.value as typeof globalShadowTarget)}
-                                className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white transition duration-150 ease-in-out"
-                            >
-                                <option value="none">None</option>
-                                <option value="footer">Footer Only</option>
-                                <option value="whole-image">Whole Image</option>
-                            </select>
-                        </label>
+                    <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-md space-y-4">
+                        <h2 className="text-lg font-semibold text-gray-800 dark:text-gray-100 border-b pb-2 mb-3 border-gray-200 dark:border-gray-700">Shadow Controls</h2>
+                        <div className="space-y-2">
+                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                                Target:
+                                <select
+                                    value={currentShadowTarget}
+                                    onChange={(e) => updateShadowTarget(e.target.value as typeof globalShadowTarget)}
+                                    className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white transition duration-150 ease-in-out"
+                                >
+                                    <option value="none">None</option>
+                                    <option value="footer">Footer Only</option>
+                                    <option value="whole-image">Whole Image</option>
+                                </select>
+                            </label>
+                        </div>
+                        <div className="space-y-2">
+                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                                Color:
+                                <input
+                                    type="color"
+                                    value={currentShadowSettings?.color || "#000000"}
+                                    onChange={(e) => updateShadowSettings({ color: e.target.value })}
+                                    className="mt-1 block w-full h-10 border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
+                                />
+                            </label>
+                        </div>
+                        <div className="space-y-2">
+                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                                Opacity: {((currentShadowSettings?.opacity || 0) * 100).toFixed(0)}%
+                                <input
+                                    type="range"
+                                    min="0"
+                                    max="1"
+                                    step="0.01"
+                                    value={currentShadowSettings?.opacity || 0}
+                                    onChange={(e) => updateShadowSettings({ opacity: parseFloat(e.target.value) })}
+                                    className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer range-thumb-blue dark:bg-gray-700 transition duration-150 ease-in-out"
+                                />
+                            </label>
+                        </div>
+                        <div className="space-y-2">
+                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                                Offset X: {currentShadowSettings?.offsetX || 0}px
+                                <input
+                                    type="range"
+                                    min="-20"
+                                    max="20"
+                                    value={currentShadowSettings?.offsetX || 0}
+                                    onChange={(e) => updateShadowSettings({ offsetX: parseInt(e.target.value) })}
+                                    className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer range-thumb-blue dark:bg-gray-700 transition duration-150 ease-in-out"
+                                />
+                            </label>
+                        </div>
+                        <div className="space-y-2">
+                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                                Offset Y: {currentShadowSettings?.offsetY || 0}px
+                                <input
+                                    type="range"
+                                    min="-20"
+                                    max="20"
+                                    value={currentShadowSettings?.offsetY || 0}
+                                    onChange={(e) => updateShadowSettings({ offsetY: parseInt(e.target.value) })}
+                                    className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer range-thumb-blue dark:bg-gray-700 transition duration-150 ease-in-out"
+                                />
+                            </label>
+                        </div>
+                        <div className="space-y-2">
+                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                                Blur: {currentShadowSettings?.blur || 0}px
+                                <input
+                                    type="range"
+                                    min="0"
+                                    max="20"
+                                    value={currentShadowSettings?.blur || 0}
+                                    onChange={(e) => updateShadowSettings({ blur: parseInt(e.target.value) })}
+                                    className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer range-thumb-blue dark:bg-gray-700 transition duration-150 ease-in-out"
+                                />
+                            </label>
+                        </div>
                     </div>
-                    <div className="space-y-2">
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                            Color:
-                            <input
-                                type="color"
-                                value={currentShadowSettings?.color || "#000000"}
-                                onChange={(e) => updateShadowSettings({ color: e.target.value })}
-                                className="mt-1 block w-full h-10 border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
-                            />
-                        </label>
-                    </div>
-                    <div className="space-y-2">
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                            Opacity: {((currentShadowSettings?.opacity || 0) * 100).toFixed(0)}%
-                            <input
-                                type="range"
-                                min="0"
-                                max="1"
-                                step="0.01"
-                                value={currentShadowSettings?.opacity || 0}
-                                onChange={(e) => updateShadowSettings({ opacity: parseFloat(e.target.value) })}
-                                className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer range-thumb-blue dark:bg-gray-700 transition duration-150 ease-in-out"
-                            />
-                        </label>
-                    </div>
-                    <div className="space-y-2">
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                            Offset X: {currentShadowSettings?.offsetX || 0}px
-                            <input
-                                type="range"
-                                min="-20"
-                                max="20"
-                                value={currentShadowSettings?.offsetX || 0}
-                                onChange={(e) => updateShadowSettings({ offsetX: parseInt(e.target.value) })}
-                                className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer range-thumb-blue dark:bg-gray-700 transition duration-150 ease-in-out"
-                            />
-                        </label>
-                    </div>
-                    <div className="space-y-2">
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                            Offset Y: {currentShadowSettings?.offsetY || 0}px
-                            <input
-                                type="range"
-                                min="-20"
-                                max="20"
-                                value={currentShadowSettings?.offsetY || 0}
-                                onChange={(e) => updateShadowSettings({ offsetY: parseInt(e.target.value) })}
-                                className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer range-thumb-blue dark:bg-gray-700 transition duration-150 ease-in-out"
-                            />
-                        </label>
-                    </div>
-                    <div className="space-y-2">
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                            Blur: {currentShadowSettings?.blur || 0}px
-                            <input
-                                type="range"
-                                min="0"
-                                max="20"
-                                value={currentShadowSettings?.blur || 0}
-                                onChange={(e) => updateShadowSettings({ blur: parseInt(e.target.value) })}
-                                className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer range-thumb-blue dark:bg-gray-700 transition duration-150 ease-in-out"
-                            />
-                        </label>
-                    </div>
-                </div>
+                </>}
             </div>)
 }

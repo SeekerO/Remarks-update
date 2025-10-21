@@ -164,33 +164,37 @@ export default function PreviewArea() {
 
     return (
         <div className="space-y-8 p-6 bg-gray-50 dark:bg-gray-900 min-h-screen rounded-lg shadow-inner">
+            <div className="flex flex-col">
+                <div className="flex flex-col sm:flex-row justify-between items-center mb-6 gap-4">
 
-            <div className="flex flex-col sm:flex-row justify-between items-center mb-6 gap-4">
-                <button onClick={handleSave}>TesT</button>
-                <h2 className="text-3xl font-extrabold text-gray-900 dark:text-white flex px-2 items-center gap-3">
-                    Image Previews
-                    <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 shadow-sm">
-                        <IoImage className="mr-1 text-base" size={20} />
-                        {images.length}
-                    </span>
-                </h2>
-                {images.length > 0 && (
-                    <div className="flex flex-col sm:flex-row items-center gap-4 w-full sm:w-auto">
-                        <input
-                            type="text"
-                            placeholder="Enter file name (optional)"
-                            onChange={(e) => setFileName(e.target.value)}
-                            className="flex-grow px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-700 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 transition-all duration-200 w-full"
-                        />
-                        <button
-                            onClick={downloadAll}
-                            className="px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-lg shadow-lg transition duration-300 ease-in-out transform hover:scale-105 flex items-center justify-center gap-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-opacity-75 disabled:opacity-50 disabled:cursor-not-allowed w-full"
-                            disabled={images.length === 0 || processing}
-                        >
-                            <HiOutlineFolderDownload className="text-2xl" /> <p className="truncate">Download as ZIP</p>
-                        </button>
-                    </div>
-                )}
+                    <h2 className="text-3xl font-extrabold text-gray-900 dark:text-white flex px-2 items-center gap-3">
+                        Image Previews
+                        <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 shadow-sm">
+                            <IoImage className="mr-1 text-base" size={20} />
+                            {images.length}
+                        </span>
+                    </h2>
+                    {images.length > 0 && (
+                        <div className="flex flex-col sm:flex-row items-center gap-4 w-full sm:w-auto">
+                            <input
+                                type="text"
+                                placeholder="Enter file name (optional)"
+                                onChange={(e) => setFileName(e.target.value)}
+                                className="flex-grow px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-700 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 transition-all duration-200 w-full"
+                            />
+                            <button
+                                onClick={downloadAll}
+                                className="px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-lg shadow-lg transition duration-300 ease-in-out transform hover:scale-105 flex items-center justify-center gap-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-opacity-75 disabled:opacity-50 disabled:cursor-not-allowed w-full"
+                                disabled={images.length === 0 || processing}
+                            >
+                                <HiOutlineFolderDownload className="text-2xl" /> <p className="truncate">Download as ZIP</p>
+                            </button>
+                        </div>
+                    )}
+                </div>
+                <div>
+                    {/* Add a template */}
+                </div>
             </div>
 
             {
