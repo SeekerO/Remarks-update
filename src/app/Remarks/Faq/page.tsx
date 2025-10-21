@@ -2,6 +2,8 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import { useAuth } from '@/app/Chat/AuthContext';
+import Link from 'next/link';
 import faqData from '@/lib/json/faq.json';
 import BreadCrumb from '@/app/component/breadcrumb';
 import TimerSettingsModal from './component/TimeSetter';
@@ -46,6 +48,7 @@ const useDebounce = (value: any, delay: number) => {
 };
 // Main App component
 const FAQ = () => {
+  const { user } = useAuth();
   // State for the FAQ data, initialized with default data (will be updated by useEffect on client)
   const [faqs, setFaqs] = useState<FaqItem[]>(faqData as FaqItem[]);
   // State for the raw search query input
@@ -422,6 +425,19 @@ const FAQ = () => {
     setTimeout(() => setMessage(''), 3000);
     setIsModalOpen(false); // Close the modal after applying the timer
   }, [hours, minutes, seconds]);
+
+
+
+
+  if (user === null) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-100 dark:bg-gray-900">
+        <Link href={"/"} className="text-gray-600 dark:text-gray-400 text-center px-6 py-3 bg-gray-100 dark:bg-gray-800 rounded-xl shadow-md text-base font-medium transition-colors duration-300">
+          Please log in to access the FAQ.
+        </Link>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-100 dark:bg-gray-900 p-8 flex flex-col items-center font-sans">
