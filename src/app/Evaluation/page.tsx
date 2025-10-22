@@ -222,7 +222,10 @@ export default function App() {
 
 
 
-    if (user === null) {
+    if (!user || (user as any).canChat === false) {
+
+        window.location.href = "/";
+
         return (
             <div className="min-h-screen flex items-center justify-center bg-gray-100 dark:bg-gray-900">
                 <Link href={"/"} className="text-gray-600 dark:text-gray-400 text-center px-6 py-3 bg-gray-100 dark:bg-gray-800 rounded-xl shadow-md text-base font-medium transition-colors duration-300">
@@ -233,7 +236,7 @@ export default function App() {
     }
 
     return (
-        <div className="min-h-screen bg-gray-100 dark:bg-gray-900 flex gap-2 justify-center py-10 px-4 sm:px-6 lg:px-8 font-inter">
+        <div className="min-h-screen w-screen flex gap-2 justify-center py-10 px-4 sm:px-6 lg:px-8 font-inter">
 
             {/* SETTINGS    */}
             <div className='bg-gray-300 dark:bg-gray-700 h-fit w-[400px] rounded-md p-2 flex flex-col '>

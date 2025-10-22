@@ -2,6 +2,7 @@
 "use client"
 import PopupChat from "@/app/Chat/PopupChat";
 import { useAuth } from "@/app/Chat/AuthContext";
+import Sidebar from "../sidebar";
 interface ChatWrapper {
     children: React.ReactNode;
 }
@@ -13,9 +14,11 @@ const ChatWrapper: React.FC<ChatWrapper> = ({ children }) => {
             {children}
             <>
                 {user && user.canChat !== false &&
-                    <div className='absolute bottom-5 right-5 z-50'>
-                        <PopupChat />
-                    </div>
+                    <>
+                        <div className='absolute bottom-5 right-5 z-50'>
+                            <PopupChat />
+                        </div>
+                    </>
                 }
             </>
         </>

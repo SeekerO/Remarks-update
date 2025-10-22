@@ -9,7 +9,10 @@ const Remarks = () => {
 
   const { user } = useAuth();
 
-  if (user === null) {
+  if (!user || (user as any).canChat === false) {
+
+    window.location.href = "/";
+
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-100 dark:bg-gray-900">
         <Link href={"/"} className="text-gray-600 dark:text-gray-400 text-center px-6 py-3 bg-gray-100 dark:bg-gray-800 rounded-xl shadow-md text-base font-medium transition-colors duration-300">
@@ -20,11 +23,13 @@ const Remarks = () => {
   }
 
   return (
-    <div className="h-screen w-screen  py-5 flex flex-col gap-y-4 dark:bg-slate-800">
-      <div className="flex justify-between px-10">
+    <div className="h-screen w-screen flex flex-col ">
+      <div className="flex justify-between px-4 py-5">
         <BreadCrumb />
       </div>
-      <DynamicColumn />
+      <div className="p-5">
+        <DynamicColumn />
+      </div>
     </div>
   );
 };

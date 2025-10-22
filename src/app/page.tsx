@@ -98,7 +98,7 @@ export default function Home() {
               priority
             />
           </div>
-          {user.canChat !== false &&
+          {user.canChat !== false ?
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3 w-full">
 
               <motion.div onClick={handleLoading} variants={itemVariants}>
@@ -137,6 +137,11 @@ export default function Home() {
                   WaterMark
                 </Link>
               </motion.div>
+            </div>
+            :
+            <div className='flex flex-col gap-1'>
+              <label className='text-lg text-red-500 font-semibold'>It seems you {`don't`} have permission to access this site</label>
+              <label className='italic text-gray-500'>Kindly contact the admin to grant you access.</label>
             </div>
           }
         </motion.div>

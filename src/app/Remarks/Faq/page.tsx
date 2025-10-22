@@ -429,9 +429,12 @@ const FAQ = () => {
 
 
 
-  if (user === null) {
+  if (!user || (user as any).canChat === false) {
+
+    window.location.href = "/";
+
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-100 dark:bg-gray-900">
+      <div className="min-h-screen w-screen flex items-center justify-center bg-gray-100 dark:bg-gray-900">
         <Link href={"/"} className="text-gray-600 dark:text-gray-400 text-center px-6 py-3 bg-gray-100 dark:bg-gray-800 rounded-xl shadow-md text-base font-medium transition-colors duration-300">
           Please log in to access the FAQ.
         </Link>
@@ -440,8 +443,8 @@ const FAQ = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-100 dark:bg-gray-900 p-8 flex flex-col items-center font-sans">
-      <div className="max-w-4xl w-full">
+    <div className="h-screen w-full p-8 flex flex-col items-center font-sans">
+      <div className="max-w-4xl w-full h-full flex flex-col">
         {/* Title and Breadcrumb */}
         <div>
           <BreadCrumb />
@@ -453,9 +456,6 @@ const FAQ = () => {
             Current Time: {new Date(currentTime).toLocaleTimeString()}
           </label>
         </div>
-
-        {/* Global Timer Setting */}
-
 
         {/* Search Bar & Add FAQ Button */}
         <div className="mb-8 w-full flex space-x-4">
@@ -503,7 +503,7 @@ const FAQ = () => {
         )}
 
         {/* FAQ Cards */}
-        <div className="space-y-4">
+        <div className="space-y-4 h-full overflow-y-auto pr-2">
           {filteredFaqs.length > 0 ? (
             filteredFaqs.map((faq) => {
               // NOTE: This 'index' is the index in the *filteredFaqs* array, not the main 'faqs' state array.

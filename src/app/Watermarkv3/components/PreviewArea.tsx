@@ -163,7 +163,7 @@ export default function PreviewArea() {
     // };
 
     return (
-        <div className="space-y-8 p-6 bg-gray-50 dark:bg-gray-900 min-h-screen rounded-lg shadow-inner">
+        <div className="space-y-8 p-6 min-h-screen rounded-lg shadow-inner">
             <div className="flex flex-col">
                 <div className="flex flex-col sm:flex-row justify-between items-center mb-6 gap-4">
 

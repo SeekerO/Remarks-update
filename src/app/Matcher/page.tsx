@@ -73,7 +73,10 @@ const Matcher = () => {
 
 
 
-  if (user === null) {
+  if (!user || (user as any).canChat === false) {
+
+    window.location.href = "/";
+
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-100 dark:bg-gray-900">
         <Link href={"/"} className="text-gray-600 dark:text-gray-400 text-center px-6 py-3 bg-gray-100 dark:bg-gray-800 rounded-xl shadow-md text-base font-medium transition-colors duration-300">
@@ -84,15 +87,14 @@ const Matcher = () => {
   }
 
   return (
-    <div className="overflow-hidden h-screen p-4 sm:p-6 lg:p-8 flex flex-col gap-4 bg-gray-100 dark:bg-gray-900 font-sans antialiased">
+    <div className="overflow-hidden h-screen w-screen flex flex-col gap-4 font-sans antialiased">
       {/* Header */}
-      <header className="flex justify-between items-center px-4 py-3 bg-white dark:bg-gray-800 rounded-lg shadow-md">
+      <header className="flex justify-between items-center px-4 py-5  rounded-lg shadow-md">
         <BreadCrumb />
-        <Image src={kkk} alt="Application Logo" width={70} height={40} className="object-contain" />
       </header>
 
       {/* Main Content Area */}
-      <main className="flex-1 w-full h-[90%] bg-white dark:bg-gray-800 rounded-lg shadow-xl flex flex-col lg:flex-row gap-4 p-4 lg:p-6 transition-colors duration-200">
+      <main className="flex-1 w-full h-[90%] rounded-lg shadow-xl flex flex-col lg:flex-row gap-4 p-4 lg:p-6 transition-colors duration-200">
         {/* Left Side: Data Set Panels */}
         <section className="flex flex-col w-full lg:w-1/2 gap-4 h-full ">
           <DataSetPanel

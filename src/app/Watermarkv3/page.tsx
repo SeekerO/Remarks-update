@@ -19,9 +19,13 @@ function WatermarkPageContent() {
     const { images, removeAllImages } = useImageEditor();
     const { user } = useAuth();
 
-    if (user === null) {
+
+    if (!user || (user as any).canChat === false) {
+
+        window.location.href = "/";
+
         return (
-            <div className="min-h-screen flex items-center justify-center bg-gray-100 dark:bg-gray-900">
+            <div className="h-screen w-screen flex items-center justify-center bg-gray-100 dark:bg-gray-900">
                 <Link href={"/"} className="text-gray-600 dark:text-gray-400 text-center px-6 py-3 bg-gray-100 dark:bg-gray-800 rounded-xl shadow-md text-base font-medium transition-colors duration-300">
                     Please log in to access the Watermark Editor.
                 </Link>
@@ -29,12 +33,14 @@ function WatermarkPageContent() {
         );
     }
 
-    return (
-        <div className="min-h-screen flex flex-col font-sans overflow-hidden ">
-            {/* Left Panel for Uploads and Controls */}
 
+
+
+    return (
+        <div className="min-h-screen flex flex-col font-sans overflow-hidden w-full">
+            {/* Left Panel for Uploads and Controls */}
             <div className="flex min-h-screen">
-                <div className="w-[350px] h-screen overflow-auto p-4 border-r bg-gray-50 dark:bg-gray-900 flex flex-col shadow-lg rounded-r-lg">
+                <div className="w-[350px] h-screen overflow-auto p-4 border-r flex flex-col shadow-lg rounded-r-lg">
                     <div className="mb-5 mt-2 ">
                         <BreadCrumb />
                     </div>
@@ -53,15 +59,11 @@ function WatermarkPageContent() {
                     {/* ImageControls is always rendered, it will internally decide if it's showing
                     global controls or individual controls based on selectedImageIndex. */}
                     <ImageControls />
-                    {!images.length && ( // Display message if no images are uploaded
-                        <p className="text-gray-600 dark:text-gray-400 text-center mt-10 px-6 py-3 bg-gray-100 dark:bg-gray-800 rounded-xl shadow-md text-base font-medium transition-colors duration-300">
-                            Created by <span className="font-semibold text-indigo-600 dark:text-indigo-400">SeekerDev</span>
-                        </p>
-                    )}
+
                 </div>
 
                 {/* Right Panel for Previews */}
-                <div className="flex-1 p-6 overflow-auto bg-gray-100 dark:bg-gray-900 h-screen">
+                <div className="flex-1 overflow-auto  h-screen">
                     <PreviewArea />
                 </div>
             </div>

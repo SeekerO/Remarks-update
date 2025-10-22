@@ -32,13 +32,11 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
         <AuthProvider>
-          <ChatWrapper>
-            <ThemeWrapper>
-
+          <ThemeWrapper>
+            <ChatWrapper>
               {children}
-
-            </ThemeWrapper>
-          </ChatWrapper>
+            </ChatWrapper>
+          </ThemeWrapper>
         </AuthProvider>
       </body>
     </html>
