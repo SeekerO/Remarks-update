@@ -1,6 +1,5 @@
 "use client"
 import React, { useLayoutEffect } from 'react'
-import DarkModeToggle from '@/lib/components/dark-button';
 import Sidebar from '../sidebar';
 import { useAuth } from '@/app/Chat/AuthContext';
 import { usePathname } from 'next/navigation';
@@ -14,7 +13,7 @@ const ThemeWrapper: React.FC<WrapperProps> = ({ children }) => {
     const { user } = useAuth();
 
     const userAuthenticated = user && user.canChat !== false;
-    const sidebarVisible = pathname !== "/"
+    const sidebarVisible = !(pathname === "/" || pathname === "/login");
     const showSidebar = sidebarVisible && userAuthenticated;
 
     useLayoutEffect(() => {
@@ -33,7 +32,7 @@ const ThemeWrapper: React.FC<WrapperProps> = ({ children }) => {
 
     return (
         <>
-            <main className='flex'>
+            <main className='flex h-screen w-screen overflow-y-auto'>
                 {/* 4. Use the new showSidebar variable */}
                 {showSidebar && <>
                     <Sidebar />

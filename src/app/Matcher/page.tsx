@@ -6,7 +6,6 @@ import BreadCrumb from "../component/breadcrumb";
 import { compareExcelFilesFuzzy } from "@/lib/util/compare";
 import SideMenu from "./component/sidemenu";
 import { useAuth } from "../Chat/AuthContext";
-import Link from "next/link";
 import { IoSearch } from "react-icons/io5";
 import { MdUploadFile, MdPeopleAlt, MdPlayArrow, MdDelete } from 'react-icons/md';
 
@@ -71,131 +70,121 @@ const Matcher = () => {
 
 
 
-  if (!user || (user as any).canChat === false) {
-
+  if (user || (user as any)?.canChat === true)
 
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-100 dark:bg-gray-900">
-        <Link href={"/"} className="text-gray-600 dark:text-gray-400 text-center px-6 py-3 bg-gray-100 dark:bg-gray-800 rounded-xl shadow-md text-base font-medium transition-colors duration-300">
-          Please log in to access the Matcher.
-        </Link>
-      </div>
-    );
-  }
+      <div className="overflow-hidden h-screen w-screen flex flex-col gap-4 font-sans antialiased">
+        {/* Header */}
+        <header className="flex justify-between items-center px-4 py-5  rounded-lg shadow-md">
+          <BreadCrumb />
+        </header>
 
-  return (
-    <div className="overflow-hidden h-screen w-screen flex flex-col gap-4 font-sans antialiased">
-      {/* Header */}
-      <header className="flex justify-between items-center px-4 py-5  rounded-lg shadow-md">
-        <BreadCrumb />
-      </header>
+        {/* Main Content Area */}
+        <main className="flex-1 w-full h-[90%] rounded-lg shadow-xl flex flex-col lg:flex-row gap-4 p-4 lg:p-6 transition-colors duration-200">
+          {/* Left Side: Data Set Panels */}
+          <section className="flex flex-col w-full lg:w-1/2 gap-4 h-full ">
+            <DataSetPanel
+              title="DATA SET 1"
+              data={res?.data1}
+              filteredData={filteredData1}
+              inputSearch={inputSearch}
+              setInputSearch={setInputSearch}
+              setDataSet={setDataSet1}
+            />
+            <DataSetPanel
+              title="DATA SET 2"
+              data={res?.data2}
+              filteredData={filteredData2}
+              inputSearch={inputSearch}
+              setInputSearch={setInputSearch}
+              setDataSet={setDataSet2}
+            />
+          </section>
 
-      {/* Main Content Area */}
-      <main className="flex-1 w-full h-[90%] rounded-lg shadow-xl flex flex-col lg:flex-row gap-4 p-4 lg:p-6 transition-colors duration-200">
-        {/* Left Side: Data Set Panels */}
-        <section className="flex flex-col w-full lg:w-1/2 gap-4 h-full ">
-          <DataSetPanel
-            title="DATA SET 1"
-            data={res?.data1}
-            filteredData={filteredData1}
-            inputSearch={inputSearch}
-            setInputSearch={setInputSearch}
-            setDataSet={setDataSet1}
-          />
-          <DataSetPanel
-            title="DATA SET 2"
-            data={res?.data2}
-            filteredData={filteredData2}
-            inputSearch={inputSearch}
-            setInputSearch={setInputSearch}
-            setDataSet={setDataSet2}
-          />
-        </section>
-
-        {/* Right Side: Results & Controls */}
-        <section className="flex flex-col w-full lg:w-1/2 bg-gray-50 dark:bg-gray-700 rounded-lg shadow-inner p-4 h-full transition-colors duration-200">
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-4 gap-3">
-            {dataset1 && dataset2 && (
-              <button
-                onClick={handleMatchingMethod}
-                className={`flex items-center justify-center px-5 py-2 text-base font-medium rounded-full text-white transition-all duration-300 transform hover:scale-105 shadow-md
-                ${loading ? "bg-gray-400 cursor-not-allowed" : "bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"}`}
-                disabled={loading}
-              >
-                {loading ? (
-                  <>
-                    <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                    </svg>
-                    Matching...
-                  </>
-                ) : (
-                  <>
-                    <MdPlayArrow className="text-xl mr-2" />
-                    Run Match
-                  </>
-                )}
-              </button>
-            )}
-
-            <div className="flex items-center gap-3 sm:ml-auto">
-              {res && res.matched && (
-                <div className="flex items-center gap-1 px-3 py-1 bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300 rounded-full text-sm font-semibold">
-                  <MdPeopleAlt className="text-lg" />
-                  <span>Matches: {res.matched.length}</span>
-                </div>
-              )}
-              {res && (
+          {/* Right Side: Results & Controls */}
+          <section className="flex flex-col w-full lg:w-1/2 bg-gray-50 dark:bg-gray-700 rounded-lg shadow-inner p-4 h-full transition-colors duration-200">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-4 gap-3">
+              {dataset1 && dataset2 && (
                 <button
-                  onClick={handleDeleteData}
-                  className="p-2 rounded-full text-red-500 hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-red-500"
-                  title="Clear All Data"
+                  onClick={handleMatchingMethod}
+                  className={`flex items-center justify-center px-5 py-2 text-base font-medium rounded-full text-white transition-all duration-300 transform hover:scale-105 shadow-md
+                ${loading ? "bg-gray-400 cursor-not-allowed" : "bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"}`}
+                  disabled={loading}
                 >
-                  <MdDelete className="text-2xl" />
+                  {loading ? (
+                    <>
+                      <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                      Matching...
+                    </>
+                  ) : (
+                    <>
+                      <MdPlayArrow className="text-xl mr-2" />
+                      Run Match
+                    </>
+                  )}
                 </button>
               )}
-              <SideMenu
-                res={res}
-                threshold={threshold}
-                SetThreshold={SetThreshold}
-              />
-            </div>
-          </div>
 
-          {/* Results Display Area */}
-          <div className=" flex-1 w-full flex flex-col gap-2 overflow-y-auto custom-scrollbar p-1 h-full overflow-hidden">
-            {error ? (
-              <div className="flex items-center justify-center h-full text-red-500 dark:text-red-400 text-center">
-                <p>{error}</p>
+              <div className="flex items-center gap-3 sm:ml-auto">
+                {res && res.matched && (
+                  <div className="flex items-center gap-1 px-3 py-1 bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300 rounded-full text-sm font-semibold">
+                    <MdPeopleAlt className="text-lg" />
+                    <span>Matches: {res.matched.length}</span>
+                  </div>
+                )}
+                {res && (
+                  <button
+                    onClick={handleDeleteData}
+                    className="p-2 rounded-full text-red-500 hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-red-500"
+                    title="Clear All Data"
+                  >
+                    <MdDelete className="text-2xl" />
+                  </button>
+                )}
+                <SideMenu
+                  res={res}
+                  threshold={threshold}
+                  SetThreshold={SetThreshold}
+                />
               </div>
-            ) : loading ? (
-              <div className="h-full w-full flex flex-col items-center justify-center text-center text-gray-500 dark:text-gray-400 p-4">
-                <svg className="animate-spin h-10 w-10 text-gray-400 mb-3" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                </svg>
-                <p className="text-lg font-semibold">Matching in progress...</p>
-                <p className="text-sm">This may take a moment depending on the file size.</p>
-              </div>
-            ) : res && res.matched && res.matched.length > 0 ? (
-              filteredResults.length > 0 ? (
-                filteredResults.map((value: any, index: number) => (
-                  <ResultItem key={index} value={value} />
-                ))
-              ) : (
-                <div className="flex items-center justify-center h-full text-gray-500 dark:text-gray-400 text-center">
-                  <p>No results found for your search.</p>
+            </div>
+
+            {/* Results Display Area */}
+            <div className=" flex-1 w-full flex flex-col gap-2 overflow-y-auto custom-scrollbar p-1 h-full overflow-hidden">
+              {error ? (
+                <div className="flex items-center justify-center h-full text-red-500 dark:text-red-400 text-center">
+                  <p>{error}</p>
                 </div>
-              )
-            ) : (
-              <NoResults message={"Upload both datasets and click 'Run Match' to see the results here."} />
-            )}
-          </div>
-        </section>
-      </main>
-    </div>
-  );
+              ) : loading ? (
+                <div className="h-full w-full flex flex-col items-center justify-center text-center text-gray-500 dark:text-gray-400 p-4">
+                  <svg className="animate-spin h-10 w-10 text-gray-400 mb-3" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  <p className="text-lg font-semibold">Matching in progress...</p>
+                  <p className="text-sm">This may take a moment depending on the file size.</p>
+                </div>
+              ) : res && res.matched && res.matched.length > 0 ? (
+                filteredResults.length > 0 ? (
+                  filteredResults.map((value: any, index: number) => (
+                    <ResultItem key={index} value={value} />
+                  ))
+                ) : (
+                  <div className="flex items-center justify-center h-full text-gray-500 dark:text-gray-400 text-center">
+                    <p>No results found for your search.</p>
+                  </div>
+                )
+              ) : (
+                <NoResults message={"Upload both datasets and click 'Run Match' to see the results here."} />
+              )}
+            </div>
+          </section>
+        </main>
+      </div>
+    );
 };
 
 export default Matcher;

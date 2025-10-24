@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+// @ts-expect-error: allow global CSS import without module declarations
 import "./globals.css";
+import UseGuard from "./component/withAuth";
 import ThemeWrapper from "./component/wrapper/night-mode-wrapper";
 import { AuthProvider } from "./Chat/AuthContext";
 // import "./Remarks/remarks.css"
@@ -31,9 +33,11 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
         <AuthProvider>
-          <ThemeWrapper>
-            {children}
-          </ThemeWrapper>
+          <UseGuard redirectTo="/login">
+            <ThemeWrapper>
+              {children}
+            </ThemeWrapper>
+          </UseGuard>
         </AuthProvider>
       </body>
     </html>

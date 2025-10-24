@@ -429,7 +429,7 @@ const FAQ = () => {
 
 
 
-  if (!user || (user as any).canChat === false) {
+  if (!user || (user as any)?.canChat === false) {
 
 
     return (

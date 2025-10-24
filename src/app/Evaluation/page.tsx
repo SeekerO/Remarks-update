@@ -9,7 +9,6 @@ import { MdDelete } from "react-icons/md";
 import BreadCrumb from '../component/breadcrumb';
 import extractIdFromUrl from '@/lib/util/extractIdFromURL';
 import { useAuth } from '../Chat/AuthContext';
-import Link from 'next/link';
 // Define the shape of a row dynamically
 interface SheetRow extends Record<string, string> {
     id: string; // Assuming the first column serves as a unique identifier
@@ -222,210 +221,200 @@ export default function App() {
 
 
 
-    if (!user || (user as any).canChat === false) {
-
+    if (user || (user as any)?.canChat === true)
 
         return (
-            <div className="min-h-screen flex items-center justify-center bg-gray-100 dark:bg-gray-900">
-                <Link href={"/"} className="text-gray-600 dark:text-gray-400 text-center px-6 py-3 bg-gray-100 dark:bg-gray-800 rounded-xl shadow-md text-base font-medium transition-colors duration-300">
-                    Please log in to access the Evaluation.
-                </Link>
+            <div className="min-h-screen w-screen flex gap-2 justify-center py-10 px-4 sm:px-6 lg:px-8 font-inter">
+
+                {/* SETTINGS    */}
+                <div className='bg-gray-300 dark:bg-gray-700 h-fit w-[400px] rounded-md p-2 flex flex-col '>
+                    <div className='flex justify-between items-center mb-5'>
+                        <label className='text-2xl font-bold text-gray-800 dark:text-white tracking-wider'>GOOGLE SHEET INFO</label>
+                        <button onClick={DeleteSavedData} className='outline-none hover:text-red-500 text-2xl'>
+                            <MdDelete />
+                        </button>
+                    </div>
+                    <div className='w-full flex flex-col gap-2'>
+                        <label htmlFor="sheetID" className='font-semibold text-gray-700 dark:text-gray-200'>Enter Google Sheet ID</label>
+                        <input
+                            id="sheetID"
+                            type='text'
+                            className='rounded-md py-2 px-3 text-black outline-none focus:ring-2 focus:ring-blue-500'
+                            name='sheetID'
+                            value={sheetRange.sheetID}
+                            onChange={handleChangeRange}
+                            placeholder='e.g., 1_AbcDEfGHIjKlMnoPqRsTuvWxyz'
+                        />
+                        <label htmlFor="sheetName" className='font-semibold text-gray-700 dark:text-gray-200'>Enter Google Sheet Name</label>
+                        <input
+                            id="sheetName"
+                            type='text'
+                            className='rounded-md py-2 px-3 text-black outline-none focus:ring-2 focus:ring-blue-500'
+                            name='sheetName'
+                            value={sheetRange.sheetName}
+                            onChange={handleChangeRange}
+                            placeholder='e.g., Sheet1 or MyDataTab'
+                        />
+
+                        <h3 className=' font-semibold text-gray-700 dark:text-gray-200 mt-2'>Sheet Column Range {`(Optional)`}</h3>
+                        <div className='flex gap-2 items-center'>
+                            <input
+                                type='text'
+                                className='py-1 px-3 w-[90px] rounded-md outline-none text-black focus:ring-2 focus:ring-blue-500'
+                                onChange={handleChangeRange}
+                                name='colRangeFrom'
+                                value={sheetRange.colRangeFrom}
+                                placeholder='A'
+                            />
+                            <span className='text-gray-700 dark:text-gray-200'>-</span>
+                            <input
+                                type='text'
+                                className='py-1 px-3 w-[90px] rounded-md outline-none text-black focus:ring-2 focus:ring-blue-500'
+                                onChange={handleChangeRange}
+                                name='colRangeTo'
+                                value={sheetRange.colRangeTo}
+                                placeholder='Z'
+                            />
+                        </div>
+
+                        <div className='border-t-2 border-slate-600 mt-2 flex flex-col gap-2 p-4 bg-slate-600 rounded-md'>
+                            <label htmlFor="sheetName" className='font-semibold text-gray-700 dark:text-gray-200'>
+                                Show Column From {`(Optional)`}
+                            </label>
+                            <input
+                                id="sheetName"
+                                type='number'
+                                min={0}
+                                className='rounded-md py-2 px-3 text-black outline-none focus:ring-2 focus:ring-blue-500'
+                                name='colShowFrom'
+                                value={sheetRange.colShowFrom}
+                                onChange={handleChangeRange}
+                                placeholder='e.g., 1 '
+                            />
+                            <label htmlFor="sheetName" className='font-semibold text-gray-700 dark:text-gray-200'>
+                                Show Column To {`(Optional)`}
+                            </label>
+                            <input
+                                id="sheetName"
+                                type='number'
+                                min={1}
+                                className='rounded-md py-2 px-3 text-black outline-none focus:ring-2 focus:ring-blue-500'
+                                name='colShowTo'
+                                value={sheetRange.colShowTo}
+                                onChange={handleChangeRange}
+                                placeholder='e.g., 1 '
+                            />
+                            <span className='italic text-gray-200 tracking-wider'>{`Don't edit if not needed`}</span>
+                        </div>
+                        {inputError && (
+                            <p className="text-red-500 text-sm mt-2">{inputError}</p>
+                        )}
+                        <button
+                            onClick={handleLoadDataClick}
+                            className="mt-4 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-md shadow-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                            disabled={loading}
+                        >
+                            {loading ? 'Loading...' : 'LOAD DATA'}
+                        </button>
+
+
+                        {/* <pre className='w-full overflow-hidden'>{JSON.stringify(sheetRange, null, 2)}</pre> */}
+
+                    </div>
+                </div>
+
+                {/* DISPLAY    */}
+                <div className="bg-white dark:bg-gray-800 p-6 sm:p-8 rounded-lg shadow-xl w-full max-w-7xl h-[90vh] overflow-auto">
+                    <BreadCrumb />
+                    <div className='flex justify-between items-center mb-6'>
+                        <h1 className="text-3xl sm:text-4xl font-bold text-gray-800 dark:text-white flex">
+                            Google Sheets Data Editor
+                        </h1>
+                        <div className='flex items-center gap-2 border border-slate-300 dark:border-gray-600 p-1 rounded-md text-white px-2'>
+                            <IoSearchOutline className='text-2xl text-gray-700 dark:text-gray-300' />
+                            <input
+                                type='search'
+                                onChange={(e) => setSearchTerm(e.target.value)}
+                                className='p-2 outline-none bg-transparent w-[20rem] text-gray-800 dark:text-white placeholder-gray-500 dark:placeholder-gray-400'
+                                placeholder='Search all columns...'
+                            />
+                        </div>
+                    </div>
+
+                    {loading && (
+                        <div className="flex flex-col items-center justify-center py-8">
+                            <div className="animate-spin rounded-full h-12 w-12 border-b-4 border-blue-500 dark:border-blue-300"></div>
+                            <p className="mt-4 text-lg text-gray-600 dark:text-gray-300">Loading data...</p>
+                        </div>
+                    )}
+
+                    {message && (
+                        <div className={`p-4 rounded-md mb-6 text-center text-lg ${message.includes('Failed') || message.includes('No data found') ? 'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-200' : 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-200'}`}>
+                            {message}
+                        </div>
+                    )}
+
+                    {!loading && data.length === 0 && !message && !inputError && (
+                        <p className="text-center text-gray-600 dark:text-gray-300 text-lg py-8">
+                            Enter Google Sheet ID and Sheet Name to load data.
+                        </p>
+                    )}
+
+                    {!loading && data.length > 0 && (
+                        <div className="overflow-x-auto rounded-lg shadow-md h-[65vh] overflow-auto">
+                            <table className="min-w-full bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg">
+                                <thead>
+                                    <th className='py-2 font-bold text-xl'>
+                                        ACTION
+                                    </th>
+                                    <th className='py-2 font-semibold text-xl'>
+
+                                    </th>
+                                </thead>
+                                <tbody className="divide-y divide-gray-200 dark:divide-gray-600">
+                                    {filteredData.map((row, idx) => (
+                                        <tr key={row.id || idx} className="hover:bg-gray-50  dark:hover:bg-gray-700 transition-colors text-center">
+                                            <td className=" whitespace-nowrap text-gray-900 dark:text-gray-100 py-2.5">
+                                                <button
+                                                    onClick={() => handleEdit(row)}
+                                                    className="inline-flex items-center text-md font-medium text-center w-[100px] h-[30px] justify-center border border-transparent rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors dark:bg-indigo-700 dark:hover:bg-indigo-800 gap-2"
+                                                >
+                                                    <HiInformationCircle />View
+                                                </button>
+                                            </td>
+                                            {headers.slice(sheetRange.colShowFrom, sheetRange.colShowTo).map((header) => (
+                                                <td key={`${row.id}-${header}`} className="py-3 px-4 whitespace-nowrap text-gray-700 dark:text-gray-300 text-lg">
+                                                    {row[header]}
+                                                </td>
+                                            ))}
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    )}
+                    <div className="mt-8 text-center">
+                        <button
+                            onClick={handleLoadDataClick} // Now calls handleLoadDataClick
+                            className="inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-md shadow-sm text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed dark:bg-green-700 dark:hover:bg-green-800"
+                            disabled={loading}
+                        >
+                            {loading ? 'Refreshing...' : 'Refresh Data'}
+                        </button>
+                    </div>
+                </div>
+
+                {/* Modal for editing */}
+                {isModalOpen && editedRow && (
+                    <Modal
+                        isOpen={isModalOpen}
+                        onClose={handleCancel}
+                        onSave={handleSave}
+                        editedRow={editedRow}
+                        handleChange={handleChange}
+                        headers={headers}
+                    />
+                )}
             </div>
         );
-    }
-
-    return (
-        <div className="min-h-screen w-screen flex gap-2 justify-center py-10 px-4 sm:px-6 lg:px-8 font-inter">
-
-            {/* SETTINGS    */}
-            <div className='bg-gray-300 dark:bg-gray-700 h-fit w-[400px] rounded-md p-2 flex flex-col '>
-                <div className='flex justify-between items-center mb-5'>
-                    <label className='text-2xl font-bold text-gray-800 dark:text-white tracking-wider'>GOOGLE SHEET INFO</label>
-                    <button onClick={DeleteSavedData} className='outline-none hover:text-red-500 text-2xl'>
-                        <MdDelete />
-                    </button>
-                </div>
-                <div className='w-full flex flex-col gap-2'>
-                    <label htmlFor="sheetID" className='font-semibold text-gray-700 dark:text-gray-200'>Enter Google Sheet ID</label>
-                    <input
-                        id="sheetID"
-                        type='text'
-                        className='rounded-md py-2 px-3 text-black outline-none focus:ring-2 focus:ring-blue-500'
-                        name='sheetID'
-                        value={sheetRange.sheetID}
-                        onChange={handleChangeRange}
-                        placeholder='e.g., 1_AbcDEfGHIjKlMnoPqRsTuvWxyz'
-                    />
-                    <label htmlFor="sheetName" className='font-semibold text-gray-700 dark:text-gray-200'>Enter Google Sheet Name</label>
-                    <input
-                        id="sheetName"
-                        type='text'
-                        className='rounded-md py-2 px-3 text-black outline-none focus:ring-2 focus:ring-blue-500'
-                        name='sheetName'
-                        value={sheetRange.sheetName}
-                        onChange={handleChangeRange}
-                        placeholder='e.g., Sheet1 or MyDataTab'
-                    />
-
-                    <h3 className=' font-semibold text-gray-700 dark:text-gray-200 mt-2'>Sheet Column Range {`(Optional)`}</h3>
-                    <div className='flex gap-2 items-center'>
-                        <input
-                            type='text'
-                            className='py-1 px-3 w-[90px] rounded-md outline-none text-black focus:ring-2 focus:ring-blue-500'
-                            onChange={handleChangeRange}
-                            name='colRangeFrom'
-                            value={sheetRange.colRangeFrom}
-                            placeholder='A'
-                        />
-                        <span className='text-gray-700 dark:text-gray-200'>-</span>
-                        <input
-                            type='text'
-                            className='py-1 px-3 w-[90px] rounded-md outline-none text-black focus:ring-2 focus:ring-blue-500'
-                            onChange={handleChangeRange}
-                            name='colRangeTo'
-                            value={sheetRange.colRangeTo}
-                            placeholder='Z'
-                        />
-                    </div>
-
-                    <div className='border-t-2 border-slate-600 mt-2 flex flex-col gap-2 p-4 bg-slate-600 rounded-md'>
-                        <label htmlFor="sheetName" className='font-semibold text-gray-700 dark:text-gray-200'>
-                            Show Column From {`(Optional)`}
-                        </label>
-                        <input
-                            id="sheetName"
-                            type='number'
-                            min={0}
-                            className='rounded-md py-2 px-3 text-black outline-none focus:ring-2 focus:ring-blue-500'
-                            name='colShowFrom'
-                            value={sheetRange.colShowFrom}
-                            onChange={handleChangeRange}
-                            placeholder='e.g., 1 '
-                        />
-                        <label htmlFor="sheetName" className='font-semibold text-gray-700 dark:text-gray-200'>
-                            Show Column To {`(Optional)`}
-                        </label>
-                        <input
-                            id="sheetName"
-                            type='number'
-                            min={1}
-                            className='rounded-md py-2 px-3 text-black outline-none focus:ring-2 focus:ring-blue-500'
-                            name='colShowTo'
-                            value={sheetRange.colShowTo}
-                            onChange={handleChangeRange}
-                            placeholder='e.g., 1 '
-                        />
-                        <span className='italic text-gray-200 tracking-wider'>{`Don't edit if not needed`}</span>
-                    </div>
-                    {inputError && (
-                        <p className="text-red-500 text-sm mt-2">{inputError}</p>
-                    )}
-                    <button
-                        onClick={handleLoadDataClick}
-                        className="mt-4 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-md shadow-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                        disabled={loading}
-                    >
-                        {loading ? 'Loading...' : 'LOAD DATA'}
-                    </button>
-
-
-                    {/* <pre className='w-full overflow-hidden'>{JSON.stringify(sheetRange, null, 2)}</pre> */}
-
-                </div>
-            </div>
-
-            {/* DISPLAY    */}
-            <div className="bg-white dark:bg-gray-800 p-6 sm:p-8 rounded-lg shadow-xl w-full max-w-7xl h-[90vh] overflow-auto">
-                <BreadCrumb />
-                <div className='flex justify-between items-center mb-6'>
-                    <h1 className="text-3xl sm:text-4xl font-bold text-gray-800 dark:text-white flex">
-                        Google Sheets Data Editor
-                    </h1>
-                    <div className='flex items-center gap-2 border border-slate-300 dark:border-gray-600 p-1 rounded-md text-white px-2'>
-                        <IoSearchOutline className='text-2xl text-gray-700 dark:text-gray-300' />
-                        <input
-                            type='search'
-                            onChange={(e) => setSearchTerm(e.target.value)}
-                            className='p-2 outline-none bg-transparent w-[20rem] text-gray-800 dark:text-white placeholder-gray-500 dark:placeholder-gray-400'
-                            placeholder='Search all columns...'
-                        />
-                    </div>
-                </div>
-
-                {loading && (
-                    <div className="flex flex-col items-center justify-center py-8">
-                        <div className="animate-spin rounded-full h-12 w-12 border-b-4 border-blue-500 dark:border-blue-300"></div>
-                        <p className="mt-4 text-lg text-gray-600 dark:text-gray-300">Loading data...</p>
-                    </div>
-                )}
-
-                {message && (
-                    <div className={`p-4 rounded-md mb-6 text-center text-lg ${message.includes('Failed') || message.includes('No data found') ? 'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-200' : 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-200'}`}>
-                        {message}
-                    </div>
-                )}
-
-                {!loading && data.length === 0 && !message && !inputError && (
-                    <p className="text-center text-gray-600 dark:text-gray-300 text-lg py-8">
-                        Enter Google Sheet ID and Sheet Name to load data.
-                    </p>
-                )}
-
-                {!loading && data.length > 0 && (
-                    <div className="overflow-x-auto rounded-lg shadow-md h-[65vh] overflow-auto">
-                        <table className="min-w-full bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg">
-                            <thead>
-                                <th className='py-2 font-bold text-xl'>
-                                    ACTION
-                                </th>
-                                <th className='py-2 font-semibold text-xl'>
-
-                                </th>
-                            </thead>
-                            <tbody className="divide-y divide-gray-200 dark:divide-gray-600">
-                                {filteredData.map((row, idx) => (
-                                    <tr key={row.id || idx} className="hover:bg-gray-50  dark:hover:bg-gray-700 transition-colors text-center">
-                                        <td className=" whitespace-nowrap text-gray-900 dark:text-gray-100 py-2.5">
-                                            <button
-                                                onClick={() => handleEdit(row)}
-                                                className="inline-flex items-center text-md font-medium text-center w-[100px] h-[30px] justify-center border border-transparent rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors dark:bg-indigo-700 dark:hover:bg-indigo-800 gap-2"
-                                            >
-                                                <HiInformationCircle />View
-                                            </button>
-                                        </td>
-                                        {headers.slice(sheetRange.colShowFrom, sheetRange.colShowTo).map((header) => (
-                                            <td key={`${row.id}-${header}`} className="py-3 px-4 whitespace-nowrap text-gray-700 dark:text-gray-300 text-lg">
-                                                {row[header]}
-                                            </td>
-                                        ))}
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                    </div>
-                )}
-                <div className="mt-8 text-center">
-                    <button
-                        onClick={handleLoadDataClick} // Now calls handleLoadDataClick
-                        className="inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-md shadow-sm text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed dark:bg-green-700 dark:hover:bg-green-800"
-                        disabled={loading}
-                    >
-                        {loading ? 'Refreshing...' : 'Refresh Data'}
-                    </button>
-                </div>
-            </div>
-
-            {/* Modal for editing */}
-            {isModalOpen && editedRow && (
-                <Modal
-                    isOpen={isModalOpen}
-                    onClose={handleCancel}
-                    onSave={handleSave}
-                    editedRow={editedRow}
-                    handleChange={handleChange}
-                    headers={headers}
-                />
-            )}
-        </div>
-    );
 }

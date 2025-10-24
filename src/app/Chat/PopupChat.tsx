@@ -6,7 +6,6 @@ import { useAuth } from './AuthContext'; // Authentication context
 import ChatList from './ChatList'; // Chat list component
 import AdminPanel from './AdminPanel'; // Admin panel component
 import { IoArrowBackCircle, IoChatbubblesSharp, IoClose } from "react-icons/io5"; // Back icon
-import { CgLogOut } from "react-icons/cg"; // Logout icon
 
 export default function PopupChat() {
     const [isOpen, setIsOpen] = useState(false); // State to control chat popup visibility
