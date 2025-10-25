@@ -11,7 +11,7 @@ import SingleImageEditor from "./SingleImageEditor"; // Ensure this is the updat
 import ModalLoading from "./ModalLoading";
 import { HiOutlineFolderDownload } from "react-icons/hi";
 import { IoImage } from "react-icons/io5";
-import { useTemplateActions } from "./saveTemplate";
+import { useTemplateActions } from "../components/hooks/useTemplateActions";
 
 export default function PreviewArea() {
     const {

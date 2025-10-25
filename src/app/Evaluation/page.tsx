@@ -6,7 +6,7 @@ import Modal from './components/Modal_Edit_User'; // Assuming this path is corre
 import { HiInformationCircle } from "react-icons/hi";
 import { IoSearchOutline } from "react-icons/io5";
 import { MdDelete } from "react-icons/md";
-import BreadCrumb from '../component/breadcrumb';
+// import BreadCrumb from '../component/breadcrumb';
 import extractIdFromUrl from '@/lib/util/extractIdFromURL';
 import { useAuth } from '../Chat/AuthContext';
 // Define the shape of a row dynamically
@@ -224,7 +224,7 @@ export default function App() {
     if (user || (user as any)?.canChat === true)
 
         return (
-            <div className="min-h-screen w-screen flex gap-2 justify-center py-10 px-4 sm:px-6 lg:px-8 font-inter">
+            <div className="min-h-screen w-screen flex gap-2 justify-center py-5 px-4 sm:px-6 lg:px-8 font-inter">
 
                 {/* SETTINGS    */}
                 <div className='bg-gray-300 dark:bg-gray-700 h-fit w-[400px] rounded-md p-2 flex flex-col '>
@@ -325,7 +325,7 @@ export default function App() {
 
                 {/* DISPLAY    */}
                 <div className="bg-white dark:bg-gray-800 p-6 sm:p-8 rounded-lg shadow-xl w-full max-w-7xl h-[90vh] overflow-auto">
-                    <BreadCrumb />
+                    {/* <BreadCrumb /> */}
                     <div className='flex justify-between items-center mb-6'>
                         <h1 className="text-3xl sm:text-4xl font-bold text-gray-800 dark:text-white flex">
                             Google Sheets Data Editor

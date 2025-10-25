@@ -12,6 +12,7 @@ import BreadCrumb from "../../component/breadcrumb";
 import { ImageEditorProvider, useImageEditor } from "./components/ImageEditorContext";
 import { MdDelete } from "react-icons/md";
 import { useAuth } from "../../Chat/AuthContext";
+import { Info } from "lucide-react";
 
 // Main page component for the watermark application.
 function WatermarkPageContent() {
@@ -36,6 +37,14 @@ function WatermarkPageContent() {
                                 </div>
                             }
                         </h1>
+
+                        <div className=" border border-blue-800 rounded-lg p-4 mb-6 flex items-start gap-3">
+                            <Info className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
+                            <div className="text-sm text-blue-600 dark:text-blue-100">
+                                <strong>100% Client-Side Processing:</strong> Your images never leave your device.
+                                It runs in your browser, ensuring maximum privacy and security.
+                            </div>
+                        </div>
 
                         <div className="mb-8">
                             <ImageUploader />

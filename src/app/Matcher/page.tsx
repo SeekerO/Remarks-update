@@ -2,7 +2,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
 import React, { useRef, useState } from "react";
-import BreadCrumb from "../component/breadcrumb";
+// import BreadCrumb from "../component/breadcrumb";
 import { compareExcelFilesFuzzy } from "@/lib/util/compare";
 import SideMenu from "./component/sidemenu";
 import { useAuth } from "../Chat/AuthContext";
@@ -75,9 +75,9 @@ const Matcher = () => {
     return (
       <div className="overflow-hidden h-screen w-screen flex flex-col gap-4 font-sans antialiased">
         {/* Header */}
-        <header className="flex justify-between items-center px-4 py-5  rounded-lg shadow-md">
+        {/* <header className="flex justify-between items-center px-4   rounded-lg shadow-md">
           <BreadCrumb />
-        </header>
+        </header> */}
 
         {/* Main Content Area */}
         <main className="flex-1 w-full h-[90%] rounded-lg shadow-xl flex flex-col lg:flex-row gap-4 p-4 lg:p-6 transition-colors duration-200">

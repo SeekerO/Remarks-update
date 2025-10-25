@@ -1,7 +1,7 @@
 // src/hooks/useTemplateActions.js
 "use client";
 
-import { useImageEditor } from "./ImageEditorContext";
+import { useImageEditor } from "../ImageEditorContext";
 
 // This is a custom hook. Its name starts with 'use'.
 // It's a reusable piece of logic that can be used inside components.

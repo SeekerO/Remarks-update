@@ -479,7 +479,7 @@ const LogoMaker: React.FC = () => {
     const checkerboardPattern = theme === 'dark' ? CHECKERBOARD_DARK : CHECKERBOARD_LIGHT;
 
     return (
-        <div className="h-screen w-screen overflow-hidden  bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100">
+        <div className="h-screen w-screen overflow-hidden  text-gray-900 dark:text-gray-100">
             {/* Top Toolbar */}
             <div className="select-none border-b border-gray-200 dark:border-gray-700 px-4 py-3 flex items-center justify-between h-[70px]">
                 <div className="flex items-center gap-4">

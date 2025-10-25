@@ -8,7 +8,7 @@ import { useImageEditor } from "./ImageEditorContext";
 import ModalPreview from "./ModalPreview";
 import { MdDelete } from "react-icons/md";
 import { FiDownload, FiMaximize2 } from "react-icons/fi";
-import { useTemplateActions } from "./saveTemplate";
+import { useTemplateActions } from "../components/hooks/useTemplateActions";
 
 interface SingleImageEditorProps {
     image: any;

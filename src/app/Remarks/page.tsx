@@ -17,7 +17,7 @@ const Remarks = () => {
         <div className="flex justify-between px-4 py-5">
           <BreadCrumb />
         </div>
-        <div className="p-5">
+        <div className="p-5 h-full w-full">
           <DynamicColumn />
         </div>
       </div>

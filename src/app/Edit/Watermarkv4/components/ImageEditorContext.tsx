@@ -1,4 +1,4 @@
-// app/components/ImageEditorContext.tsx
+// app/watermark/components/ImageEditorContext.tsx
 "use client";
 
 import React, { createContext, useContext, useState, ReactNode } from "react";
@@ -10,6 +10,8 @@ interface WatermarkSettings {
     height: number;
     paddingX: number;
     paddingY: number;
+    opacity?: number;
+    rotation?: number;
 }
 
 interface FooterSettings {
@@ -17,34 +19,26 @@ interface FooterSettings {
     scale: number;
     offsetX: number;
     offsetY: number;
+    rotation?: number;
 }
 
-// NEW: Defines the structure for shadow settings
 interface ShadowSettings {
-    color: string; // e.g., "#000000"
-    opacity: number; // 0-1
-    offsetX: number; // pixels
-    offsetY: number; // pixels
-    blur: number; // Blur radius for the shadow
+    color: string;
+    opacity: number;
+    offsetX: number;
+    offsetY: number;
+    blur: number;
 }
 
-// NEW: Defines the target for the shadow
 type ShadowTarget = "none" | "footer" | "whole-image";
 
-
-// Defines the structure for image data, including a flag for global settings
-// and optional individual settings.
 interface ImageData {
     file: File;
     url: string;
-    // New: Flag to determine if this image uses global settings
     useGlobalSettings: boolean;
-    // Optional: Individual settings, only used if useGlobalSettings is false
     individualLogoSettings?: WatermarkSettings;
     individualFooterSettings?: FooterSettings;
-    individualShadowSettings?: ShadowSettings; // NEW: Individual shadow settings
-
-    // NEW: Individual logo and footer image URLs
+    individualShadowSettings?: ShadowSettings;
     individualLogo?: string | null;
     individualFooter?: string | null;
 }
@@ -63,23 +57,30 @@ interface ImageEditorContextType {
     setGlobalLogoSettings: React.Dispatch<React.SetStateAction<WatermarkSettings>>;
     globalFooterSettings: FooterSettings;
     setGlobalFooterSettings: React.Dispatch<React.SetStateAction<FooterSettings>>;
-    globalShadowSettings: ShadowSettings; // NEW: Add global shadow settings
+    globalShadowSettings: ShadowSettings;
     setGlobalShadowSettings: React.Dispatch<React.SetStateAction<ShadowSettings>>;
-    globalShadowTarget: ShadowTarget; // NEW: Add global shadow target
+    globalShadowTarget: ShadowTarget;
     setGlobalShadowTarget: React.Dispatch<React.SetStateAction<ShadowTarget>>;
     removeAllImages: () => void;
 
-    // NEW: Functions to update individual logo/footer for the selected image
     setIndividualLogo: (index: number, url: string | null) => void;
     setIndividualFooter: (index: number, url: string | null) => void;
 
-    // NEW: Function to toggle useGlobalSettings for selected image
     toggleUseGlobalSettings: () => void;
 
-    // NEW: Function to update individual settings for selected image
     updateIndividualLogoSettings: (settings: Partial<WatermarkSettings>) => void;
     updateIndividualFooterSettings: (settings: Partial<FooterSettings>) => void;
     updateIndividualShadowSettings: (settings: Partial<ShadowSettings>) => void;
+
+    // ============================================
+    // NEW: BATCH SELECTION STATE AND METHODS
+    // ============================================
+    selectedImages: number[];
+    toggleImageSelection: (index: number) => void;
+    selectAllImages: () => void;
+    deselectAllImages: () => void;
+    removeSelectedImages: () => void;
+    isImageSelected: (index: number) => boolean;
 }
 
 // Default settings for the logo watermark.
@@ -89,6 +90,8 @@ const defaultLogoSettings: WatermarkSettings = {
     height: 100,
     paddingX: 20,
     paddingY: 20,
+    opacity: 1,
+    rotation: 0,
 };
 
 // Default settings for the footer.
@@ -97,6 +100,7 @@ const defaultFooterSettings: FooterSettings = {
     scale: 1,
     offsetX: 0,
     offsetY: 0,
+    rotation: 0,
 };
 
 // Default settings for the shadow.
@@ -107,7 +111,6 @@ const defaultShadowSettings: ShadowSettings = {
     offsetY: 5,
     blur: 5,
 };
-
 
 // Create the context with a default undefined value.
 const ImageEditorContext = createContext<ImageEditorContextType | undefined>(undefined);
@@ -123,10 +126,14 @@ export const ImageEditorProvider = ({ children }: { children: ReactNode }) => {
     const [globalLogoSettings, setGlobalLogoSettings] = useState<WatermarkSettings>(defaultLogoSettings);
     const [globalFooterSettings, setGlobalFooterSettings] = useState<FooterSettings>(defaultFooterSettings);
 
-    // NEW: Global shadow settings and target
+    // Global shadow settings and target
     const [globalShadowSettings, setGlobalShadowSettings] = useState<ShadowSettings>(defaultShadowSettings);
     const [globalShadowTarget, setGlobalShadowTarget] = useState<ShadowTarget>("none");
 
+    // ============================================
+    // NEW: BATCH SELECTION STATE
+    // ============================================
+    const [selectedImages, setSelectedImages] = useState<number[]>([]);
 
     const removeAllImages = () => {
         // Revoke object URLs to prevent memory leaks
@@ -136,10 +143,10 @@ export const ImageEditorProvider = ({ children }: { children: ReactNode }) => {
             if (image.individualFooter) URL.revokeObjectURL(image.individualFooter);
         });
         setImages([]);
-        setSelectedImageIndex(null); // Deselect any image when all are removed
+        setSelectedImageIndex(null);
+        setSelectedImages([]); // Clear batch selection
     };
 
-    // NEW: Function to set individual logo for the selected image
     const setIndividualLogo = (index: number, url: string | null) => {
         setImages(prevImages => {
             const newImages = [...prevImages];
@@ -155,7 +162,6 @@ export const ImageEditorProvider = ({ children }: { children: ReactNode }) => {
         });
     };
 
-    // NEW: Function to set individual footer for the selected image
     const setIndividualFooter = (index: number, url: string | null) => {
         setImages(prevImages => {
             const newImages = [...prevImages];
@@ -171,7 +177,6 @@ export const ImageEditorProvider = ({ children }: { children: ReactNode }) => {
         });
     };
 
-    // NEW: Function to toggle useGlobalSettings for the selected image
     const toggleUseGlobalSettings = () => {
         if (selectedImageIndex !== null) {
             setImages(prevImages => {
@@ -181,7 +186,6 @@ export const ImageEditorProvider = ({ children }: { children: ReactNode }) => {
                     newImages[selectedImageIndex] = {
                         ...currentImage,
                         useGlobalSettings: !currentImage.useGlobalSettings,
-                        // Initialize individual settings if switching from global and they don't exist
                         individualLogoSettings: currentImage.individualLogoSettings || { ...defaultLogoSettings },
                         individualFooterSettings: currentImage.individualFooterSettings || { ...defaultFooterSettings },
                         individualShadowSettings: currentImage.individualShadowSettings || { ...defaultShadowSettings },
@@ -192,7 +196,6 @@ export const ImageEditorProvider = ({ children }: { children: ReactNode }) => {
         }
     };
 
-    // NEW: Function to update individual logo settings for the selected image
     const updateIndividualLogoSettings = (settings: Partial<WatermarkSettings>) => {
         if (selectedImageIndex !== null) {
             setImages(prevImages => {
@@ -202,15 +205,14 @@ export const ImageEditorProvider = ({ children }: { children: ReactNode }) => {
                     individualLogoSettings: {
                         ...newImages[selectedImageIndex].individualLogoSettings,
                         ...settings
-                    } as WatermarkSettings, // Type assertion as we know it's being initialized above
-                    useGlobalSettings: false, // Ensure individual settings are active
+                    } as WatermarkSettings,
+                    useGlobalSettings: false,
                 };
                 return newImages;
             });
         }
     };
 
-    // NEW: Function to update individual footer settings for the selected image
     const updateIndividualFooterSettings = (settings: Partial<FooterSettings>) => {
         if (selectedImageIndex !== null) {
             setImages(prevImages => {
@@ -220,15 +222,14 @@ export const ImageEditorProvider = ({ children }: { children: ReactNode }) => {
                     individualFooterSettings: {
                         ...newImages[selectedImageIndex].individualFooterSettings,
                         ...settings
-                    } as FooterSettings, // Type assertion
-                    useGlobalSettings: false, // Ensure individual settings are active
+                    } as FooterSettings,
+                    useGlobalSettings: false,
                 };
                 return newImages;
             });
         }
     };
 
-    // NEW: Function to update individual shadow settings for the selected image
     const updateIndividualShadowSettings = (settings: Partial<ShadowSettings>) => {
         if (selectedImageIndex !== null) {
             setImages(prevImages => {
@@ -238,16 +239,67 @@ export const ImageEditorProvider = ({ children }: { children: ReactNode }) => {
                     individualShadowSettings: {
                         ...newImages[selectedImageIndex].individualShadowSettings,
                         ...settings
-                    } as ShadowSettings, // Type assertion
-                    useGlobalSettings: false, // Ensure individual settings are active
+                    } as ShadowSettings,
+                    useGlobalSettings: false,
                 };
                 return newImages;
             });
         }
     };
 
+    // ============================================
+    // NEW: BATCH SELECTION METHODS
+    // ============================================
 
+    // Toggle selection of a single image
+    const toggleImageSelection = (index: number) => {
+        setSelectedImages(prev => {
+            if (prev.includes(index)) {
+                return prev.filter(i => i !== index);
+            } else {
+                return [...prev, index];
+            }
+        });
+    };
 
+    // Select all images
+    const selectAllImages = () => {
+        setSelectedImages(images.map((_, index) => index));
+    };
+
+    // Deselect all images
+    const deselectAllImages = () => {
+        setSelectedImages([]);
+    };
+
+    // Remove selected images
+    const removeSelectedImages = () => {
+        setImages(prevImages => {
+            // Revoke URLs for selected images
+            selectedImages.forEach(index => {
+                const image = prevImages[index];
+                if (image) {
+                    URL.revokeObjectURL(image.url);
+                    if (image.individualLogo) URL.revokeObjectURL(image.individualLogo);
+                    if (image.individualFooter) URL.revokeObjectURL(image.individualFooter);
+                }
+            });
+
+            // Filter out selected images
+            const newImages = prevImages.filter((_, index) => !selectedImages.includes(index));
+
+            // Clear selections
+            setSelectedImages([]);
+            setSelectedImageIndex(null);
+
+            return newImages;
+        });
+    };
+
+    // Check if an image is selected
+    const isImageSelected = (index: number): boolean => {
+        return selectedImages.includes(index);
+    };
 
     return (
         <ImageEditorContext.Provider
@@ -275,6 +327,13 @@ export const ImageEditorProvider = ({ children }: { children: ReactNode }) => {
                 updateIndividualLogoSettings,
                 updateIndividualFooterSettings,
                 updateIndividualShadowSettings,
+                // NEW: Batch selection exports
+                selectedImages,
+                toggleImageSelection,
+                selectAllImages,
+                deselectAllImages,
+                removeSelectedImages,
+                isImageSelected,
             }}
         >
             {children}
