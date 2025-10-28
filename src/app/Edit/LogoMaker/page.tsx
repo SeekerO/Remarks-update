@@ -697,7 +697,7 @@ const LogoMaker: React.FC = () => {
                 {/* Canvas Container (Scrollable) */}
                 <div
                     ref={canvasContainerRef}
-                    className="flex-1 h-full  overflow-auto p-8 flex items-center justify-center relative"
+                    className="flex-1 h-full  overflow-auto p-8 flex items-center justify-center relative select-none"
                 >
                     {/* Right Sidebar - Applied responsive width: w-64 on smaller screens, w-72 on medium and larger */}
                     {selected && (

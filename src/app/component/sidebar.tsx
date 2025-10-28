@@ -126,39 +126,63 @@ const Sidebar: React.FC = () => {
     // Get all possible page IDs for the backward-compatibility logic
     const allPageIds = Object.keys(PAGE_PERMISSION_MAP);
 
-    // Get user's allowed pages:
-    // 1. Admins get all pages.
-    // 2. If allowedPages is undefined (old user, or first time loading), grant all pages.
-    // 3. Otherwise (new user, or configured user), use the stored array (e.g., [] for new users).
-    const allowedPages: string[] = (userRole === 'admin')
-        ? allPageIds
-        : (user?.allowedPages !== undefined
-            ? user.allowedPages
-            : allPageIds); // Backward compatibility for old users
+    // --- MODIFIED LOGIC START ---
+
+    // 1. Determine the effective allowedPages list based on the user's role and the 'allowedPages' variable.
+    let allowedPages: string[] | null;
+
+    if (userRole === 'admin') {
+        // Rule 2: Admin, regardless of `allowedPages` (present or null), gets ALL pages.
+        // We use `null` to signal "show all" to the `hasAccess` function for admins.
+        allowedPages = null;
+    } else {
+        // Standard User Logic
+        if (user?.allowedPages === undefined || user?.allowedPages === null) {
+            // Rule 1: Not Admin AND allowedPages is NOT set (undefined/null).
+            // An empty array signals "show nothing" to the `hasAccess` function.
+            allowedPages = [];
+        } else {
+            // Rule 3: Not Admin AND allowedPages IS set (it's an array, possibly empty).
+            // Use the explicit list from the user object.
+            allowedPages = user.allowedPages;
+        }
+    }
+
+    // --- MODIFIED LOGIC END ---
 
     // State to track open dropdowns
     const [openDropdowns, setOpenDropdowns] = useState<string | null>(null);
 
     // Check if user has access based on role AND page permissions
     const hasAccess = (item: NavItem): boolean => {
+
         // 1. Check role requirement (Admin pages)
         const required = item.requiredRole || 'standard';
         if (userRole !== 'admin' && required === 'admin') {
             return false;
         }
 
-        // 2. Admins bypass all page permission checks
-        if (userRole === 'admin') {
+        // 2. Admins bypass all page permission checks (since `allowedPages` is null for admins)
+        if (allowedPages === null) {
             return true;
         }
 
-        // 3. For standard users, check page permissions
+
+        // 3. Items without pagePermissionId are admin-only (already handled by step 1, but for safety/clarity)
+        if (item.pagePermissionId === undefined) {
+            return false;
+        }
+
+        // 4. For standard users, check page permissions against the determined `allowedPages` array.
+        // This handles:
+        // - Rule 1 (allowedPages is [] -> returns false for all)
+        // - Rule 3 (allowedPages is ['x', 'y'] -> returns true only for 'x' and 'y')
         if (item.pagePermissionId) {
-            // Check if the page ID is in the user's allowedPages array
+            // Type check is implicitly handled because allowedPages is guaranteed to be `string[]` here
             return allowedPages.includes(item.pagePermissionId);
         }
 
-        // 4. If no pagePermissionId is set (e.g., a general category link), allow access
+        // This case should not be hit for links meant to be restricted, but serves as a default for parent-only items.
         return true;
     };
 
@@ -229,7 +253,7 @@ const Sidebar: React.FC = () => {
                         const canAccessItem = hasAccess(item);
                         const hasAccessibleSublinks = item.sublinks.some(sub => hasAccess(sub));
 
-                        // Hide parent items that user has no access to AND have no accessible sublinks
+                        // Hide the main link/dropdown if neither it nor any of its sublinks are accessible
                         if (!canAccessItem && !hasAccessibleSublinks) {
                             return null;
                         }
@@ -238,10 +262,11 @@ const Sidebar: React.FC = () => {
                         const isOpen = isPureDropdown ? openDropdowns === item.name : isParentActive(item);
                         const isLinkActive = isPureDropdown ? false : (isActive(item.href) || isParentActive(item));
 
-                        // FIXED: For parent items with sublinks, only disable if NO sublinks are accessible
+                        // Only disable the parent link if it's a direct link (not a category header) AND the user can't access it.
+                        // Category headers should only be disabled if no sublinks are accessible (handled by `shouldDisable`).
                         const shouldDisable = isPureDropdown
-                            ? !hasAccessibleSublinks  // For dropdowns, disable only if no sublinks accessible
-                            : !canAccessItem;          // For direct links, check their own permission
+                            ? !hasAccessibleSublinks   // For dropdowns, disable if no sublinks accessible
+                            : !canAccessItem;           // For direct links, check its own permission
 
                         const commonClasses = `${linkBaseClasses} ${mainLinkSpaceClass} ${isLinkActive ? activeClasses : inactiveMainClasses} ${shouldDisable ? disabledClasses : 'cursor-pointer'}`;
 
