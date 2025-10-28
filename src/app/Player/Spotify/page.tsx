@@ -1,5 +1,5 @@
 'use client'
-
+// eslint-disable-line @typescript-eslint/no-unused-vars
 import React, { useState, useEffect } from 'react';
 import { Play, Pause, SkipBack, SkipForward, Volume2, VolumeX, Repeat, Shuffle, Heart, Music } from 'lucide-react';
 
@@ -28,7 +28,7 @@ const SpotifyPlayer = () => {
     const [playbackState, setPlaybackState] = useState<PlaybackState | null>(null);
     const [isLiked, setIsLiked] = useState(false);
     const [error, setError] = useState('');
-    const [isConnecting, setIsConnecting] = useState(false);
+    // const [isConnecting, setIsConnecting] = useState(false);
 
     // Spotify API configuration
     const CLIENT_ID = process.env.NEXT_PUBLIC_SPOTIFY_CLIENT_ID;
