@@ -16,10 +16,61 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
+// --- SEO Configuration Start ---
+const APP_NAME = "KKK Tool - SeekerDev";
+const APP_DESCRIPTION = "A modern, professional tool suite for web and mobile developers. Build clean, error-free components with React, Next.js, and TypeScript.";
+const APP_URL = "https://kkk-tool.vercel.app"; // **[IMPORTANT]: Change this to your actual domain**
+
 export const metadata: Metadata = {
-  title: "KKK",
-  description: "Website for KKK Tools",
+  // 1. Primary Metadata
+  applicationName: APP_NAME,
+  title: {
+    default: APP_NAME,
+    template: `%s | ${APP_NAME}`, // Sets a template for all nested page titles
+  },
+  description: APP_DESCRIPTION,
+
+  // 2. Canonical URL & Site Base
+  metadataBase: new URL(APP_URL),
+  alternates: {
+    canonical: APP_URL, // Define the preferred URL for the root
+  },
+
+  // 3. Open Graph (for Facebook, LinkedIn, etc.)
+  openGraph: {
+    title: APP_NAME,
+    description: APP_DESCRIPTION,
+    url: APP_URL,
+    siteName: APP_NAME,
+    images: [
+      {
+        url: `${APP_URL}/opengraph-image.jpg`, // **[ACTION]: Create this image (1200x630px)**
+        width: 1200,
+        height: 630,
+        alt: APP_NAME,
+      },
+    ],
+    locale: 'en_US',
+    type: 'website',
+  },
+
+  // 4. Twitter Card (for Twitter/X)
+  twitter: {
+    card: 'summary_large_image',
+    site: '@SeekerOfficial', // **[ACTION]: Change to your Twitter handle**
+    creator: '@SeekerOfficial',
+    title: APP_NAME,
+    description: APP_DESCRIPTION,
+    images: [`${APP_URL}/twitter-image.jpg`], // **[ACTION]: Create this image (ratio 2:1)**
+  },
+
+  // 5. Icons and PWA
+  icons: {
+    icon: '/favicon.ico', // **[ACTION]: Ensure you have your favicon in /public**
+    apple: '/apple-icon.png',
+  },
 };
+// --- SEO Configuration End ---
 
 export default function RootLayout({
   children,
@@ -31,6 +82,7 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
+        {/* The AuthProvider and other providers are correctly wrapping the app */}
         <AuthProvider>
           <UseGuard redirectTo="/login">
             <ThemeWrapper>

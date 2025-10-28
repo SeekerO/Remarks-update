@@ -82,7 +82,7 @@ export default function Home() {
   return (
     <>
       <Head>
-        <title>Home | My App</title>
+        <title>KKK Tool - SeekerDev</title>
       </Head>
       <main className="flex flex-col items-center justify-center h-screen w-screen bg-gray-50 dark:bg-gray-900 font-sans text-gray-800 dark:text-white overflow-hidden p-4 relative">
         <div className='py-2'>
