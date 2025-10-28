@@ -19,20 +19,6 @@ import { LuArrowLeftToLine } from "react-icons/lu";
 import { SiYoutubestudio } from "react-icons/si";
 import { MdOutlineAdminPanelSettings } from "react-icons/md";
 
-// --- Page Permission Mapping ---
-// Maps page IDs used in admin panel (page.tsx) to navigation paths
-const PAGE_PERMISSION_MAP: Record<string, string> = {
-    'watermark': '/Edit/Watermarkv4',
-    'bgremover': '/Edit/Backgroundremover',
-    'logomaker': '/Edit/LogoMaker',
-    'faq': '/Remarks/Faq',
-    'remarks': '/Remarks',
-    'pdf': '/Pdf',
-    'matcher': '/Matcher',
-    'evaluation': '/Evaluation',
-    // Admin pages are handled by role, not pagePermissionId
-};
-
 // --- Tailwind Class Definitions (omitted for brevity) ---
 const linkBaseClasses = "flex items-center p-3 rounded-lg text-sm transition-all duration-300 ease-in-out whitespace-nowrap overflow-hidden";
 const activeClasses = "bg-sky-900 text-white font-semibold shadow-md hover:bg-sky-500";
