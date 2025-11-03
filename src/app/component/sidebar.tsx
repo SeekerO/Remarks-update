@@ -52,7 +52,8 @@ const navItems: NavItem[] = [
         active: false,
         sublinks: [
             { name: "Watermark V4", href: "/Edit/Watermarkv4", icon: IoWater, active: true, pagePermissionId: 'watermark', sublinks: [] },
-            { name: "BG Remover", href: "/Edit/Backgroundremover", icon: IoIosColorWand, active: true, pagePermissionId: 'bgremover', sublinks: [] },
+            { name: "Watermark V5", href: "/Edit/Watermarkv5", icon: IoWater, active: true, pagePermissionId: 'watermark', sublinks: [] },
+            { name: "BG Remover", href: "/Edit/Backgroundremover", icon: IoIosColorWand, active: true, pagePermissionId: 'bgremover', requiredRole: 'admin', sublinks: [] },
             { name: "Logo Maker", href: "/Edit/LogoMaker", icon: IoLogoBuffer, active: true, pagePermissionId: 'logomaker', sublinks: [] }
         ]
     },

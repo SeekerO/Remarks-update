@@ -49,16 +49,6 @@ const CANVAS_PRESETS = [
 const CHECKERBOARD_LIGHT = 'linear-gradient(45deg, #e5e5e5 25%, transparent 25%, transparent 75%, #e5e5e5 75%, #e5e5e5), linear-gradient(45deg, #e5e5e5 25%, transparent 25%, transparent 75%, #e5e5e5 75%, #e5e5e5)';
 const CHECKERBOARD_DARK = 'linear-gradient(45deg, #374151 25%, transparent 25%, transparent 75%, #374151 75%, #374151), linear-gradient(45deg, #374151 25%, transparent 25%, transparent 75%, #374151 75%, #374151)';
 
-// Helper to determine initial theme from system preference or local storage
-const getInitialTheme = () => {
-    if (typeof window !== 'undefined' && localStorage.getItem('theme')) {
-        return localStorage.getItem('theme') as 'light' | 'dark';
-    }
-    if (typeof window !== 'undefined' && window.matchMedia('(prefers-color-scheme: dark)').matches) {
-        return 'dark';
-    }
-    return 'light';
-};
 
 const LogoMaker: React.FC = () => {
     const [elements, setElements] = useState<Element[]>([]);
@@ -77,19 +67,12 @@ const LogoMaker: React.FC = () => {
     const [isResizing, setIsResizing] = useState(false);
     const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
     const [resizeStart, setResizeStart] = useState({ x: 0, y: 0, width: 0, height: 0 });
-    const [theme] = useState<'light' | 'dark'>(getInitialTheme);
-
     const canvasContainerRef = useRef<HTMLDivElement>(null); // Ref for the scrollable container
     const canvasRef = useRef<HTMLDivElement>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
+    const theme = localStorage.getItem('theme-mode')
 
     // --- Theme Management Effect ---
-    useEffect(() => {
-        const root = window.document.documentElement;
-        root.classList.remove(theme === 'dark' ? 'light' : 'dark');
-        root.classList.add(theme);
-        localStorage.setItem('theme', theme);
-    }, [theme]);
 
     // --- History Management ---
     const addToHistory = (newElements: Element[]) => {

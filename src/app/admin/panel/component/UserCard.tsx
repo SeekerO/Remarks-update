@@ -1,7 +1,10 @@
+// src/app/admin/panel/component/UserCard.tsx (MODIFIED)
+
 import React from 'react';
-import Image from 'next/image';
-import { UserCheck, Shield, ShieldOff, Globe, MessageSquareText, MessageSquareOff, Lock } from 'lucide-react';
-import { UserCardProps } from '../../lib/types';
+// REMOVED: Image import is no longer needed here
+import { Shield, ShieldOff, Globe, MessageSquareText, MessageSquareOff, Lock } from 'lucide-react';
+import { UserCardProps } from '@/lib/types/adminTypes'; // Adjusted import path
+import UserAvatar from '@/lib/components/avatar'; // 🔑 IMPORT THE NEW AVATAR COMPONENT
 
 // The component function itself can remain the same
 const UserCard: React.FC<UserCardProps> = React.memo(({
@@ -19,25 +22,15 @@ const UserCard: React.FC<UserCardProps> = React.memo(({
         className="bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded-xl p-6 shadow-lg flex flex-col hover:shadow-xl transition-all duration-300 h-full"
     >
         <div className="flex items-center space-x-4 mb-4">
-            <div className="relative shrink-0">
-                {user.profilePic ? (
-                    <Image
-                        width={64}
-                        height={64}
-                        src={user.profilePic}
-                        alt={`${user.name}'s profile`}
-                        className="w-16 h-16 rounded-full object-cover border-4 border-blue-500/50 dark:border-blue-400/50"
-                    />
-                ) : (
-                    <div className="w-16 h-16 rounded-full bg-gray-200 dark:bg-gray-600 flex items-center justify-center text-xl text-gray-500 dark:text-gray-300">
-                        <UserCheck size={32} />
-                    </div>
-                )}
-                <span
-                    title={isOnline ? "Online" : lastOnlineTimestamp ? `Last seen: ${formatLastOnline(lastOnlineTimestamp)}` : "Offline"}
-                    className={`absolute bottom-0 right-0 block h-4 w-4 rounded-full ring-2 ring-white dark:ring-gray-800 ${isOnline ? "bg-green-500" : "bg-gray-400"}`}
-                />
-            </div>
+            {/* 🔑 REPLACE AVATAR LOGIC WITH THE NEW COMPONENT */}
+            <UserAvatar
+                user={user}
+                isOnline={isOnline}
+                lastOnlineTimestamp={lastOnlineTimestamp}
+                formatLastOnline={formatLastOnline}
+            />
+            {/* 🔑 END REPLACEMENT */}
+
             <div className="flex-grow min-w-0">
                 <h3 className="font-bold text-lg text-gray-900 dark:text-white truncate">
                     {user.name}
@@ -142,7 +135,7 @@ const UserCard: React.FC<UserCardProps> = React.memo(({
         )}
     </div>
 ), (prevProps, nextProps) => {
-    // Custom memoization to prevent re-renders unless data changes (performance improvement)
+    // Custom memoization remains to prevent re-renders unless data changes
     return (
         prevProps.user === nextProps.user &&
         prevProps.isOnline === nextProps.isOnline &&
@@ -150,7 +143,6 @@ const UserCard: React.FC<UserCardProps> = React.memo(({
     );
 });
 
-// FIX: Set the display name for better debugging in React DevTools
 UserCard.displayName = 'UserCard';
 
 export default UserCard;

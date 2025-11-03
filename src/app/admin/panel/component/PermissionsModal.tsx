@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
 import React, { useState } from 'react';
-import { PermissionsModalProps, AVAILABLE_PAGES, PageId } from '../../lib/types';
+import { PermissionsModalProps, AVAILABLE_PAGES, PageId } from '@/lib/types/adminTypes';
 import { Lock, Unlock } from 'lucide-react';
 
 const PermissionsModal: React.FC<PermissionsModalProps> = ({ user, onClose, onSave }) => {

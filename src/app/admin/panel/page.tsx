@@ -1,4 +1,5 @@
-// src/app/admin/panel/page.tsx
+// src/app/admin/panel/page.tsx (MODIFIED)
+
 "use client";
 /* eslint-disable @typescript-eslint/no-explicit-any */
 /* eslint-disable @typescript-eslint/no-unused-vars */
@@ -7,42 +8,40 @@ import React, { useState, useEffect, useCallback } from "react";
 import { ref, onValue, update } from "firebase/database";
 import { Search, Users } from "lucide-react";
 
-// Assuming your AuthContext and Firebase imports are correct
 import { db } from "@/lib/firebase/firebase";
-import { useAuth } from "@/app/Chat/AuthContext"; // 🔑 CRITICAL FIX: Import useAuth
-import { PageId, UserProfile } from "../lib/types"
+import { useAuth } from "@/app/Chat/AuthContext";
+import { PageId, UserProfile } from "@/lib/types/adminTypes";
 import UserCard from "./component/UserCard";
 import PermissionsModal from "./component/PermissionsModal";
-
+// 🔑 IMPORT THE NEW CUSTOM HOOK
+import { useUserPresence } from "@/lib/hooks/useUserPresence";
 
 
 // --- Main Admin Panel Component (The Page Default Export) ---
 
-export default function AdminPanel() { // 🔑 FIXED: Removed custom props
-    const { user } = useAuth(); // Fetch user from context
-    // Now we have the current user's UID for the rest of the component's logic
-
+export default function AdminPanel() {
+    const { user } = useAuth();
 
     const [allUsers, setAllUsers] = useState<UserProfile[]>([]);
-    const [onlineUsers, setOnlineUsers] = useState<Record<string, boolean | number>>({});
+    // 🔑 REMOVED: onlineUsers state is now managed by the hook
     const [searchTerm, setSearchTerm] = useState<string>("");
     const [showOnlineOnly, setShowOnlineOnly] = useState<boolean>(false);
     const [showCanChatOnly, setShowCanChatOnly] = useState<boolean>(false);
-    const [isLoading, setIsLoading] = useState<boolean>(true);
+    const [isLoadingUsers, setIsLoadingUsers] = useState<boolean>(true); // Renamed for clarity
     const [selectedUserForPermissions, setSelectedUserForPermissions] = useState<UserProfile | null>(null);
     const currentUserId = user?.uid ?? '';
 
+    // 🔑 USE THE NEW HOOK
+    const { onlineUsers, isPresenceLoading, formatLastOnline } = useUserPresence();
+
+    // Combine loading states
+    const isLoading = isLoadingUsers || isPresenceLoading;
+
+
     useEffect(() => {
         const usersRef = ref(db, "users");
-        const presenceRef = ref(db, "presence");
 
         let usersLoaded = false;
-        let presenceLoaded = false;
-        const updateLoading = () => {
-            if (usersLoaded && presenceLoaded) {
-                setIsLoading(false);
-            }
-        };
 
         const unsubscribeUsers = onValue(usersRef, (snapshot) => {
             const usersData = snapshot.val();
@@ -54,8 +53,6 @@ export default function AdminPanel() { // 🔑 FIXED: Removed custom props
                     email: usersData[uid].email || "No Email",
                     isAdmin: usersData[uid].isAdmin || false,
                     canChat: usersData[uid].canChat !== undefined ? usersData[uid].canChat : true,
-                    // Keeping it undefined allows the PermissionsModal to default to ALL pages 
-                    // for older users who haven't had permissions configured yet.
                     allowedPages: usersData[uid].allowedPages !== undefined
                         ? usersData[uid].allowedPages
                         : undefined,
@@ -65,36 +62,26 @@ export default function AdminPanel() { // 🔑 FIXED: Removed custom props
                 setAllUsers([]);
             }
             usersLoaded = true;
-            updateLoading();
+            setIsLoadingUsers(false); // Update user-specific loading state
         });
 
-        const unsubscribePresence = onValue(presenceRef, (snapshot) => {
-            const presenceData = snapshot.val() || {};
-            const statusMap: Record<string, boolean | number> = {};
-            for (const uid in presenceData) {
-                statusMap[uid] = presenceData[uid];
-            }
-            setOnlineUsers(statusMap);
-            presenceLoaded = true;
-            updateLoading();
-        });
+        // 🔑 REMOVED: Presence subscription logic is now in useUserPresence
 
         return () => {
             unsubscribeUsers();
-            unsubscribePresence();
+            // 🔑 REMOVED: unsubscribePresence is now in useUserPresence cleanup
         };
     }, []);
 
 
-    // All handler functions are correctly using useCallback with currentUserId as a dependency, 
-    // which is stable after the initial fetch from useAuth.
+    // Handler functions remain unchanged, just relying on the currentUserId from useAuth.
     const handleToggleAdmin = useCallback(
         async (userId: string, currentAdminStatus: boolean) => {
             if (userId === currentUserId) {
                 alert("For security, you cannot modify your own Admin status.");
                 return;
             }
-
+            // ... (rest of the logic)
             try {
                 const userRef = ref(db, `users/${userId}`);
                 await update(userRef, { isAdmin: !currentAdminStatus });
@@ -112,6 +99,7 @@ export default function AdminPanel() { // 🔑 FIXED: Removed custom props
                 alert("You cannot modify your own chat permission status.");
                 return;
             }
+            // ... (rest of the logic)
             try {
                 const userRef = ref(db, `users/${userId}`);
                 await update(userRef, { canChat: !currentCanChatStatus });
@@ -130,7 +118,6 @@ export default function AdminPanel() { // 🔑 FIXED: Removed custom props
     const handleSavePermissions = useCallback(async (userId: string, allowedPages: PageId[]) => {
         try {
             const userRef = ref(db, `users/${userId}`);
-            // This updates the 'allowedPages' field in the database
             await update(userRef, { allowedPages });
         } catch (error) {
             alert("Failed to update page permissions. Check console for details.");
@@ -138,9 +125,8 @@ export default function AdminPanel() { // 🔑 FIXED: Removed custom props
     }, []);
 
 
-    // 🔑 Handle Loading and Unauthorized User
+    // Handle Loading and Unauthorized User
     if (!user) {
-        // You might show a full-screen spinner or redirect
         return (
             <div className="p-10 w-full h-screen flex justify-center items-center dark:bg-gray-900 bg-gray-50">
                 <div className="animate-spin rounded-full h-12 w-12 border-4 border-blue-500 border-t-transparent"></div>
@@ -150,22 +136,7 @@ export default function AdminPanel() { // 🔑 FIXED: Removed custom props
     }
 
 
-
-
-    const formatLastOnline = (timestamp: number) => {
-        const date = new Date(timestamp);
-        try {
-            return new Intl.DateTimeFormat('en-US', {
-                month: 'short',
-                day: 'numeric',
-                hour: 'numeric',
-                minute: 'numeric',
-                hour12: true,
-            }).format(date);
-        } catch (e) {
-            return date.toLocaleString();
-        }
-    };
+    // 🔑 REMOVED: formatLastOnline function is now returned from useUserPresence
 
     const filteredUsers = allUsers.filter((user) => {
         const isOnline = onlineUsers[user.uid] === true;
@@ -260,7 +231,7 @@ export default function AdminPanel() { // 🔑 FIXED: Removed custom props
                                     handleToggleCanChat={handleToggleCanChat}
                                     handleToggleAdmin={handleToggleAdmin}
                                     handleOpenPermissions={handleOpenPermissions}
-                                    formatLastOnline={formatLastOnline}
+                                    formatLastOnline={formatLastOnline} // 🔑 Use the format function from the hook
                                 />
                             );
                         })
@@ -279,6 +250,3 @@ export default function AdminPanel() { // 🔑 FIXED: Removed custom props
         </>
     );
 }
-
-
-
