@@ -62,7 +62,6 @@
     "react-toastify": "^11.0.5",
     "react-toggle-dark-mode": "^1.1.1",
     "remark-gfm": "^4.0.1",
-    "sharp": "^0.34.2",
     "stream": "^0.0.3",
     "string-similarity": "^4.0.4",
     "tailwind-merge": "^3.0.2",
