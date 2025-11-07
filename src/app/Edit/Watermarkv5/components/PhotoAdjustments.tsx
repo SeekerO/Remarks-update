@@ -98,13 +98,14 @@ export default function PhotoAdjustments() {
             updateIndividualPhotoAdjustments({ [key]: value });
         }
     };
-
     const reset = () => {
         if (selectedImageIndex !== null) {
-            alert("De selected image index: " + selectedImageIndex + " to reset adjustments.");
+            // Reset individual image adjustments
+            resetPhotoAdjustments();
+        } else {
+            // Reset global adjustments
+            resetPhotoAdjustments();
         }
-        else
-            resetPhotoAdjustments()
     }
 
     const toggleSection = (section: keyof typeof expandedSections) => {

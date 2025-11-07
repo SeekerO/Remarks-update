@@ -155,8 +155,8 @@ export default function SingleImageEditor({ image, index, onCanvasReady }: Singl
                 const {
                     opacity = 1,
                     scale = 1, // <--- **CRITICAL FIX**: Default scale to 1 
-                    offsetX,
-                    offsetY,
+                    offsetX = 0,
+                    offsetY = 0,
                     rotation = 0
                 } = settings;
 

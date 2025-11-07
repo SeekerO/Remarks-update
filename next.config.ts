@@ -12,6 +12,12 @@ const nextConfig: NextConfig = {
       },
     ],
   },
+  webpack: (config, { isServer, dev }) => {
+    if (!dev && !isServer) {
+      config.devtool = false;
+    }
+        return config;
+  },
 };
 
 export default nextConfig;

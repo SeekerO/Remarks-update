@@ -68,7 +68,7 @@ const ModalPreview = ({
     const { images, updateIndividualPhotoAdjustments, globalPhotoAdjustments } = useImageEditor();
     const currentImage = images[imageIndex];
 
-    const [showControls, setShowControls] = useState(true);
+    const [showControls, setShowControls] = useState(false);
     const [activeTab, setActiveTab] = useState<'light' | 'color' | 'detail'>('light');
 
     // Get current adjustments for this specific image

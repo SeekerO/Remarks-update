@@ -20,7 +20,7 @@ function WatermarkPageContent() {
     const { images, removeAllImages } = useImageEditor();
     const { user } = useAuth();
 
-    if (user || (user as any)?.canChat === true)
+    if (user && (user as any)?.canChat === true)
 
         return (
             <div className="min-h-screen flex flex-col font-sans overflow-hidden w-full">

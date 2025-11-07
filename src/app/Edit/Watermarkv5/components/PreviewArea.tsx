@@ -156,6 +156,13 @@ export default function PreviewArea() {
         };
     }, []);
 
+    useEffect(() => {
+    // Clear stale getters when images array changes
+    return () => {
+        imageBlobGetters.current.clear();
+    };
+}, [images]);
+
 
     // const handleSave = () => {
     //     // Save a template on a button click
