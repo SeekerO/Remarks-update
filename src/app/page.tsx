@@ -61,7 +61,7 @@ export default function Home() {
     return setLoading(true)
   }
 
-  if (!user && loading) {
+  if (!user) {
     return (<div className='flex w-screen h-screen items-center justify-center select-none'>
       <div className='w-[450px] h-[300px] shadow-md light:bg-slate-200 dark:bg-gray-800 rounded-lg flex flex-col items-center justify-center p-4 gap-5 relative'>
         <Image
@@ -79,7 +79,7 @@ export default function Home() {
     </div>)
   }
 
-  if (user && !loading) (
+  if (user) (
     <>
       <Head>
         <title>KKK Tool - SeekerDev</title>

@@ -13,7 +13,7 @@ interface AuthGuardProps {
 
 const AuthGuard = ({ children, redirectTo = '/login' }: AuthGuardProps) => {
   const [isMounted, setIsMounted] = useState(false);
-  const { user } = useAuth(); // Add isLoading if available
+  const { user } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
 
@@ -25,34 +25,45 @@ const AuthGuard = ({ children, redirectTo = '/login' }: AuthGuardProps) => {
   // Auth/Redirection Logic
   useEffect(() => {
     if (!isMounted) {
-      return; // Wait until mounted AND auth state is loaded
+      return;
     }
 
-    const isLoginPage = pathname === redirectTo;
+    const isLoginPage = pathname === '/login';
 
-    // Only redirect if user is NOT authenticated AND NOT on login page
-    if (!user && !isLoginPage) {
-      // Save the current path to return after login
-      sessionStorage.setItem('redirectAfterLogin', pathname);
-      router.replace(redirectTo);
-    }
-
-    // If user just logged in and there's a saved redirect path
-    if (user && isLoginPage) {
-      const savedPath = sessionStorage.getItem('redirectAfterLogin');
-      if (savedPath && savedPath !== redirectTo) {
-        sessionStorage.removeItem('redirectAfterLogin');
-        router.replace(savedPath);
+    // User is NOT authenticated
+    if (!user) {
+      if (!isLoginPage) {
+        // Redirect to login page
+        router.replace('/login');
       }
+      return;
     }
-  }, [user, isMounted, redirectTo, pathname, router]);
+
+    // User IS authenticated
+    if (user) {
+      // Check if this is the first login (no saved path)
+      const savedPath = sessionStorage.getItem('redirectAfterLogin');
+
+      if (isLoginPage) {
+        // Just logged in
+        if (savedPath && savedPath !== '/login') {
+          // Redirect to the page they were trying to access
+          sessionStorage.removeItem('redirectAfterLogin');
+          router.replace(savedPath);
+        } else {
+          // First time login - go to dashboard
+          router.replace('/dashboard');
+        }
+      }
+      // If not on login page and authenticated, stay on current page (do nothing)
+    }
+  }, [user, isMounted, pathname, router]);
 
   // --- Render Control ---
 
-  // Show loading state while auth is being verified
   if (!isMounted) {
-    // If already on login page, render immediately
-    if (pathname === redirectTo) {
+    // Render login page immediately without loading screen
+    if (pathname === '/login') {
       return <>{children}</>;
     }
 
@@ -69,7 +80,17 @@ const AuthGuard = ({ children, redirectTo = '/login' }: AuthGuardProps) => {
     return <>{children}</>;
   }
 
-  // If not authenticated, render children (will redirect if not on login page)
+  // If not authenticated and not on login page, show loading
+  // (will redirect to login)
+  if (!user && pathname !== '/login') {
+    return (
+      <div className='p-[50px] text-center'>
+        <h1>Redirecting...</h1>
+      </div>
+    );
+  }
+
+  // Not authenticated but on login page - render it
   return <>{children}</>;
 };
 
