@@ -33,7 +33,8 @@ const AuthGuard = ({ children, redirectTo = '/login' }: AuthGuardProps) => {
     // User is NOT authenticated
     if (!user) {
       if (!isLoginPage) {
-        // Redirect to login page
+        // Save current path before redirecting to login
+        sessionStorage.setItem('redirectAfterLogin', pathname);
         router.replace('/login');
       }
       return;
@@ -41,21 +42,21 @@ const AuthGuard = ({ children, redirectTo = '/login' }: AuthGuardProps) => {
 
     // User IS authenticated
     if (user) {
-      // Check if this is the first login (no saved path)
-      const savedPath = sessionStorage.getItem('redirectAfterLogin');
-
       if (isLoginPage) {
-        // Just logged in
+        // Just logged in - check if there's a saved path
+        const savedPath = sessionStorage.getItem('redirectAfterLogin');
+
         if (savedPath && savedPath !== '/login') {
-          // Redirect to the page they were trying to access
+          // User was trying to access a specific page - redirect there
           sessionStorage.removeItem('redirectAfterLogin');
           router.replace(savedPath);
         } else {
-          // First time login - go to dashboard
+          // First time login or no saved path - go to dashboard
+          sessionStorage.removeItem('redirectAfterLogin');
           router.replace('/dashboard');
         }
       }
-      // If not on login page and authenticated, stay on current page (do nothing)
+      // If authenticated and not on login page, stay on current page (do nothing)
     }
   }, [user, isMounted, pathname, router]);
 
