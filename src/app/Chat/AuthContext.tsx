@@ -10,7 +10,7 @@ import {
     signOut,
     User,
 } from "firebase/auth";
-import { ref, set, onDisconnect, serverTimestamp, get } from "firebase/database";
+import { ref, set, onDisconnect, serverTimestamp, get, onValue } from "firebase/database";
 import { saveUserProfile } from "./components/saveUserProfile";
 
 // Extend User type to include custom properties like isAdmin and allowedPages
@@ -20,13 +20,12 @@ interface CustomUser extends User {
     allowedPages?: string[];
 }
 
-
 // Define the shape of the authentication context
 interface AuthContextType {
     user: CustomUser | null;
     loginWithGoogle: () => Promise<void>;
     logout: () => void;
-    uid?: string; // Ensure uid is always present
+    uid?: string;
 }
 
 // Create the AuthContext
@@ -39,30 +38,27 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     const userRef = useRef(user);
     userRef.current = user;
 
-
     useEffect(() => {
+        let unsubscribePermissions: (() => void) | null = null;
+        let isInitialLoad = true;
+
         const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
             if (currentUser) {
                 // 1. Save/Update Profile
-                // This will use `update` for existing users, preserving existing permissions.
                 await saveUserProfile(currentUser);
 
-                // 2. Fetch the SAVED profile to get roles and permissions
+                // 2. Fetch the SAVED profile to get initial roles and permissions
                 const userProfileRef = ref(db, `users/${currentUser.uid}`);
                 const snapshot = await get(userProfileRef);
 
                 let isAdmin = false;
                 let canChat = false;
-                // Initialize to undefined. Sidebar handles this by granting all pages 
-                // for old users who have no configured permission field yet.
                 let allowedPages: string[] | undefined = undefined;
 
                 if (snapshot.exists()) {
                     const userData = snapshot.val();
                     isAdmin = userData.isAdmin || false;
                     canChat = userData.canChat !== undefined ? userData.canChat : true;
-
-                    // **CRITICAL FIX:** Read the allowedPages from the database snapshot
                     allowedPages = userData.allowedPages;
                 }
 
@@ -70,16 +66,62 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
                     ...currentUser,
                     isAdmin,
                     canChat,
-                    allowedPages, // This is now correctly set from the database
+                    allowedPages,
                 };
                 setUser(userWithRoles);
+
+                // 3. Set up real-time listener for permission changes
+                unsubscribePermissions = onValue(userProfileRef, (snapshot) => {
+                    // Skip the first call (initial data) since we already set it above
+                    if (isInitialLoad) {
+                        isInitialLoad = false;
+                        return;
+                    }
+
+                    if (snapshot.exists()) {
+                        const userData = snapshot.val();
+
+                        // Only update if permissions actually changed
+                        setUser((prevUser) => {
+                            if (!prevUser) return null;
+
+                            const newIsAdmin = userData.isAdmin || false;
+                            const newCanChat = userData.canChat !== undefined ? userData.canChat : true;
+                            const newAllowedPages = userData.allowedPages;
+
+                            // Check if anything actually changed
+                            const hasChanged =
+                                prevUser.isAdmin !== newIsAdmin ||
+                                prevUser.canChat !== newCanChat ||
+                                JSON.stringify(prevUser.allowedPages) !== JSON.stringify(newAllowedPages);
+
+                            if (!hasChanged) {
+                                return prevUser; // No change, return same reference
+                            }
+
+                            // Something changed, return new user object
+                            return {
+                                ...prevUser,
+                                isAdmin: newIsAdmin,
+                                canChat: newCanChat,
+                                allowedPages: newAllowedPages,
+                            };
+                        });
+                    }
+                });
 
                 // Presence/Online Status logic
                 const userStatusRef = ref(db, `presence/${currentUser.uid}`);
                 set(userStatusRef, true);
                 onDisconnect(userStatusRef).set(serverTimestamp());
             } else {
-                // Set last online timestamp using the ref to avoid stale state
+                // Clean up permissions listener when user logs out
+                if (unsubscribePermissions) {
+                    unsubscribePermissions();
+                    unsubscribePermissions = null;
+                }
+
+                // Set last online timestamp
                 if (userRef.current && userRef.current.uid) {
                     const userStatusRef = ref(db, `presence/${userRef.current.uid}`);
                     set(userStatusRef, serverTimestamp());
@@ -88,7 +130,13 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
             }
         });
 
-        return () => unsubscribe();
+        return () => {
+            unsubscribe();
+            // Clean up permissions listener on unmount
+            if (unsubscribePermissions) {
+                unsubscribePermissions();
+            }
+        };
     }, []);
 
     // Function to handle Google login

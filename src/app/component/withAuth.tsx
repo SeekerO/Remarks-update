@@ -91,7 +91,7 @@ const AuthGuard = ({ children, redirectTo = '/login' }: AuthGuardProps) => {
     });
   };
 
-  // Auth/Redirection Logic
+  // Auth/Redirection Logic - runs ONCE per pathname/user change
   useEffect(() => {
     if (!isMounted) {
       return;
@@ -188,7 +188,7 @@ const AuthGuard = ({ children, redirectTo = '/login' }: AuthGuardProps) => {
 
   }, [user, isMounted, pathname, router, accessChecked]);
 
-  // Reset access check when pathname or user changes
+  // Reset access check when pathname or user ID changes
   useEffect(() => {
     setAccessChecked(false);
   }, [pathname, user?.uid]);
@@ -205,6 +205,61 @@ const AuthGuard = ({ children, redirectTo = '/login' }: AuthGuardProps) => {
       <div className='p-[50px] text-center'>
         <h1>Verifying Access...</h1>
         <p>Please wait...</p>
+      </div>
+    );
+  }
+
+  // User not authenticated
+  if (!user) {
+    if (pathname === '/login') {
+      return <>{children}</>;
+    }
+    return (
+      <div className='p-[50px] text-center'>
+        <h1>Redirecting to login...</h1>
+      </div>
+    );
+  }
+
+  // User doesn't have canChat permission
+  if (!user.canChat) {
+    if (pathname === '/') {
+      return <>{children}</>;
+    }
+    return (
+      <div className='p-[50px] text-center'>
+        <h1>Access Denied</h1>
+        <p>You do not have permission to access this application.</p>
+      </div>
+    );
+  }
+
+  // Check if user has access to current page
+  const userRole: UserRole = user?.isAdmin ? 'admin' : 'standard';
+  let allowedPages: PageId[] | null;
+
+  if (userRole === 'admin') {
+    allowedPages = null;
+  } else {
+    if (user?.allowedPages === undefined || user?.allowedPages === null) {
+      allowedPages = [];
+    } else {
+      allowedPages = user.allowedPages as PageId[];
+    }
+  }
+
+  const accessibleHrefs = getAccessibleHrefs(allowedPages);
+  const isDashboardPage = pathname === '/dashboard';
+  const isUnauthorizedPage = pathname === '/';
+  const isLoginPage = pathname === '/login';
+
+  // Block rendering if user doesn't have access to current page
+  if (!isDashboardPage && !isUnauthorizedPage && !isLoginPage && !hasAccessToPath(pathname, accessibleHrefs)) {
+    return (
+      <div className='p-[50px] text-center'>
+        <h1>Access Denied</h1>
+        <p>You do not have permission to access this page.</p>
+        <p className='mt-4 text-sm text-gray-600'>Redirecting...</p>
       </div>
     );
   }
