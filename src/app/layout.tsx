@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
-import "./globals.css";
 import UseGuard from "./component/withAuth";
 import ThemeWrapper from "./component/wrapper/night-mode-wrapper";
+import "./globals.css"
 import { AuthProvider } from "./Chat/AuthContext";
 import { YouTubePlayerProvider } from "@/app/admin/Youtube/components/YouTubePlayerContext";
 

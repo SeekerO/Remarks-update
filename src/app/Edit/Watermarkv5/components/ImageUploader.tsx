@@ -5,6 +5,8 @@ import React, { useRef, useState } from "react";
 import { useImageEditor } from "./ImageEditorContext";
 import { FaImage, FaImages } from "react-icons/fa6";
 import { Plus } from "lucide-react";
+import PresSelect from "./PresSelect";
+
 
 export default function ImageUploader() {
     const imageInputRef = useRef<HTMLInputElement>(null);
@@ -297,6 +299,8 @@ export default function ImageUploader() {
                     </div>
                 </>
             )}
+
+            <PresSelect />
         </div>
     );
 }

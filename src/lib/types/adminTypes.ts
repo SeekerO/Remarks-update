@@ -9,6 +9,7 @@ export const AVAILABLE_PAGES = [
   { id: "pdf", name: "PDF", category: "Document" },
   { id: "matcher", name: "Matcher", category: "Main" },
   { id: "evaluation", name: "Evaluation", category: "Main" },
+  { id: "csc", name: "CSC Reveiwer", category: "Main" },
 ] as const;
 
 // Export the types as well for external consumption
@@ -159,6 +160,14 @@ export const navItems: NavItem[] = [
     icon: Settings,
     active: true,
     pagePermissionId: "evaluation",
+    sublinks: [],
+  },
+  {
+    name: "CSC Reveiwer",
+    href: "/csc",
+    icon: Settings,
+    active: true,
+    pagePermissionId: "csc",
     sublinks: [],
   },
   {

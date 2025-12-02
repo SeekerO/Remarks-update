@@ -2,11 +2,14 @@
 @tailwind components;
 @tailwind utilities;
 
-body {
-  /* background: linear-gradient(-45deg, #DB2224, #253D75, #ECC027);
-  background-size: 400% 400%;
-  animation: gradient 15s ease infinite;
-  height: 100vh; */
+
+* {
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  -khtml-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
 }
 
 @keyframes gradient {
