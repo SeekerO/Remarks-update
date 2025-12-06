@@ -1,4 +1,4 @@
-import * as XLSX from "xlsx";
+import ExcelJS from "exceljs";
 import { token_set_ratio } from "fuzzball";
 
 
@@ -7,22 +7,42 @@ function cleanString(str) {
 }
 
 
-export function compareExcelFilesFuzzy(
+export async function compareExcelFilesFuzzy(
   file1Buffer,
   file2Buffer,
   threshold = 85
 ) {
-  const wb1 = XLSX.read(file1Buffer, { type: "buffer" });
-  const wb2 = XLSX.read(file2Buffer, { type: "buffer" });
+  // Use ExcelJS instead of XLSX (secure alternative)
+  const wb1 = new ExcelJS.Workbook();
+  const wb2 = new ExcelJS.Workbook();
 
-  const ws1 = wb1.Sheets[wb1.SheetNames[0]];
-  const ws2 = wb2.Sheets[wb2.SheetNames[0]];
+  await wb1.xlsx.load(file1Buffer);
+  await wb2.xlsx.load(file2Buffer);
 
-  const data1 = XLSX.utils.sheet_to_json(ws1, { header: 1 });
-  const data2 = XLSX.utils.sheet_to_json(ws2, { header: 1 });
+  const ws1 = wb1.worksheets[0];
+  const ws2 = wb2.worksheets[0];
 
-  console.log(data1)
-  console.log(data2)
+  // Convert worksheets to 2D arrays
+  const data1 = [];
+  ws1.eachRow((row) => {
+    const rowData = [];
+    row.eachCell({ includeEmpty: true }, (cell) => {
+      rowData.push(cell.value);
+    });
+    data1.push(rowData);
+  });
+
+  const data2 = [];
+  ws2.eachRow((row) => {
+    const rowData = [];
+    row.eachCell({ includeEmpty: true }, (cell) => {
+      rowData.push(cell.value);
+    });
+    data2.push(rowData);
+  });
+
+  console.log(data1);
+  console.log(data2);
 
   const matched = [];
   const unmatched = [];
@@ -58,32 +78,63 @@ export function compareExcelFilesFuzzy(
     }
   }
 
-
   return { matched, unmatched, data1, data2 };
 }
 
-export function loadExcelFileData(fileBuffer) {
-  const workbook = XLSX.read(fileBuffer, { type: "buffer" });
-  const worksheet = workbook.Sheets[workbook.SheetNames[0]];
-  const data = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+export async function loadExcelFileData(fileBuffer) {
+  // Use ExcelJS instead of XLSX (secure alternative)
+  const workbook = new ExcelJS.Workbook();
+  await workbook.xlsx.load(fileBuffer);
+
+  const worksheet = workbook.worksheets[0];
+
+  // Convert worksheet to 2D array
+  const data = [];
+  worksheet.eachRow((row) => {
+    const rowData = [];
+    row.eachCell({ includeEmpty: true }, (cell) => {
+      rowData.push(cell.value);
+    });
+    data.push(rowData);
+  });
+
   return data;
 }
 
 
-
-export function compareExcelFilesFuzzyOptimized(
+export async function compareExcelFilesFuzzyOptimized(
   file1Buffer,
   file2Buffer,
   threshold = 85
 ) {
-  const wb1 = XLSX.read(file1Buffer, { type: "buffer" });
-  const wb2 = XLSX.read(file2Buffer, { type: "buffer" });
+  // Use ExcelJS instead of XLSX (secure alternative)
+  const wb1 = new ExcelJS.Workbook();
+  const wb2 = new ExcelJS.Workbook();
 
-  const ws1 = wb1.Sheets[wb1.SheetNames[0]];
-  const ws2 = wb2.Sheets[wb2.SheetNames[0]];
+  await wb1.xlsx.load(file1Buffer);
+  await wb2.xlsx.load(file2Buffer);
 
-  const data1 = XLSX.utils.sheet_to_json(ws1, { header: 1 });
-  const data2 = XLSX.utils.sheet_to_json(ws2, { header: 1 });
+  const ws1 = wb1.worksheets[0];
+  const ws2 = wb2.worksheets[0];
+
+  // Convert worksheets to 2D arrays
+  const data1 = [];
+  ws1.eachRow((row) => {
+    const rowData = [];
+    row.eachCell({ includeEmpty: true }, (cell) => {
+      rowData.push(cell.value);
+    });
+    data1.push(rowData);
+  });
+
+  const data2 = [];
+  ws2.eachRow((row) => {
+    const rowData = [];
+    row.eachCell({ includeEmpty: true }, (cell) => {
+      rowData.push(cell.value);
+    });
+    data2.push(rowData);
+  });
 
   // Pre-process the larger dataset into a Map or similar structure
   // For simplicity, we'll assume data2 is the lookup list

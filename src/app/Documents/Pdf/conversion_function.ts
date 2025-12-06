@@ -1,4 +1,4 @@
-import * as XLSX from "xlsx";
+import ExcelJS from 'exceljs';
 import { jsPDF } from "jspdf";
 import { PDFDocument } from "pdf-lib";
 import * as mammoth from "mammoth";
@@ -43,21 +43,32 @@ export const pdfToWord = async (item: FileItem) => {
 
 export const excelToPDF = async (item: FileItem) => {
   const arrayBuffer = await item.file.arrayBuffer();
-  const workbook = XLSX.read(arrayBuffer, { type: "array" });
-  const pdf = new jsPDF();
 
+  // Use ExcelJS instead of XLSX
+  const workbook = new ExcelJS.Workbook();
+  await workbook.xlsx.load(arrayBuffer);
+
+  const pdf = new jsPDF();
   let firstSheet = true;
 
-  workbook.SheetNames.forEach((sheetName) => {
+  workbook.eachSheet((worksheet) => {
     if (!firstSheet) pdf.addPage();
     firstSheet = false;
 
+    const sheetName = worksheet.name;
     pdf.setFontSize(16);
     pdf.setFont("helvetica", "bold");
     pdf.text(sheetName, 14, 15);
 
-    const worksheet = workbook.Sheets[sheetName];
-    const data = XLSX.utils.sheet_to_json(worksheet, { header: 1 }) as any[][];
+    // Convert worksheet to 2D array
+    const data: any[][] = [];
+    worksheet.eachRow((row, rowNumber) => {
+      const rowData: any[] = [];
+      row.eachCell({ includeEmpty: true }, (cell) => {
+        rowData.push(cell.value);
+      });
+      data.push(rowData);
+    });
 
     if (data.length === 0) return;
 
@@ -105,14 +116,20 @@ export const pdfToExcel = async (item: FileItem) => {
   const extractedText = await extractTextFromPDF(arrayBuffer);
 
   const lines = extractedText.split("\n").filter((line: string) => line.trim());
-  const data = lines.map((line: string) => [line]);
 
-  const ws = XLSX.utils.aoa_to_sheet(data);
-  const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, "Extracted Text");
+  // Use ExcelJS instead of XLSX
+  const workbook = new ExcelJS.Workbook();
+  const worksheet = workbook.addWorksheet("Extracted Text");
 
-  const wbout = XLSX.write(wb, { bookType: "xlsx", type: "array" });
-  return new Blob([wbout], {
+  // Add each line as a row
+  lines.forEach((line: string) => {
+    worksheet.addRow([line]);
+  });
+
+  // Generate Excel file as buffer
+  const buffer = await workbook.xlsx.writeBuffer();
+
+  return new Blob([buffer], {
     type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
   });
 };
