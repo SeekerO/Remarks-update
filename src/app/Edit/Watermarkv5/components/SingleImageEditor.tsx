@@ -61,8 +61,9 @@ const calculatePosition = (
 
 export default function SingleImageEditor({ image, index, onCanvasReady }: SingleImageEditorProps) {
     const canvasRef = useRef<HTMLCanvasElement>(null);
+    const [isRendering, setIsRendering] = useState(false);
+
     const {
-        // Removed: footer, globalFooterSettings (now handled by globalFooters state)
         globalShadowSettings,
         globalShadowTarget,
         images,
@@ -92,12 +93,10 @@ export default function SingleImageEditor({ image, index, onCanvasReady }: Singl
         ? globalFooters
         : (currentImage.individualFooters || []);
 
-    // Removed: footerToUse and footerSettingsToUse (now derived from footersToRender loop)
     const shadowSettingsToUse = currentImage.useGlobalSettings ? globalShadowSettings : currentImage.individualShadowSettings;
     const shadowTargetToUse = currentImage.useGlobalSettings
         ? globalShadowTarget
         : (currentImage.individualShadowSettings ? "whole-image" : "none");
-
 
     // Draw a single logo
     const drawLogo = useCallback((
@@ -148,13 +147,13 @@ export default function SingleImageEditor({ image, index, onCanvasReady }: Singl
         shadowTarget: "none" | "footer" | "whole-image"
     ) => {
         const footerImg = new Image();
+        console.log(footerUrl.includes("FOOTER") ? "Drawing footer:" : "Drawing logo as footer:", footerUrl);
         footerImg.src = footerUrl;
         return new Promise<void>(resolve => {
             footerImg.onload = () => {
-                // FIX IS HERE: Added default values for opacity and scale
                 const {
                     opacity = 1,
-                    scale = 1, // <--- **CRITICAL FIX**: Default scale to 1 
+                    scale = 1,
                     offsetX = 0,
                     offsetY = 0,
                     rotation = 0
@@ -163,17 +162,14 @@ export default function SingleImageEditor({ image, index, onCanvasReady }: Singl
                 const scaledWidth = footerImg.width * scale;
                 const scaledHeight = footerImg.height * scale;
 
-                // Footer is correctly anchored to the bottom edge
                 const x = (imgWidth - scaledWidth) / 2 + offsetX;
-                const y = imgHeight - scaledHeight + offsetY;
-
+                const y = imgHeight - scaledHeight + offsetY
                 const centerX = x + scaledWidth / 2;
                 const centerY = y + scaledHeight / 2;
 
                 ctx.save();
                 ctx.globalAlpha = opacity;
 
-                // Apply rotation
                 if (rotation !== 0) {
                     ctx.translate(centerX, centerY);
                     ctx.rotate(rotation * Math.PI / 180);
@@ -187,7 +183,6 @@ export default function SingleImageEditor({ image, index, onCanvasReady }: Singl
                     ctx.shadowOffsetY = shadowSettings.offsetY;
                 }
 
-                // If scaledWidth or scaledHeight is 0 or NaN, nothing is drawn.
                 if (scaledWidth > 0 && scaledHeight > 0) {
                     ctx.drawImage(footerImg, x, y, scaledWidth, scaledHeight);
                 } else {
@@ -199,7 +194,6 @@ export default function SingleImageEditor({ image, index, onCanvasReady }: Singl
             };
             footerImg.onerror = () => {
                 console.error("Failed to load footer image:", footerUrl);
-                // Fallback for image loading failure
                 resolve();
             };
         });
@@ -233,6 +227,9 @@ export default function SingleImageEditor({ image, index, onCanvasReady }: Singl
         baseImg.src = image.url;
 
         const drawImageAndWatermarks = async () => {
+            // Start rendering - show loading
+            setIsRendering(true);
+
             // STEP 1: Load and Draw the Base Image
             await new Promise<void>((resolve) => {
                 baseImg.onload = () => {
@@ -249,6 +246,7 @@ export default function SingleImageEditor({ image, index, onCanvasReady }: Singl
                 };
                 baseImg.onerror = (e) => {
                     console.error("Failed to load base image:", image.url, e);
+                    setIsRendering(false);
                     resolve();
                 };
             });
@@ -279,7 +277,7 @@ export default function SingleImageEditor({ image, index, onCanvasReady }: Singl
                     )
                 );
 
-                // STEP 4: Apply Photo Adjustments (NEW!)
+                // STEP 4: Apply Photo Adjustments
                 applyPhotoAdjustments(canvas, photoAdjustmentsToUse);
             }
 
@@ -287,6 +285,11 @@ export default function SingleImageEditor({ image, index, onCanvasReady }: Singl
             onCanvasReady(index, async () => {
                 return new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
             });
+
+            // Rendering complete - hide loading after a small delay
+            setTimeout(() => {
+                setIsRendering(false);
+            }, 300);
         };
 
         drawImageAndWatermarks();
@@ -298,18 +301,17 @@ export default function SingleImageEditor({ image, index, onCanvasReady }: Singl
         footersToRender,
         shadowSettingsToUse,
         shadowTargetToUse,
-        photoAdjustmentsToUse, // ADD THIS DEPENDENCY
+        photoAdjustmentsToUse,
         onCanvasReady,
         drawLogo,
         drawFooter,
         drawShadow
     ]);
 
-    // Safety check - if image doesn't exist, don't render
+    // Safety check
     if (!currentImage) {
         return null;
     }
-
 
     const downloadImage = async () => {
         const canvas = canvasRef.current;
@@ -342,7 +344,6 @@ export default function SingleImageEditor({ image, index, onCanvasReady }: Singl
 
     const modalCanvasId = `modal-canvas-${index}`;
 
-
     return (
         <div className="relative group">
             <canvas
@@ -351,8 +352,20 @@ export default function SingleImageEditor({ image, index, onCanvasReady }: Singl
                 className="w-full h-auto rounded-md shadow-sm border border-gray-300 dark:border-gray-600"
             />
 
+            {/* Loading Overlay on Canvas */}
+            {isRendering && (
+                <div className="absolute inset-0 bg-black bg-opacity-60 rounded-md flex items-center justify-center backdrop-blur-sm z-10">
+                    <div className="flex flex-col items-center gap-3">
+                        <div className="relative w-12 h-12">
+                            <div className="absolute inset-0 border-4 border-white border-t-transparent rounded-full animate-spin"></div>
+                        </div>
+
+                    </div>
+                </div>
+            )}
+
             {/* Logo and Footer count indicators */}
-            <div className="absolute top-2 left-2 flex flex-col gap-1">
+            <div className="absolute top-2 left-2 flex flex-col gap-1 z-20">
                 {logosToRender.length > 0 && (
                     <div className="bg-purple-600 text-white px-2 py-1 rounded-full text-xs font-bold shadow-md">
                         {logosToRender.length} Logo{logosToRender.length !== 1 ? 's' : ''}
@@ -365,36 +378,36 @@ export default function SingleImageEditor({ image, index, onCanvasReady }: Singl
                 )}
             </div>
 
-            <div className="absolute top-2 right-2 flex space-x-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+            <div className="absolute top-2 right-2 flex space-x-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-20">
                 <button
                     onClick={downloadImage}
-                    className="relative group p-3 bg-green-600 hover:bg-green-700 text-white rounded-full shadow-md transition duration-300 ease-in-out transform hover:scale-110"
+                    className="relative group/btn p-3 bg-green-600 hover:bg-green-700 text-white rounded-full shadow-md transition duration-300 ease-in-out transform hover:scale-110"
                     aria-label="Download Image"
                 >
                     <FiDownload className="text-xl" />
-                    <span className="absolute bottom-full mb-2 hidden group-hover:block px-3 py-1 bg-gray-700 text-white text-xs rounded-md whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                    <span className="absolute bottom-full mb-2 hidden group-hover/btn:block px-3 py-1 bg-gray-700 text-white text-xs rounded-md whitespace-nowrap opacity-0 group-hover/btn:opacity-100 transition-opacity duration-300">
                         Download
                     </span>
                 </button>
 
                 <button
                     onClick={removeImage}
-                    className="relative group p-3 bg-red-600 hover:bg-red-700 text-white rounded-full shadow-md transition duration-300 ease-in-out transform hover:scale-110"
+                    className="relative group/btn p-3 bg-red-600 hover:bg-red-700 text-white rounded-full shadow-md transition duration-300 ease-in-out transform hover:scale-110"
                     aria-label="Delete Image"
                 >
                     <MdDelete className="text-xl" />
-                    <span className="absolute bottom-full mb-2 hidden group-hover:block px-3 py-1 bg-gray-700 text-white text-xs rounded-md whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                    <span className="absolute bottom-full mb-2 hidden group-hover/btn:block px-3 py-1 bg-gray-700 text-white text-xs rounded-md whitespace-nowrap opacity-0 group-hover/btn:opacity-100 transition-opacity duration-300">
                         Delete
                     </span>
                 </button>
 
                 <button
                     onClick={() => setOpenPreview(true)}
-                    className="relative group p-3 bg-blue-600 hover:bg-blue-700 text-white rounded-full shadow-md transition duration-300 ease-in-out transform hover:scale-110"
+                    className="relative group/btn p-3 bg-blue-600 hover:bg-blue-700 text-white rounded-full shadow-md transition duration-300 ease-in-out transform hover:scale-110"
                     aria-label="Preview Image"
                 >
                     <FiMaximize2 className="text-xl" />
-                    <span className="absolute bottom-full mb-2 hidden group-hover:block px-3 py-1 bg-gray-700 text-white text-xs rounded-md whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                    <span className="absolute bottom-full mb-2 hidden group-hover/btn:block px-3 py-1 bg-gray-700 text-white text-xs rounded-md whitespace-nowrap opacity-0 group-hover/btn:opacity-100 transition-opacity duration-300">
                         Preview
                     </span>
                 </button>

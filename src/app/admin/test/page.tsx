@@ -1,10 +1,8 @@
-import Tertis from "./test";
-import Game from "./test2";
+import Test from "./test";
 
 const page = () => {
     return <>
-
-        <Tertis />
+        <Test />
     </>
 };
 

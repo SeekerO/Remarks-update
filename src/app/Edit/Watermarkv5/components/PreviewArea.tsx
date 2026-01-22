@@ -29,7 +29,6 @@ export default function PreviewArea() {
 
     const handleCanvasReady = useCallback((index: number, getBlobFunc: () => Promise<Blob | null>) => {
         imageBlobGetters.current.set(index, getBlobFunc);
-        console.log(`Canvas ${index} ready and getter stored.`);
     }, []);
 
     const downloadAll = async () => {

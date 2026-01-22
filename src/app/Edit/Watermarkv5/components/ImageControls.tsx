@@ -16,7 +16,7 @@ interface WatermarkSettings {
     rotation?: number;
 }
 
-// NEW: Calculate distance from edges
+// Calculate distance from edges
 const calculateEdgeDistance = (
     position: string,
     paddingX: number,
@@ -90,6 +90,8 @@ export default function ImageControls() {
     const [expandedFooterSection, setExpandedFooterSection] = useState(true);
     const [draggedLogoIndex, setDraggedLogoIndex] = useState<number | null>(null);
     const [draggedFooterIndex, setDraggedFooterIndex] = useState<number | null>(null);
+    const [isAdjusting, setIsAdjusting] = useState(false);
+    const adjustmentTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
 
     const isImageSelected = selectedImageIndex !== null && selectedImageIndex < images.length;
     const selectedImage = isImageSelected && selectedImageIndex !== null ? images[selectedImageIndex] : null;
@@ -117,21 +119,47 @@ export default function ImageControls() {
     const updateLogoSettings = (settings: Partial<typeof globalLogoSettings>) => {
         if (!selectedLogoId) return;
 
+        // Trigger loading state
+        setIsAdjusting(true);
+
+        // Clear any existing timeout
+        if (adjustmentTimeoutRef.current) {
+            clearTimeout(adjustmentTimeoutRef.current);
+        }
+
         if (useGlobal) {
             updateGlobalLogoSettings(selectedLogoId, settings);
         } else if (selectedImageIndex !== null) {
             updateIndividualImageLogoSettings(selectedImageIndex, selectedLogoId, settings);
         }
+
+        // Set timeout to hide loading after adjustment completes
+        adjustmentTimeoutRef.current = setTimeout(() => {
+            setIsAdjusting(false);
+        }, 500);
     };
 
     const updateFooterSettings = (settings: Partial<typeof globalFooterSettings>) => {
         if (!selectedFooterId) return;
+
+        // Trigger loading state
+        setIsAdjusting(true);
+
+        // Clear any existing timeout
+        if (adjustmentTimeoutRef.current) {
+            clearTimeout(adjustmentTimeoutRef.current);
+        }
 
         if (useGlobal) {
             updateGlobalFooterSettings(selectedFooterId, settings);
         } else if (selectedImageIndex !== null) {
             updateIndividualImageFooterSettings(selectedImageIndex, selectedFooterId, settings);
         }
+
+        // Set timeout to hide loading after adjustment completes
+        adjustmentTimeoutRef.current = setTimeout(() => {
+            setIsAdjusting(false);
+        }, 500);
     };
 
     const handleRemoveLogo = (logoId: string) => {
@@ -206,8 +234,19 @@ export default function ImageControls() {
         setDraggedFooterIndex(null);
     };
 
+    // Cleanup timeout on unmount
+    React.useEffect(() => {
+        return () => {
+            if (adjustmentTimeoutRef.current) {
+                clearTimeout(adjustmentTimeoutRef.current);
+            }
+        };
+    }, []);
+
     return (
         <div className="space-y-6">
+
+
             {isImageSelected && (
                 <div className="w-full flex justify-center">
                     <div className="h-[1px] w-[80%] dark:bg-slate-600 bg-slate-300" />
@@ -482,18 +521,18 @@ export default function ImageControls() {
                                 </div>
                             </div>
 
-                            {/* Footer Controls */}
+                            {/* Footer Controls - OPTIMIZED */}
                             {selectedFooterId && currentFooterSettings && (
                                 <>
                                     <div className="space-y-2">
                                         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                                            Opacity: {((currentFooterSettings.opacity || 0) * 100).toFixed(0)}%
+                                            Opacity: {((currentFooterSettings.opacity || 1) * 100).toFixed(0)}%
                                             <input
                                                 type="range"
                                                 min="0"
                                                 max="1"
                                                 step="0.01"
-                                                value={currentFooterSettings.opacity || 0}
+                                                value={currentFooterSettings.opacity || 1}
                                                 onChange={(e) => updateFooterSettings({ opacity: parseFloat(e.target.value) })}
                                                 className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer dark:bg-gray-700"
                                             />
@@ -501,13 +540,13 @@ export default function ImageControls() {
                                     </div>
                                     <div className="space-y-2">
                                         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                                            Scale: {((currentFooterSettings.scale || 0) * 100).toFixed(0)}%
+                                            Scale: {((currentFooterSettings.scale || 1) * 100).toFixed(0)}%
                                             <input
                                                 type="range"
                                                 min="0.1"
-                                                max="10"
+                                                max="5"
                                                 step="0.01"
-                                                value={currentFooterSettings.scale || 0}
+                                                value={currentFooterSettings.scale || 1}
                                                 onChange={(e) => updateFooterSettings({ scale: parseFloat(e.target.value) })}
                                                 className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer dark:bg-gray-700"
                                             />
@@ -518,7 +557,7 @@ export default function ImageControls() {
                                             Offset X: {currentFooterSettings.offsetX || 0}px
                                             <input
                                                 type="range"
-                                                min="-100"
+                                                min="-1500"
                                                 max="1500"
                                                 value={currentFooterSettings.offsetX || 0}
                                                 onChange={(e) => updateFooterSettings({ offsetX: parseInt(e.target.value) })}
@@ -531,7 +570,7 @@ export default function ImageControls() {
                                             Offset Y: {currentFooterSettings.offsetY || 0}px
                                             <input
                                                 type="range"
-                                                min="-100"
+                                                min="-1500"
                                                 max="1500"
                                                 value={currentFooterSettings.offsetY || 0}
                                                 onChange={(e) => updateFooterSettings({ offsetY: parseInt(e.target.value) })}

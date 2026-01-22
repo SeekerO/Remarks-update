@@ -283,7 +283,7 @@ const Sidebar: React.FC = () => {
                     {isCollapsed && <div className="h-4"></div>}
                     {!isCollapsed && (
                         <div className={`p-4 text-xs text-center text-gray-500`}>
-                            <p>App Version 4.0.0</p>
+                            <p>App Version 4.1.0</p>
                         </div>
                     )}
                 </div>

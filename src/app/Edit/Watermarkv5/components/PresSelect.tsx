@@ -3,12 +3,9 @@ import { useImageEditor } from "./ImageEditorContext";
 import { X, ImageIcon, Layers } from "lucide-react";
 
 //FOOTER
-import BlackShadow from "../../images/00-BLACK-SHADOW.png";
-import WhiteShadow from "../../images/01-WHITE-SHADOW.png";
-import WhiteLOGO from "../../images/02-WHITE-LOGO.png"
-import BlackLOGO from "../../images/03-BLACK-LOGO.png"
-import BlackLOGOeidCOMELEC from "../../images/04-BLACK-LOGO-EID.png"
-import WHITELOGOeidCOMELEC from "../../images/05-WHITE-LOGO-EID.png"
+import BlackShadow from "../../images/00-BLACK-SHADOW-FOOTER.png";
+import WhiteShadow from "../../images/01-WHITE-SHADOW-FOOTER.png";
+
 
 //LOGO
 import WhiteLogoEID from "../../images/WHITE-EID.png";
@@ -28,8 +25,8 @@ const PRESET_IMAGES = [
     { id: 6, url: KKKlogo.src, name: "KKK LOGO", type: "logo" },
 
     // Footers
-    { id: 7, url: BlackShadow.src, name: "Black Shadow", type: "footer" },
-    { id: 8, url: WhiteShadow.src, name: "White Shadow", type: "footer" },
+    { id: 7, url: BlackShadow.src, name: "Black Shadow Footer", type: "footer" },
+    { id: 8, url: WhiteShadow.src, name: "White Shadow Footer", type: "footer" },
 ];
 
 const PresSelect = () => {
