@@ -95,7 +95,7 @@ export default function Home() {
             </button>
           </div>
           <motion.div
-            variants={containerVariants}
+            // variants={containerVariants}
             initial="hidden"
             animate="visible"
             className="flex flex-col justify-center items-center p-8 md:p-14 rounded-3xl shadow-2xl bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 max-w-xl w-full text-center relative overflow-hidden"
@@ -114,10 +114,12 @@ export default function Home() {
             {user.canChat !== false ?
               <div className="flex items-center justify-center h-full gap-3 w-full">
 
-                <motion.div onClick={handleLoading} variants={itemVariants}>
+                <motion.div onClick={handleLoading}
+                //  variant={itemVariants}
+                 >
                   <Link
                     href="/dashboard"
-                    className="flex items-center justify-center px-8 py-4 bg-gradient-to-r from-blue-600 to-blue-700 text-white font-bold rounded-full shadow-lg hover:shadow-xl transition-all duration-300 ease-in-out transform hover:-translate-y-1 hover:scale-105 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-gray-800 uppercase tracking-wide"
+                    className="flex items-center justify-center px-8 py-4 bg-gradient-to-r from-blue-600 to-blue-700 text-white font-bold rounded-full shadow-lg hover:shadow-xl transition-all duration-300 ease-in-out transform hover:-translate-y-1 hover:scale-105 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offsvaet-gray-800 uppercase tracking-wide"
                   >
                     Dashboard
                   </Link>
