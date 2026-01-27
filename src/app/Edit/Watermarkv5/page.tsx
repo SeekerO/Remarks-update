@@ -15,6 +15,7 @@ import { useAuth } from "../../Chat/AuthContext";
 import { Info } from "lucide-react";
 import PhotoAdjustments from "./components/PhotoAdjustments";
 
+
 // Main page component for the watermark application.
 function WatermarkPageContent() {
     const { images, removeAllImages } = useImageEditor();
