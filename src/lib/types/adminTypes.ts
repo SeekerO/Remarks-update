@@ -51,15 +51,16 @@ export interface PermissionsModalProps {
   onSave: (userId: string, allowedPages: PageId[]) => Promise<void>;
 }
 
+
 import { Search, Settings } from "lucide-react";
 import { IoLogoBuffer, IoIosColorWand } from "react-icons/io";
 import { FaRegFileImage, FaFileAlt, FaYoutube } from "react-icons/fa";
-import { FaRegNoteSticky, FaFilePen } from "react-icons/fa6";
+import { FaRegNoteSticky, FaFilePen, FaWandMagicSparkles } from "react-icons/fa6";
 import { GiCardExchange } from "react-icons/gi";
 import { IoWater } from "react-icons/io5";
 import { RiAdminFill } from "react-icons/ri";
 import { SiYoutubestudio } from "react-icons/si";
-import { MdOutlineAdminPanelSettings } from "react-icons/md";
+import { MdOutlineAdminPanelSettings, MdOpacity } from "react-icons/md";
 
 export type UserRole = "admin" | "standard";
 
@@ -109,6 +110,14 @@ export const navItems: NavItem[] = [
         name: "Logo Maker",
         href: "/Edit/LogoMaker",
         icon: IoLogoBuffer,
+        active: true,
+        pagePermissionId: "logomaker",
+        sublinks: [],
+      },
+      {
+        name: "Resolution Adjuster",
+        href: "/Edit/ResolutionAdjuster",
+        icon: MdOpacity,
         active: true,
         pagePermissionId: "logomaker",
         sublinks: [],
@@ -197,14 +206,6 @@ export const navItems: NavItem[] = [
       {
         name: "Youtube Config",
         href: "/admin/Youtube",
-        icon: FaYoutube,
-        active: true,
-        requiredRole: "admin",
-        sublinks: [],
-      },
-      {
-        name: "Test Page",
-        href: "/admin/test",
         icon: FaYoutube,
         active: true,
         requiredRole: "admin",

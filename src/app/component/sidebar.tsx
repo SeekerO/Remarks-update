@@ -263,14 +263,7 @@ const Sidebar: React.FC = () => {
 
                 {/* Footer Section */}
                 <div className={`pt-2 ${footerBorderClasses}`}>
-                    <button
-                        onClick={logout}
-                        className={`text-gray-400 dark:text-gray-300 font-medium hover:text-red-500 dark:hover:text-red-400 flex items-center gap-2 w-full duration-300 ${footerPaddingClass}`}
-                        title="Logout"
-                    >
-                        <CiLogout size={23} />
-                        {!isCollapsed && <span className="whitespace-nowrap">Logout</span>}
-                    </button>
+
 
                     <button
                         onClick={() => setIsSettings(!isSettings)}
@@ -280,12 +273,26 @@ const Sidebar: React.FC = () => {
                         <IoIosSettings size={23} />
                         {!isCollapsed && <span className="whitespace-nowrap">Settings</span>}
                     </button>
+
+
+                    <button
+                        onClick={logout}
+                        className={`text-gray-400 dark:text-gray-300 font-medium hover:text-red-500 dark:hover:text-red-400 flex items-center gap-2 w-full duration-300 ${footerPaddingClass}`}
+                        title="Logout"
+                    >
+                        <CiLogout size={23} />
+                        {!isCollapsed && <span className="whitespace-nowrap">Logout</span>}
+                    </button>
+
+
                     {isCollapsed && <div className="h-4"></div>}
                     {!isCollapsed && (
                         <div className={`p-4 text-xs text-center text-gray-500`}>
                             <p>App Version 4.1.0</p>
                         </div>
                     )}
+
+
                 </div>
             </div>
 

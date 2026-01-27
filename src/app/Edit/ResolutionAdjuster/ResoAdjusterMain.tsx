@@ -85,15 +85,15 @@ const ProfessionalResizer: React.FC = () => {
         <div className="max-w-5xl mx-auto p-6 font-sans antialiased text-slate-900">
             {/* Header */}
             <div className="mb-10 text-center">
-                <h1 className="text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl">Image Optic</h1>
-                <p className="mt-2 text-slate-500">Professional-grade client-side image downsampling.</p>
+                <h1 className="text-3xl font-bold tracking-tight dark:text-slate-100 text-slate-900 sm:text-4xl">Image Optic</h1>
+                <p className="mt-2 dark:text-slate-400 text-slate-500">Professional-grade client-side image downsampling.</p>
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
                 {/* Controls Side */}
                 <div className="lg:col-span-4 space-y-6">
-                    <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
-                        <label className="text-sm font-semibold text-slate-700 block mb-4 uppercase tracking-wider">
+                    <div className="p-6 rounded-2xl border dark:border-slate-600 border-slate-200 shadow-sm">
+                        <label className="text-sm font-semibold dark:text-slate-100 text-slate-700 block mb-4 uppercase tracking-wider">
                             Resolution Scale
                         </label>
                         <input
@@ -113,7 +113,7 @@ const ProfessionalResizer: React.FC = () => {
                     </div>
 
                     {meta && (
-                        <div className="bg-indigo-600 rounded-2xl p-6 text-white shadow-lg shadow-indigo-200">
+                        <div className=" rounded-2xl p-6 border border-0.5 dark:border-slate-600 text-white shadow-lg shadow-gray-300 dark:shadow-gray-800">
                             <h3 className="text-sm font-bold uppercase tracking-widest opacity-80 mb-4">Export Details</h3>
                             <div className="space-y-3">
                                 <div className="flex justify-between items-center border-b border-indigo-500 pb-2">
@@ -132,7 +132,7 @@ const ProfessionalResizer: React.FC = () => {
                             <a
                                 href={previews?.processed}
                                 download={`optimized-${meta.name}`}
-                                className="mt-6 w-full flex items-center justify-center gap-2 bg-white text-indigo-600 py-3 rounded-xl font-bold hover:bg-indigo-50 transition-all active:scale-95"
+                                className="mt-6 w-full flex items-center justify-center gap-2 dark:bg-slate-900 hover:scale-105 bg-white text-indigo-600 py-3 rounded-xl font-bold hover:bg-indigo-50 transition-all active:scale-95"
                             >
                                 <Download size={18} />
                                 Download Image
@@ -164,9 +164,9 @@ const ProfessionalResizer: React.FC = () => {
                             />
                         </div>
                     ) : (
-                        <div className="bg-white border border-slate-200 rounded-3xl overflow-hidden shadow-sm">
-                            <div className="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
-                                <span className="text-sm font-medium text-slate-600 flex items-center gap-2">
+                        <div className=" border border-slate-600 rounded-3xl overflow-hidden shadow-sm">
+                            <div className="p-4 border-b border-slate-100 flex justify-between items-center ">
+                                <span className="text-sm font-medium dark:text-slate-200 text-slate-600 flex items-center gap-2">
                                     <ImageIcon size={16} /> {meta?.name}
                                 </span>
                                 <button
@@ -176,7 +176,7 @@ const ProfessionalResizer: React.FC = () => {
                                     <RefreshCcw size={18} />
                                 </button>
                             </div>
-                            <div className="p-8 flex items-center justify-center bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] bg-slate-100">
+                            <div className="p-8 flex items-center justify-center bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] dark:bg-slate-700 bg-slate-400">
                                 <div className="relative group">
                                     <img
                                         src={previews.processed}
