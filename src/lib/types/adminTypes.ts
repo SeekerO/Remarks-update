@@ -57,7 +57,7 @@ import { IoLogoBuffer, IoIosColorWand } from "react-icons/io";
 import { FaRegFileImage, FaFileAlt, FaYoutube } from "react-icons/fa";
 import { FaRegNoteSticky, FaFilePen, FaWandMagicSparkles } from "react-icons/fa6";
 import { GiCardExchange } from "react-icons/gi";
-import { IoWater } from "react-icons/io5";
+import { IoWater, IoDocumentTextOutline } from "react-icons/io5";
 import { RiAdminFill } from "react-icons/ri";
 import { SiYoutubestudio } from "react-icons/si";
 import { MdOutlineAdminPanelSettings, MdOpacity } from "react-icons/md";
@@ -167,7 +167,7 @@ export const navItems: NavItem[] = [
   {
     name: "Evaluation",
     href: "/Evaluation",
-    icon: Settings,
+    icon: IoDocumentTextOutline,
     active: true,
     pagePermissionId: "evaluation",
     sublinks: [],
@@ -191,22 +191,6 @@ export const navItems: NavItem[] = [
         name: "Admin Panel",
         href: "/admin/panel",
         icon: RiAdminFill,
-        active: true,
-        requiredRole: "admin",
-        sublinks: [],
-      },
-      {
-        name: "Youtube Validator",
-        href: "/admin/YoutubeLinkValidator",
-        icon: SiYoutubestudio,
-        active: true,
-        requiredRole: "admin",
-        sublinks: [],
-      },
-      {
-        name: "Youtube Config",
-        href: "/admin/Youtube",
-        icon: FaYoutube,
         active: true,
         requiredRole: "admin",
         sublinks: [],

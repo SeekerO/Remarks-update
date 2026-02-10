@@ -4,7 +4,6 @@ import UseGuard from "./component/withAuth";
 import ThemeWrapper from "./component/wrapper/night-mode-wrapper";
 import "./globals.css"
 import { AuthProvider } from "./Chat/AuthContext";
-import { YouTubePlayerProvider } from "@/app/admin/Youtube/components/YouTubePlayerContext";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -86,9 +85,7 @@ export default function RootLayout({
         <AuthProvider>
           <UseGuard>
             <ThemeWrapper>
-              <YouTubePlayerProvider>
-                {children}
-              </YouTubePlayerProvider>
+              {children}
             </ThemeWrapper>
           </UseGuard>
         </AuthProvider>

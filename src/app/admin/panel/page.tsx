@@ -1,47 +1,33 @@
-// src/app/admin/panel/page.tsx (MODIFIED)
-
 "use client";
 /* eslint-disable @typescript-eslint/no-unused-vars */
 
 import React, { useState, useEffect, useCallback } from "react";
 import { ref, onValue, update } from "firebase/database";
-import { Search, Users } from "lucide-react";
+import { Search, Users, Command } from "lucide-react";
 
 import { db } from "@/lib/firebase/firebase";
 import { useAuth } from "@/app/Chat/AuthContext";
 import { PageId, UserProfile } from "@/lib/types/adminTypes";
 import UserCard from "./component/UserCard";
 import PermissionsModal from "./component/PermissionsModal";
-// 🔑 IMPORT THE NEW CUSTOM HOOK
+import AdminCommandPalette from "./component/AdminCommandPalette";
 import { useUserPresence } from "@/lib/hooks/useUserPresence";
-
-
-// --- Main Admin Panel Component (The Page Default Export) ---
 
 export default function AdminPanel() {
     const { user } = useAuth();
-
     const [allUsers, setAllUsers] = useState<UserProfile[]>([]);
-    // 🔑 REMOVED: onlineUsers state is now managed by the hook
     const [searchTerm, setSearchTerm] = useState<string>("");
     const [showOnlineOnly, setShowOnlineOnly] = useState<boolean>(false);
     const [showCanChatOnly, setShowCanChatOnly] = useState<boolean>(false);
-    const [isLoadingUsers, setIsLoadingUsers] = useState<boolean>(true); // Renamed for clarity
+    const [isLoadingUsers, setIsLoadingUsers] = useState<boolean>(true);
     const [selectedUserForPermissions, setSelectedUserForPermissions] = useState<UserProfile | null>(null);
+
     const currentUserId = user?.uid ?? '';
-
-    // 🔑 USE THE NEW HOOK
     const { onlineUsers, isPresenceLoading, formatLastOnline } = useUserPresence();
-
-    // Combine loading states
     const isLoading = isLoadingUsers || isPresenceLoading;
-
 
     useEffect(() => {
         const usersRef = ref(db, "users");
-
-        let usersLoaded = false;
-
         const unsubscribeUsers = onValue(usersRef, (snapshot) => {
             const usersData = snapshot.val();
             if (usersData) {
@@ -52,63 +38,34 @@ export default function AdminPanel() {
                     email: usersData[uid].email || "No Email",
                     isAdmin: usersData[uid].isAdmin || false,
                     canChat: usersData[uid].canChat !== undefined ? usersData[uid].canChat : true,
-                    allowedPages: usersData[uid].allowedPages !== undefined
-                        ? usersData[uid].allowedPages
-                        : undefined,
+                    allowedPages: usersData[uid].allowedPages || undefined,
                 }));
                 setAllUsers(usersList);
             } else {
                 setAllUsers([]);
             }
-            usersLoaded = true;
-            setIsLoadingUsers(false); // Update user-specific loading state
+            setIsLoadingUsers(false);
         });
-
-        // 🔑 REMOVED: Presence subscription logic is now in useUserPresence
-
-        return () => {
-            unsubscribeUsers();
-            // 🔑 REMOVED: unsubscribePresence is now in useUserPresence cleanup
-        };
+        return () => unsubscribeUsers();
     }, []);
 
+    const handleToggleAdmin = useCallback(async (userId: string, currentAdminStatus: boolean) => {
+        if (userId === currentUserId) return alert("You cannot modify your own Admin status.");
+        try {
+            await update(ref(db, `users/${userId}`), { isAdmin: !currentAdminStatus });
+        } catch (error) {
+            console.error("Admin Update Error:", error);
+        }
+    }, [currentUserId]);
 
-    // Handler functions remain unchanged, just relying on the currentUserId from useAuth.
-    const handleToggleAdmin = useCallback(
-        async (userId: string, currentAdminStatus: boolean) => {
-            if (userId === currentUserId) {
-                alert("For security, you cannot modify your own Admin status.");
-                return;
-            }
-            // ... (rest of the logic)
-            try {
-                const userRef = ref(db, `users/${userId}`);
-                await update(userRef, { isAdmin: !currentAdminStatus });
-            } catch (error) {
-                console.error("Error toggling Admin status:", error);
-                alert("Failed to update user admin permission. Check console for details.");
-            }
-        },
-        [currentUserId]
-    );
-
-    const handleToggleCanChat = useCallback(
-        async (userId: string, currentCanChatStatus: boolean) => {
-            if (userId === currentUserId) {
-                alert("You cannot modify your own chat permission status.");
-                return;
-            }
-            // ... (rest of the logic)
-            try {
-                const userRef = ref(db, `users/${userId}`);
-                await update(userRef, { canChat: !currentCanChatStatus });
-            } catch (error) {
-                console.error("Error toggling canChat status:", error);
-                alert("Failed to update user chat permission. Check console for details.");
-            }
-        },
-        [currentUserId]
-    );
+    const handleToggleCanChat = useCallback(async (userId: string, currentCanChatStatus: boolean) => {
+        if (userId === currentUserId) return alert("You cannot modify your own chat status.");
+        try {
+            await update(ref(db, `users/${userId}`), { canChat: !currentCanChatStatus });
+        } catch (error) {
+            console.error("Chat Update Error:", error);
+        }
+    }, [currentUserId]);
 
     const handleOpenPermissions = useCallback((user: UserProfile) => {
         setSelectedUserForPermissions(user);
@@ -116,124 +73,97 @@ export default function AdminPanel() {
 
     const handleSavePermissions = useCallback(async (userId: string, allowedPages: PageId[]) => {
         try {
-            const userRef = ref(db, `users/${userId}`);
-            await update(userRef, { allowedPages });
+            await update(ref(db, `users/${userId}`), { allowedPages });
         } catch (error) {
-            alert("Failed to update page permissions. Check console for details.");
+            alert("Failed to update page permissions.");
         }
     }, []);
 
+    if (!user) return <div className="h-screen w-screen flex items-center justify-center dark:bg-gray-900 bg-gray-50"><p>Authenticating...</p></div>;
 
-    // Handle Loading and Unauthorized User
-    if (!user) {
-        return (
-            <div className="p-10 w-full h-screen flex justify-center items-center dark:bg-gray-900 bg-gray-50">
-                <div className="animate-spin rounded-full h-12 w-12 border-4 border-blue-500 border-t-transparent"></div>
-                <p className="ml-4 text-lg text-gray-700 dark:text-gray-300">Authenticating...</p>
-            </div>
-        );
-    }
-
-
-    // 🔑 REMOVED: formatLastOnline function is now returned from useUserPresence
-
-    const filteredUsers = allUsers.filter((user) => {
-        const isOnline = onlineUsers[user.uid] === true;
-        const matchesSearchTerm = user.name
-            .toLowerCase()
-            .includes(searchTerm.toLowerCase()) || user.email.toLowerCase().includes(searchTerm.toLowerCase());
-        const matchesOnlineStatus = showOnlineOnly ? isOnline : true;
-        const matchesCanChatStatus = showCanChatOnly ? user.canChat === true : true;
-        return matchesSearchTerm && matchesOnlineStatus && matchesCanChatStatus;
+    const filteredUsers = allUsers.filter((u) => {
+        const isOnline = onlineUsers[u.uid] === true;
+        const matchesSearch = u.name.toLowerCase().includes(searchTerm.toLowerCase()) || u.email.toLowerCase().includes(searchTerm.toLowerCase());
+        const matchesOnline = showOnlineOnly ? isOnline : true;
+        const matchesChat = showCanChatOnly ? u.canChat === true : true;
+        return matchesSearch && matchesOnline && matchesChat;
     });
 
-    if (isLoading) {
-        return (
-            <div className="p-10 w-full h-full flex justify-center items-center dark:bg-gray-900 bg-gray-50">
-                <div className="animate-spin rounded-full h-12 w-12 border-4 border-blue-500 border-t-transparent dark:border-blue-400 dark:border-t-transparent"></div>
-                <p className="ml-4 text-lg text-gray-700 dark:text-gray-300">Loading user data...</p>
-            </div>
-        );
-    }
+    if (isLoading) return <div className="h-screen w-screen flex items-center justify-center dark:bg-gray-900 bg-gray-50"><p>Loading User Data...</p></div>;
 
     return (
         <>
+            {/* The Enhanced Command Palette */}
+            <AdminCommandPalette
+                allUsers={allUsers}
+                onlineUsers={onlineUsers}
+                onToggleAdmin={handleToggleAdmin}
+                onToggleChat={handleToggleCanChat}
+                onOpenPermissions={handleOpenPermissions}
+                currentUserId={currentUserId}
+                formatLastOnline={formatLastOnline}
+            />
+
             <div className="p-6 md:p-10 min-h-screen w-full dark:bg-gray-900 bg-gray-50 font-sans overflow-y-auto">
-                <header className="mb-8 border-b border-gray-200 dark:border-gray-700 pb-4">
-                    <h1 className="text-3xl font-extrabold text-gray-900 dark:text-white flex items-center">
-                        <Users className="w-8 h-8 mr-3 text-blue-600" />
-                        User Management Dashboard
-                    </h1>
-                    <p className="text-gray-500 dark:text-gray-400 mt-1">Control access and view status for all platform users.</p>
+                <header className="mb-8 border-b border-gray-200 dark:border-gray-700 pb-4 flex justify-between items-end">
+                    <div>
+                        <h1 className="text-3xl font-extrabold text-gray-900 dark:text-white flex items-center">
+                            <Users className="w-8 h-8 mr-3 text-blue-600" />
+                            User Management
+                        </h1>
+                    </div>
                 </header>
 
-                <div className="bg-white dark:bg-gray-800 p-5 rounded-xl shadow-md mb-8">
+                {/* Filter Section */}
+                <div className="bg-white dark:bg-gray-800 p-5 rounded-xl shadow-md mb-8 border border-gray-100 dark:border-gray-700">
                     <div className="flex flex-col md:flex-row md:items-center space-y-4 md:space-y-0 md:space-x-6">
                         <div className="relative flex-grow">
                             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
                             <input
                                 type="text"
-                                placeholder="Search by name or email..."
-                                className="pl-10 pr-4 py-3 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 rounded-lg w-full focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
+                                placeholder="Search users..."
+                                className="pl-10 pr-4 py-3 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 rounded-lg w-full focus:ring-2 focus:ring-blue-500 text-gray-900 dark:text-white"
                                 value={searchTerm}
                                 onChange={(e) => setSearchTerm(e.target.value)}
                             />
                         </div>
-
-                        <div className="flex items-center space-x-6">
-                            <label className="flex items-center cursor-pointer">
-                                <input
-                                    type="checkbox"
-                                    className="form-checkbox h-5 w-5 text-blue-600 rounded border-gray-300 dark:border-gray-500 dark:bg-gray-700 focus:ring-blue-500"
-                                    checked={showOnlineOnly}
-                                    onChange={(e) => setShowOnlineOnly(e.target.checked)}
-                                />
-                                <span className="ml-2 text-sm font-medium text-gray-700 dark:text-gray-200">Online Only</span>
+                        {/* <div className="flex items-center space-x-6">
+                            <label className="flex items-center cursor-pointer text-sm text-gray-700 dark:text-gray-200">
+                                <input type="checkbox" className="mr-2" checked={showOnlineOnly} onChange={(e) => setShowOnlineOnly(e.target.checked)} />
+                                Online Only
                             </label>
-
-                            <label className="flex items-center cursor-pointer">
-                                <input
-                                    type="checkbox"
-                                    className="form-checkbox h-5 w-5 text-blue-600 rounded border-gray-300 dark:border-gray-500 dark:bg-gray-700 focus:ring-blue-500"
-                                    checked={showCanChatOnly}
-                                    onChange={(e) => setShowCanChatOnly(e.target.checked)}
-                                />
-                                <span className="ml-2 text-sm font-medium text-gray-700 dark:text-gray-200">Chat Enabled Only</span>
+                            <label className="flex items-center cursor-pointer text-sm text-gray-700 dark:text-gray-200">
+                                <input type="checkbox" className="mr-2" checked={showCanChatOnly} onChange={(e) => setShowCanChatOnly(e.target.checked)} />
+                                Chat Enabled
                             </label>
-                        </div>
+                        </div> */}
                     </div>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                {/* Users Grid */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 pb-20">
                     {filteredUsers.length === 0 ? (
-                        <div className="col-span-full text-center py-20 bg-white dark:bg-gray-800 rounded-xl shadow-inner">
-                            <p className="text-xl text-gray-500 dark:text-gray-400 font-medium">
-                                {allUsers.length === 0
-                                    ? "No users found in the database."
-                                    : "No users match your current search and filter criteria."}
-                            </p>
+                        <div className="col-span-full text-center py-20 bg-white dark:bg-gray-800 rounded-xl shadow-inner text-gray-500">
+                            No users match your criteria.
                         </div>
                     ) : (
-                        filteredUsers.map((user) => {
-                            const isOnline = onlineUsers[user.uid] === true;
-                            const lastOnlineTimestamp = typeof onlineUsers[user.uid] === 'number'
-                                ? (onlineUsers[user.uid] as number)
-                                : null;
-
-                            return (
+                        filteredUsers.map((u) => (
+                            <div
+                                key={u.uid}
+                                className="h-full"
+                            >
                                 <UserCard
-                                    key={user.uid}
-                                    user={user}
-                                    isOnline={isOnline}
-                                    lastOnlineTimestamp={lastOnlineTimestamp}
+                                    user={u}
+                                    isOnline={onlineUsers[u.uid] === true}
+                                    lastOnlineTimestamp={typeof onlineUsers[u.uid] === 'number' ? onlineUsers[u.uid] as number : null}
                                     currentUserId={currentUserId}
                                     handleToggleCanChat={handleToggleCanChat}
                                     handleToggleAdmin={handleToggleAdmin}
                                     handleOpenPermissions={handleOpenPermissions}
-                                    formatLastOnline={formatLastOnline} // 🔑 Use the format function from the hook
+                                    formatLastOnline={formatLastOnline}
                                 />
-                            );
-                        })
+                            </div>
+                        ))
                     )}
                 </div>
             </div>

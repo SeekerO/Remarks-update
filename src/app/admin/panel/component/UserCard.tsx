@@ -1,143 +1,93 @@
-// src/app/admin/panel/component/UserCard.tsx (MODIFIED)
+"use client";
 
 import React from 'react';
-// REMOVED: Image import is no longer needed here
-import { Shield, ShieldOff, Globe, MessageSquareText, MessageSquareOff, Lock } from 'lucide-react';
-import { CiLock, CiUnlock } from "react-icons/ci";
-import { MdFindInPage } from "react-icons/md";
-import { UserCardProps } from '@/lib/types/adminTypes'; // Adjusted import path
-import UserAvatar from '@/lib/components/avatar'; // 🔑 IMPORT THE NEW AVATAR COMPONENT
+import { Shield, Globe } from 'lucide-react';
+import { motion } from 'framer-motion'; // 1. Import motion
+import { UserCardProps } from '@/lib/types/adminTypes';
+import UserAvatar from '@/lib/components/avatar';
 
-// The component function itself can remain the same
 const UserCard: React.FC<UserCardProps> = React.memo(({
     user,
     isOnline,
     lastOnlineTimestamp,
     currentUserId,
-    handleToggleCanChat,
-    handleToggleAdmin,
-    handleOpenPermissions,
     formatLastOnline,
 }) => (
-    <div
-        key={user.uid}
-        className="bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded-xl p-6 shadow-lg flex flex-col hover:shadow-xl transition-all duration-300 h-full"
+    <motion.div
+        layout // 2. Enable liquid layout animations
+        initial={{ opacity: 0, scale: 0.9 }}
+        animate={{ opacity: 1, scale: 1 }}
+        exit={{ opacity: 0, scale: 0.9, transition: { duration: 0.2 } }}
+        whileHover={{
+            y: -5,
+            scale: 1.02,
+            transition: { duration: 0.2, ease: "easeOut" }
+        }}
+        className="bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded-2xl p-6 shadow-sm hover:shadow-xl transition-shadow duration-300 h-full flex flex-col cursor-pointer select-none"
     >
+        {/* User Avatar and Info */}
         <div className="flex items-center space-x-4 mb-4">
-            {/* 🔑 REPLACE AVATAR LOGIC WITH THE NEW COMPONENT */}
             <UserAvatar
                 user={user}
                 isOnline={isOnline}
                 lastOnlineTimestamp={lastOnlineTimestamp}
                 formatLastOnline={formatLastOnline}
             />
-            {/* 🔑 END REPLACEMENT */}
 
             <div className="flex-grow min-w-0">
-                <h3 className="font-bold text-lg text-gray-900 dark:text-white truncate">
+                <motion.h3
+                    layout="position" // Ensures text doesn't jitter during card resize
+                    className="font-bold text-lg text-gray-900 dark:text-white truncate"
+                >
                     {user.name}
-                </h3>
-                <p className="text-sm text-gray-500 dark:text-gray-400 truncate">{user.email}</p>
-            </div>
-        </div>
-        <div className="text-xs text-gray-500 dark:text-gray-400 mb-4 border-b border-gray-100 dark:border-gray-700 pb-2 flex items-center justify-center w-full">
-            {user.isAdmin ?
-                <span className="ml-2 text-xs font-semibold text-blue-600 dark:text-blue-400 rounded-full tracking-wider">
-                    ADMIN
-                </span>
-                :
-                <span className="ml-2 text-xs font-semibold text-gray-600 dark:text-gray-400 rounded-full tracking-wider">
-                    USER
-                </span>
-            }
-        </div>
-
-        <div className="text-xs text-gray-500 dark:text-gray-400 mb-4 border-b border-gray-100 dark:border-gray-700 pb-2">
-            UID: {user.uid.substring(0, 12)}...
-        </div>
-
-        <div className="space-y-3 flex-grow">
-            {/* Chat Access Toggle */}
-            <div className="flex justify-between items-center border-b border-gray-100 dark:border-gray-700 pb-3">
-                <span className="text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center">
-                    {user.canChat ? <CiLock className="w-4 h-4 mr-2 text-green-500" /> : <CiUnlock className="w-4 h-4 mr-2 text-red-500" />}
-                    Access
-                </span>
-
-                <label className="relative inline-flex items-center cursor-pointer">
-                    <input
-                        type="checkbox"
-                        checked={user.canChat}
-                        onChange={() => handleToggleCanChat(user.uid, user.canChat)}
-                        disabled={user.uid === currentUserId}
-                        className="sr-only peer"
-                    />
-                    <div className={`w-11 h-6 bg-gray-200 rounded-full peer peer-focus:outline-none peer-focus:ring-4 ${user.uid === currentUserId ? 'peer-focus:ring-yellow-300 dark:bg-yellow-800' : 'peer-focus:ring-blue-300 dark:bg-gray-700'} peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all ${user.canChat ? 'peer-checked:bg-blue-600' : ''} ${user.uid === currentUserId ? 'opacity-50 cursor-not-allowed' : ''}`}></div>
-                </label>
-            </div>
-
-            {/* Admin Status Toggle */}
-            <div className="flex justify-between items-center border-b border-gray-100 dark:border-gray-700 pb-3">
-                <span className="text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center">
-                    {user.isAdmin ? <Shield className="w-4 h-4 mr-2 text-red-600" /> : <ShieldOff className="w-4 h-4 mr-2 text-gray-500" />}
-                    Admin Role
-                </span>
-
-                <button
-                    onClick={() => handleToggleAdmin(user.uid, user.isAdmin)}
-                    disabled={user.uid === currentUserId}
-                    className={`px-3 py-1 text-sm font-medium rounded-lg transition-colors duration-200 flex items-center shadow-sm 
-                        ${user.isAdmin
-                            ? "bg-red-500 text-white hover:bg-red-600"
-                            : "bg-green-500 text-white hover:bg-green-600"
-                        }
-                        ${user.uid === currentUserId ? "opacity-50 cursor-not-allowed" : ""}`
-                    }
+                </motion.h3>
+                <motion.p
+                    layout="position"
+                    className="text-sm text-gray-500 dark:text-gray-400 truncate"
                 >
-                    {user.isAdmin ? "Revoke" : "Promote"}
-                </button>
+                    {user.email}
+                </motion.p>
             </div>
+        </div>
 
-            {/* Page Permissions Button */}
-            <div className="flex justify-between items-center border-b border-gray-100 dark:border-gray-700 pb-3">
-                <span className="text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center">
-                    <MdFindInPage className="w-4 h-4 mr-2 text-purple-500" />
-                    Page Access
+        {/* Role Badge */}
+        <div className="text-xs text-gray-500 dark:text-gray-400 mb-4 border-b border-gray-100 dark:border-gray-700 pb-3 flex items-center justify-center w-full">
+            {user.isAdmin ? (
+                <div className={`${user.uid === currentUserId ? "text-purple-600 dark:text-purple-400" : "text-blue-600 dark:text-blue-400"} flex items-center gap-2 font-semibold`} >
+                    <Shield className="w-4 h-4 " />
+                    <span className="text-xs tracking-wider uppercase">
+                        Admin
+                    </span>
+                </div>
+            ) : (
+                <span className="text-xs font-semibold text-gray-400 dark:text-gray-500 tracking-wider uppercase">
+                    User
                 </span>
+            )}
+        </div>
 
-                <button
-                    onClick={() => handleOpenPermissions(user)}
-                    disabled={user.uid === currentUserId}
-                    className={`px-3 py-1 text-sm font-medium rounded-lg transition-colors duration-200 flex items-center shadow-sm bg-purple-500 text-white hover:bg-purple-600
-                        ${user.uid === currentUserId ? "opacity-50 cursor-not-allowed" : ""}`}
-                >
-                    Configure
-                </button>
-            </div>
-
-            <div className="flex justify-between items-center mt-3">
-                <span className="text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center">
+        {/* Details Section */}
+        <div className="space-y-3 flex-grow flex flex-col justify-end">
+            <div className="flex justify-between items-center">
+                <span className="text-sm font-medium text-gray-500 dark:text-gray-400 flex items-center">
                     <Globe className="w-4 h-4 mr-2 text-blue-500" />
-                    Last Status
+                    Status
                 </span>
-                <span className={`text-sm font-semibold ${isOnline ? "text-green-600 dark:text-green-400" : "text-gray-500 dark:text-gray-400"}`}>
+                <span className={`text-[10px] font-bold px-2 py-1 rounded-full uppercase tracking-tight ${isOnline
+                    ? 'bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400'
+                    : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400'
+                    }`}>
                     {isOnline
-                        ? "Online"
+                        ? 'Online'
                         : lastOnlineTimestamp
                             ? formatLastOnline(lastOnlineTimestamp)
-                            : "Offline"}
+                            : 'Offline'
+                    }
                 </span>
             </div>
         </div>
-
-        {user.uid === currentUserId && (
-            <p className="text-xs text-yellow-600 dark:text-yellow-400 mt-2 text-center">
-                (Cannot modify your own permissions)
-            </p>
-        )}
-    </div>
+    </motion.div>
 ), (prevProps, nextProps) => {
-    // Custom memoization remains to prevent re-renders unless data changes
     return (
         prevProps.user === nextProps.user &&
         prevProps.isOnline === nextProps.isOnline &&
