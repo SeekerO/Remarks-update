@@ -10,6 +10,7 @@ export const AVAILABLE_PAGES = [
   { id: "matcher", name: "Matcher", category: "Main" },
   { id: "evaluation", name: "Evaluation", category: "Main" },
   { id: "csc", name: "CSC Reveiwer", category: "Main" },
+  { id: "directory", name: "Directory", category: "Directory" },
 ] as const;
 
 // Export the types as well for external consumption
@@ -53,7 +54,8 @@ export interface PermissionsModalProps {
 
 
 import { Search, Settings } from "lucide-react";
-import { IoLogoBuffer, IoIosColorWand } from "react-icons/io";
+import { GoFileDirectoryFill } from "react-icons/go";
+import { IoLogoBuffer, IoIosColorWand, IoIosPin } from "react-icons/io";
 import { FaRegFileImage, FaFileAlt, FaYoutube } from "react-icons/fa";
 import { FaRegNoteSticky, FaFilePen, FaWandMagicSparkles } from "react-icons/fa6";
 import { GiCardExchange } from "react-icons/gi";
@@ -179,6 +181,31 @@ export const navItems: NavItem[] = [
     active: true,
     pagePermissionId: "csc",
     sublinks: [],
+  },
+  {
+    name: "Directory",
+    href: "/Directory",
+    icon: GoFileDirectoryFill,
+    active: false,
+    pagePermissionId: "directory",
+    sublinks: [
+      {
+        name: "Field Office",
+        href: "/directory/fieldoffice",
+        icon: IoIosPin,
+        active: true,
+        pagePermissionId: "directory",
+        sublinks: [],
+      },
+      {
+        name: "3D World",
+        href: "/directory/3dplanet",
+        icon: IoIosPin,
+        active: true,
+        pagePermissionId: "directory",
+        sublinks: [],
+      }
+    ],
   },
   {
     name: "Admin",
