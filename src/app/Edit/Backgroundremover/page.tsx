@@ -1,259 +1,241 @@
 'use client';
-/* eslint-disable @typescript-eslint/no-explicit-any */
-import Image from 'next/image';
-import React, { useState, useCallback } from 'react';
-import { Upload, Download, X, Loader2, Image as ImageIcon, Info } from 'lucide-react';
-import { useAuth } from '../../Chat/AuthContext';
-const BackgroundRemover: React.FC = () => {
+
+import React, { useState, useRef, useEffect, useCallback } from 'react';
+import { Upload, Download, X, Loader2, Image as ImageIcon, Info, RotateCcw } from 'lucide-react';
+
+const PureBackgroundRemover: React.FC = () => {
     const [originalImage, setOriginalImage] = useState<string | null>(null);
     const [processedImage, setProcessedImage] = useState<string | null>(null);
     const [loading, setLoading] = useState(false);
-    const [error, setError] = useState<string | null>(null);
     const [dragActive, setDragActive] = useState(false);
-    const [progress, setProgress] = useState<string>('');
-    const { user } = useAuth();
+    const [modelLoaded, setModelLoaded] = useState(false);
 
+    const canvasRef = useRef<HTMLCanvasElement>(null);
+    const segmentationRef = useRef<any>(null);
+
+    // 1. Initialize MediaPipe on Mount
+    useEffect(() => {
+        const initMediaPipe = async () => {
+            try {
+                const mpSelfie = await import('@mediapipe/selfie_segmentation');
+                // Handle CommonJS vs ESM export differences
+                const SelfieClass = mpSelfie.SelfieSegmentation || (mpSelfie as any).default;
+
+                if (SelfieClass) {
+                    const selfieSegmentation = new SelfieClass({
+                        locateFile: (file: string) => `https://cdn.jsdelivr.net/npm/@mediapipe/selfie_segmentation/${file}`,
+                    });
+
+                    selfieSegmentation.setOptions({
+                        modelSelection: 1, // 1 for General (better quality), 0 for Landscape (faster)
+                    });
+
+                    selfieSegmentation.onResults(handleSegmentationResults);
+                    segmentationRef.current = selfieSegmentation;
+                    setModelLoaded(true);
+                }
+            } catch (err) {
+                console.error("Failed to load MediaPipe:", err);
+            }
+        };
+
+        initMediaPipe();
+    }, []);
+
+    // 2. The Core Canvas Logic
+    const handleSegmentationResults = (results: any) => {
+        if (!canvasRef.current) return;
+        const canvas = canvasRef.current;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return;
+
+        // Clear and resize
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        // Step A: Draw the mask provided by the AI
+        ctx.drawImage(results.segmentationMask, 0, 0, canvas.width, canvas.height);
+
+        // Step B: Use 'source-in' to composite the original image over the mask
+        // This keeps only the pixels that overlap with the "person" mask
+        ctx.globalCompositeOperation = 'source-in';
+        ctx.drawImage(results.image, 0, 0, canvas.width, canvas.height);
+
+        // Step C: Reset composite mode for future operations
+        ctx.globalCompositeOperation = 'source-over';
+
+        setProcessedImage(canvas.toDataURL('image/png'));
+        setLoading(false);
+    };
+
+    // 3. File Handling
+    const processFile = (file: File) => {
+        if (!file.type.startsWith('image/')) return;
+        setLoading(true);
+        const reader = new FileReader();
+        reader.onload = (event) => {
+            setOriginalImage(event.target?.result as string);
+            setProcessedImage(null);
+            setLoading(false);
+        };
+        reader.readAsDataURL(file);
+    };
+
+    // 4. Drag and Drop Logic
     const handleDrag = useCallback((e: React.DragEvent) => {
         e.preventDefault();
         e.stopPropagation();
-        if (e.type === 'dragenter' || e.type === 'dragover') {
-            setDragActive(true);
-        } else if (e.type === 'dragleave') {
-            setDragActive(false);
-        }
+        setDragActive(e.type === "dragenter" || e.type === "dragover");
     }, []);
 
     const handleDrop = useCallback((e: React.DragEvent) => {
         e.preventDefault();
         e.stopPropagation();
         setDragActive(false);
-
-        if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-            handleFile(e.dataTransfer.files[0]);
+        if (e.dataTransfer.files?.[0]) {
+            processFile(e.dataTransfer.files[0]);
         }
     }, []);
 
-    const handleFile = (file: File) => {
-        if (!file.type.startsWith('image/')) {
-            setError('Please upload an image file');
-            return;
-        }
-
-        const reader = new FileReader();
-        reader.onload = (e) => {
-            setOriginalImage(e.target?.result as string);
-            setProcessedImage(null);
-            setError(null);
-        };
-        reader.readAsDataURL(file);
-    };
-
-    const handleFileInput = (e: React.ChangeEvent<HTMLInputElement>) => {
-        if (e.target.files && e.target.files[0]) {
-            handleFile(e.target.files[0]);
-        }
-    };
-
-    const removeBackground = async () => {
-        if (!originalImage) {
-            setError('Please upload an image');
-            return;
-        }
-
+    const runSegmentation = async () => {
+        if (!originalImage || !segmentationRef.current) return;
         setLoading(true);
-        setError(null);
-        setProgress('Loading AI model...');
 
-        try {
-            // Dynamically import the library
-            const { removeBackground: removeBg } = await import('@imgly/background-removal');
+        const img = new Image();
+        img.src = originalImage;
+        await img.decode();
 
-            setProgress('Processing image...');
-
-            // Convert data URL to blob
-            const response = await fetch(originalImage);
-            const blob = await response.blob();
-
-            // Remove background
-            const result = await removeBg(blob, {
-                progress: (key, current, total) => {
-                    const percentage = Math.round((current / total) * 100);
-                    setProgress(`${key}: ${percentage}%`);
-                },
-            });
-
-            // Convert result to data URL
-            const url = URL.createObjectURL(result);
-            setProcessedImage(url);
-            setProgress('');
-        } catch (err) {
-            console.error(err);
-            setError(err instanceof Error ? err.message : 'Failed to remove background');
-            setProgress('');
-        } finally {
-            setLoading(false);
+        if (canvasRef.current) {
+            canvasRef.current.width = img.width;
+            canvasRef.current.height = img.height;
         }
+
+        await segmentationRef.current.send({ image: img });
     };
 
     const downloadImage = () => {
         if (!processedImage) return;
-
         const link = document.createElement('a');
         link.href = processedImage;
-        link.download = 'removed-background.png';
-        document.body.appendChild(link);
+        link.download = 'no-bg.png';
         link.click();
-        document.body.removeChild(link);
     };
 
-    const reset = () => {
-        setOriginalImage(null);
-        setProcessedImage(null);
-        setError(null);
-        setProgress('');
-    };
-    if (user || (user as any)?.canChat === true)
-        return (
-            <div className="h-screen w-screen flex bg-gradient-to-br px-3 py-5 overflow-y-auto">
-                <div className="max-w-6xl h-[80%] mx-auto mt-10 flex flex-col">
-                    <div className="text-center mb-8">
-                        <h1 className="text-4xl font-bold text-slate-800 dark:text-gray-100 mb-2">Background Remover</h1>
-                        <p className="text-gray-600 dark:text-gray-100">Remove backgrounds from your images using AI - completely free!</p>
-                    </div>
+    return (
+        <div className="min-h-screen w-screen overflow-y-auto bg-slate-50 dark:bg-slate-950 p-6 flex flex-col items-center">
+            <div className="max-w-5xl w-full space-y-8">
+                {/* Header */}
+                <div className="text-center space-y-2">
+                    <h1 className="text-4xl font-extrabold text-slate-900 dark:text-white tracking-tight">
+                        AI Background Remover
+                    </h1>
+                    <p className="text-slate-500 dark:text-slate-400">
+                        Privacy-first: Processing happens entirely in your browser.
+                    </p>
+                </div>
 
-                    <div className=" border border-blue-800 rounded-lg p-4 mb-6 flex items-start gap-3">
-                        <Info className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
-                        <div className="text-sm text-blue-600 dark:text-blue-100">
-                            <strong>100% Client-Side Processing:</strong> Your images never leave your device.
-                            The AI model runs directly in your browser. First use may take longer as the model downloads (~50MB).
-                        </div>
-                    </div>
+                {!originalImage ? (
+                    /* Upload Zone */
+                    <div
+                        onDragEnter={handleDrag}
+                        onDragLeave={handleDrag}
+                        onDragOver={handleDrag}
+                        onDrop={handleDrop}
+                        className={`relative border-2 border-dashed rounded-3xl p-16 text-center transition-all duration-300 ${dragActive
+                            ? 'border-blue-500 bg-blue-500/10 scale-[1.01]'
+                            : 'border-slate-300 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm'
+                            }`}
+                    >
+                        <input
+                            type="file"
+                            id="file-upload"
+                            hidden
+                            accept="image/*"
+                            onChange={(e) => e.target.files?.[0] && processFile(e.target.files[0])}
+                        />
+                        <div className="flex flex-col items-center">
+                            <div className="w-20 h-20 bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center mb-6">
+                                <Upload className="w-10 h-10 text-blue-600" />
+                            </div>
+                            <h3 className="text-xl font-bold mb-2">Drag & Drop Image</h3>
+                            <p className="text-slate-500 mb-8">or click to browse from your computer</p>
 
-                    {!originalImage ? (
-                        <div
-                            className={` rounded-lg shadow-lg p-12 text-center transition-all ${dragActive ? 'border-4 border-purple-800 ' : 'border border-dashed border-blue-700'
-                                }`}
-                            onDragEnter={handleDrag}
-                            onDragLeave={handleDrag}
-                            onDragOver={handleDrag}
-                            onDrop={handleDrop}
-                        >
-                            <Upload className="w-16 h-16 mx-auto mb-4 text-gray-200" />
-                            <h3 className="text-xl font-semibold text-gray-700 dark:text-gray-100 mb-2">
-                                Drag and drop your image here
-                            </h3>
-                            <p className="text-gray-100 mb-6">or</p>
-                            <label className="inline-block">
-                                <input
-                                    type="file"
-                                    accept="image/*"
-                                    onChange={handleFileInput}
-                                    className="hidden"
-                                />
-                                <span className="px-6 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors cursor-pointer inline-flex items-center gap-2">
-                                    <ImageIcon className="w-5 h-5" />
-                                    Choose File
-                                </span>
+                            <label
+                                htmlFor="file-upload"
+                                className="px-8 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold cursor-pointer transition-all shadow-lg shadow-blue-500/25"
+                            >
+                                Choose Image
                             </label>
                         </div>
-                    ) : (
-                        <div className="border-blue-700 border  rounded-lg shadow-lg p-6 h-fit">
-                            <div className="flex justify-between items-center mb-6">
-                                <h3 className="text-xl font-semibold dark:text-gray-100 text-gray-800">
-                                    {processedImage ? 'Results' : 'Preview'}
-                                </h3>
-                                <button
-                                    onClick={reset}
-                                    className="p-2 text-gray-500 hover:text-gray-700 transition-colors"
-                                >
-                                    <X className="w-6 h-6" />
+                    </div>
+                ) : (
+                    /* Editor View */
+                    <div className="grid lg:grid-cols-2 gap-8 animate-in fade-in zoom-in duration-300">
+                        <div className="space-y-4">
+                            <div className="flex justify-between items-center">
+                                <span className="text-sm font-bold uppercase tracking-widest text-slate-400">Original</span>
+                                <button onClick={() => setOriginalImage(null)} className="text-slate-400 hover:text-red-500 transition-colors">
+                                    <X className="w-5 h-5" />
                                 </button>
                             </div>
+                            <div className="relative aspect-square rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-800 bg-slate-100 dark:bg-slate-900">
+                                <img src={originalImage} className="w-full h-full object-contain" alt="Original" />
+                            </div>
+                        </div>
 
-                            <div className="grid md:grid-cols-2 gap-6 mb-6">
-                                <div>
-                                    <h4 className="text-sm font-medium dark:text-gray-100 text-gray-600 mb-2">Original</h4>
-                                    <div className="relative aspect-square border-slate-50 bg-white border-dashed border-2 rounded-lg overflow-hidden">
-                                        <Image
-                                            src={originalImage}
-                                            alt="Original"
-                                            className="w-full h-full object-contain"
-                                        />
-                                    </div>
-                                </div>
-
-                                <div>
-                                    <h4 className="text-sm font-medium dark:text-gray-100 text-gray-600 mb-2">Processed</h4>
-                                    <div className="relative aspect-square border-slate-50 border-2 bg-white rounded-lg overflow-hidden bg-[linear-gradient(45deg,#e5e5e5_25%,transparent_25%,transparent_75%,#e5e5e5_75%,#e5e5e5),linear-gradient(45deg,#e5e5e5_25%,transparent_25%,transparent_75%,#e5e5e5_75%,#e5e5e5)] bg-[length:20px_20px] bg-[position:0_0,10px_10px]">
-                                        {processedImage ? (
-                                            <Image
-                                                src={processedImage}
-                                                alt="Processed"
-                                                className="w-full h-full object-contain"
-                                            />
+                        <div className="space-y-4">
+                            <div className="flex justify-between items-center">
+                                <span className="text-sm font-bold uppercase tracking-widest text-slate-400">Result</span>
+                                {processedImage && (
+                                    <button onClick={downloadImage} className="text-blue-500 hover:text-blue-600 flex items-center gap-1 text-sm font-bold">
+                                        <Download className="w-4 h-4" /> Save PNG
+                                    </button>
+                                )}
+                            </div>
+                            <div className="relative aspect-square rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 bg-[url('https://www.transparenttextures.com/patterns/checkerboard.png')]">
+                                {processedImage ? (
+                                    <img src={processedImage} className="w-full h-full object-contain" alt="Processed" />
+                                ) : (
+                                    <div className="flex flex-col items-center justify-center h-full text-slate-400">
+                                        {loading ? (
+                                            <>
+                                                <Loader2 className="w-12 h-12 animate-spin text-blue-500 mb-4" />
+                                                <p className="font-medium animate-pulse">Removing background...</p>
+                                            </>
                                         ) : (
-                                            <div className="flex items-center justify-center h-full text-gray-400">
-                                                {loading ? (
-                                                    <div className="text-center">
-                                                        <Loader2 className="w-12 h-12 animate-spin mx-auto mb-3" />
-                                                        {progress && (
-                                                            <p className="text-sm text-gray-600">{progress}</p>
-                                                        )}
-                                                    </div>
-                                                ) : (
-                                                    <ImageIcon className="w-12 h-12" />
-                                                )}
+                                            <div className="text-center px-6">
+                                                <ImageIcon className="w-12 h-12 mx-auto mb-4 opacity-20" />
+                                                <button
+                                                    onClick={runSegmentation}
+                                                    disabled={!modelLoaded}
+                                                    className="px-6 py-2 bg-slate-800 dark:bg-slate-700 text-white rounded-lg font-bold hover:bg-slate-700 disabled:opacity-50"
+                                                >
+                                                    {modelLoaded ? "Start AI Processing" : "Loading AI Engine..."}
+                                                </button>
                                             </div>
                                         )}
                                     </div>
-                                </div>
-                            </div>
-
-                            {error && (
-                                <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-4">
-                                    {error}
-                                </div>
-                            )}
-
-                            <div className="flex gap-4 justify-center">
-                                {!processedImage ? (
-                                    <button
-                                        onClick={removeBackground}
-                                        disabled={loading}
-                                        className="px-8 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed flex items-center gap-2"
-                                    >
-                                        {loading ? (
-                                            <>
-                                                <Loader2 className="w-5 h-5 animate-spin" />
-                                                Processing...
-                                            </>
-                                        ) : (
-                                            'Remove Background'
-                                        )}
-                                    </button>
-                                ) : (
-                                    <>
-                                        <button
-                                            onClick={downloadImage}
-                                            className="px-8 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center gap-2"
-                                        >
-                                            <Download className="w-5 h-5" />
-                                            Download
-                                        </button>
-                                        <button
-                                            onClick={reset}
-                                            className="px-8 py-3 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
-                                        >
-                                            Upload New Image
-                                        </button>
-                                    </>
                                 )}
                             </div>
                         </div>
-                    )}
-                </div>
+                    </div>
+                )}
+
+                {originalImage && (
+                    <div className="flex justify-center pt-4">
+                        <button
+                            onClick={() => { setOriginalImage(null); setProcessedImage(null); }}
+                            className="flex items-center gap-2 text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 font-medium transition-colors"
+                        >
+                            <RotateCcw className="w-4 h-4" /> Upload a different image
+                        </button>
+                    </div>
+                )}
             </div>
-        );
+
+            {/* Internal processing canvas */}
+            <canvas ref={canvasRef} className="hidden" />
+        </div>
+    );
 };
 
-export default BackgroundRemover;
+export default PureBackgroundRemover;
