@@ -220,7 +220,7 @@ const diffDot: Record<Difficulty, string> = {
 
 const ALL_CATS: string[] = ["ALL", "PHIL CONST", "RA 6713", "HUMAN RIGHTS", "ENVIRONMENT", "VERBAL-EN", "VERBAL-FIL", "NUMERICAL"];
 
-export default function CSEQuizApp(): JSX.Element {
+export default function CSEQuizApp() {
     const [currentIndex, setCurrentIndex] = useState<number>(0);
     const [selectedAnswer, setSelectedAnswer] = useState<number | null>(null);
     const [showResult, setShowResult] = useState<boolean>(false);
