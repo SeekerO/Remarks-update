@@ -99,9 +99,9 @@ Rules:
             const row = extractedData.find((r: any) => Number(r.day) === day);
             return {
                 Day: String(day).padStart(2, '0'),
-                'Morning In': row?.morningIn ?? '',
-                'Lunch': row?.lunchOut ?? '',
-                'Afternoon Out': row?.afternoonOut ?? '',
+                'Morning In': ensure24Hour(row?.morningIn ?? ''),
+                'Lunch': ensure24Hour(row?.lunchOut ?? ''),
+                'Afternoon Out': ensure24Hour(row?.afternoonOut ?? ''),
             };
         });
         const ws = XLSX.utils.json_to_sheet(rows);
@@ -133,6 +133,25 @@ Rules:
         } finally {
             setTransferring(false);
         }
+    };
+
+    const ensure24Hour = (timeStr: string): string => {
+        if (!timeStr || timeStr.includes(':') === false) return timeStr;
+
+        // Check if it contains AM/PM
+        const match = timeStr.match(/(\d{1,2}):(\d{2})\s*(AM|PM)?/i);
+        if (!match) return timeStr;
+
+        let [_, hours, minutes, modifier] = match;
+        let h = parseInt(hours, 10);
+
+        if (modifier) {
+            const amp = modifier.toUpperCase();
+            if (amp === 'PM' && h < 12) h += 12;
+            if (amp === 'AM' && h === 12) h = 0;
+        }
+
+        return `${h.toString().padStart(2, '0')}:${minutes}`;
     };
 
     // This a test feature DTR extractor, which is why it's in the admin section. It allows you to upload a photo of a DTR form, uses Groq's vision+language model to extract the time entries, and then optionally send them to Google Sheets or export as Excel. It's meant to be a demo of what's possible with vision+language models and custom APIs, and also a potential real tool for anyone who still has to deal with paper DTRs.
