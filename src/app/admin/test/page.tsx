@@ -15,6 +15,52 @@ const toBase64 = (file: File): Promise<{ base64: string; mediaType: string }> =>
         reader.readAsDataURL(file);
     });
 
+const enhanceImage = (file: File): Promise<{ base64: string; mediaType: string }> => {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            const img = new Image();
+            img.onload = () => {
+                const canvas = document.createElement('canvas');
+                const ctx = canvas.getContext('2d');
+                if (!ctx) return reject(new Error('Canvas context failed'));
+
+                canvas.width = img.width;
+                canvas.height = img.height;
+
+                // 1. Draw original image
+                ctx.drawImage(img, 0, 0);
+
+                // 2. Get image data for manipulation
+                const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                const data = imageData.data;
+
+                for (let i = 0; i < data.length; i += 4) {
+                    // Calculate Grayscale (Luminance)
+                    const avg = 0.3 * data[i] + 0.59 * data[i + 1] + 0.11 * data[i + 2];
+
+                    // Apply a Threshold (if avg > 128 then white, else black)
+                    // This creates a "Scan" look. Adjust 140 for sensitivity.
+                    const threshold = avg > 140 ? 255 : 0;
+
+                    data[i] = threshold;     // Red
+                    data[i + 1] = threshold;   // Green
+                    data[i + 2] = threshold;   // Blue
+                }
+
+                ctx.putImageData(imageData, 0, 0);
+
+                // Return as high-quality JPEG (smaller than PNG for Vercel limits)
+                const base64 = canvas.toDataURL('image/jpeg', 0.8).split(',')[1];
+                resolve({ base64, mediaType: 'image/jpeg' });
+            };
+            img.src = e.target?.result as string;
+        };
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+    });
+};
+
 const TimeCardExtractor: React.FC = () => {
     const [loading, setLoading] = useState(false);
     const [statusMsg, setStatusMsg] = useState('');
@@ -39,6 +85,9 @@ const TimeCardExtractor: React.FC = () => {
 
         try {
             const { base64, mediaType } = await toBase64(file);
+            // const { base64, mediaType } = await enhanceImage(file);
+            // setPreviewUrl(`data:${mediaType};base64,${base64}`);
+
 
             const response = await fetch('/api/dtr', {
                 method: 'POST',
@@ -59,7 +108,7 @@ Rules:
 - "morningIn" = first column (arrival time)
 - "lunchOut" = middle break time (Morning Out or Afternoon In — same value, just pick one)
 - "afternoonOut" = last column (departure time)
-- Include ALL 31 days; use "" for empty fields
+- Include ALL 31 DAYS; use "" for empty fields
 - day must be a number (1–31)`
                             }
                         ]
