@@ -222,6 +222,14 @@ export const navItems: NavItem[] = [
         requiredRole: "admin",
         sublinks: [],
       },
+      {
+        name: "Test Ground",
+        href: "/admin/test",
+        icon: RiAdminFill,
+        active: true,
+        requiredRole: "admin",
+        sublinks: [],
+      }
     ],
   },
 ];

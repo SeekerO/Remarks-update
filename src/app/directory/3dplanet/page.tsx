@@ -1,7 +1,9 @@
 "use client";
 
-import { useState, useRef, useEffect, useCallback, useMemo } from "react";
+import { useState, useRef, useEffect, useCallback, useMemo, type ReactNode } from "react";
+import { Building2, Globe, MapPin } from "lucide-react";
 import directoryData from "../fieldoffice/directory.json";
+import test from "node:test";
 
 // ─── TYPES ────────────────────────────────────────────────────────────────────
 
@@ -71,6 +73,10 @@ const REGION_LABEL_TO_DIRECTORY_KEY: Record<string, string> = {
     "BARMM": "barmm",
 };
 
+const DIRECTORY_KEY_TO_REGION_LABEL: Record<string, string> = Object.fromEntries(
+    Object.entries(REGION_LABEL_TO_DIRECTORY_KEY).map(([label, key]) => [key.toLowerCase(), label])
+);
+
 // ─── UTILS ────────────────────────────────────────────────────────────────────
 
 function decodeTopology(topo: Topology, objectKey: string): Omit<DecodedFeature, "regionLabel" | "color">[] {
@@ -117,10 +123,14 @@ function pointInPolygon(px: number, py: number, ring: [number, number][]) {
 
 export default function PhilippineMap() {
     const canvasRef = useRef<HTMLCanvasElement>(null);
+    const mapContainerRef = useRef<HTMLDivElement>(null);
+    const tooltipRef = useRef<HTMLDivElement>(null);
+    const searchContainerRef = useRef<HTMLDivElement>(null);
+    const zoomAnimRef = useRef<number | null>(null);
     const [allFeatures, setAllFeatures] = useState<DecodedFeature[]>([]);
     const [hoveredId, setHoveredId] = useState<number | null>(null);
     const [tooltip, setTooltip] = useState<{ data: DecodedFeature; x: number; y: number } | null>(null);
-    const [lockedTooltipId, setLockedTooltipId] = useState<number | null>(null);
+    const [selectedFeatureId, setSelectedFeatureId] = useState<number | null>(null);
     const [transform, setTransform] = useState({ x: 0, y: 0, scale: 1 });
     const [loading, setLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState("");
@@ -128,6 +138,42 @@ export default function PhilippineMap() {
 
     const isDragging = useRef(false);
     const lastPos = useRef({ x: 0, y: 0 });
+    const dragAnimRef = useRef<number | null>(null);
+    const pendingDragDelta = useRef({ dx: 0, dy: 0 });
+
+    const cancelZoomAnimation = useCallback(() => {
+        if (zoomAnimRef.current !== null) {
+            cancelAnimationFrame(zoomAnimRef.current);
+            zoomAnimRef.current = null;
+        }
+    }, []);
+
+    const animateToTransform = useCallback((target: { x: number; y: number; scale: number }, durationMs = 650) => {
+        cancelZoomAnimation();
+
+        const from = transform;
+        const start = performance.now();
+
+        const easeInOutCubic = (t: number) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
+
+        const step = (now: number) => {
+            const t = Math.min(1, (now - start) / durationMs);
+            const e = easeInOutCubic(t);
+            setTransform({
+                x: from.x + (target.x - from.x) * e,
+                y: from.y + (target.y - from.y) * e,
+                scale: from.scale + (target.scale - from.scale) * e,
+            });
+
+            if (t < 1) {
+                zoomAnimRef.current = requestAnimationFrame(step);
+            } else {
+                zoomAnimRef.current = null;
+            }
+        };
+
+        zoomAnimRef.current = requestAnimationFrame(step);
+    }, [cancelZoomAnimation, transform]);
 
     const handleRedirect = ({ region, city }: { region: string; city: string }) => {
         const directoryRegionKey = REGION_LABEL_TO_DIRECTORY_KEY[region] ?? region;
@@ -135,6 +181,10 @@ export default function PhilippineMap() {
         const formattedCity = city.toLowerCase().replace(/\s+/g, "");
         const officeCaps = formattedCity === "caraga" || formattedCity === "barmm" ? "Offices" : "offices";
         const url = `https://comelec.gov.ph/?r=ContactInformation/FieldOffices/CityMunicipalOffices/${formattedRegion + officeCaps}#${formattedCity}`;
+
+
+        if (region.toLowerCase() === "ncr")
+            return window.open("https://comelec.gov.ph/?r=ContactInformation/FieldOffices/NCROffices", "_blank", "noopener,noreferrer");
         window.open(url, "_blank", "noopener,noreferrer");
     };
 
@@ -213,11 +263,16 @@ export default function PhilippineMap() {
 
         const normalizedSearch = normalize(searchName);
 
+        // If the search term is a directory-style region key (e.g., "region1", "caraga"),
+        // translate it to the human-readable region label used in the TopoJSON data.
+        const mappedRegionLabel = DIRECTORY_KEY_TO_REGION_LABEL[normalizedSearch];
+        const regionSearchTerm = mappedRegionLabel ? mappedRegionLabel.toLowerCase() : searchName;
+
         // 2. Identify Regional Targets (e.g., if user searched "NCR" or "BARMM")
         // Compares against the regionLabel assigned during the TopoJSON decoding
         const regionalFeatures = allFeatures.filter(f =>
-            f.regionLabel.toLowerCase().includes(searchName) ||
-            normalize(f.regionLabel).includes(normalizedSearch)
+            f.regionLabel.toLowerCase().includes(regionSearchTerm) ||
+            normalize(f.regionLabel).includes(regionSearchTerm)
         );
 
         // 3. Identify Specific Location Targets (e.g., "Manila")
@@ -254,15 +309,30 @@ export default function PhilippineMap() {
             const isRegionZoom = regionalFeatures.length > 1;
             const targetScale = isRegionZoom ? 2.5 : 6;
 
-            setTransform({
+            const targetTransform = {
                 scale: targetScale,
                 x: (CANVAS_W / 2 / targetScale) - px,
                 y: (CANVAS_H / 2 / targetScale) - py
-            });
+            };
 
-            // Update the highlight: 
-            // If it's a specific city, highlight it. If it's a region, clear the highlight.
-            setHoveredId(specificFeature ? specificFeature.id : null);
+            animateToTransform(targetTransform);
+
+            // Lock highlight & tooltip on the selected feature until user clicks outside
+            const featureForTooltip = specificFeature ?? targets[0];
+            if (featureForTooltip) {
+                setSelectedFeatureId(featureForTooltip.id);
+                setHoveredId(featureForTooltip.id);
+
+                const sx = (px + targetTransform.x) * targetTransform.scale;
+                const sy = (py + targetTransform.y) * targetTransform.scale;
+
+                const rect = canvasRef.current?.getBoundingClientRect();
+                if (rect) {
+                    const clientX = rect.left + sx * (rect.width / CANVAS_W);
+                    const clientY = rect.top + sy * (rect.height / CANVAS_H);
+                    setTooltip({ x: clientX, y: clientY, data: featureForTooltip });
+                }
+            }
 
             // Close search UI
             setIsSearchOpen(false);
@@ -270,8 +340,10 @@ export default function PhilippineMap() {
         }
     };
 
+
     const handleWheel = (e: React.WheelEvent<HTMLCanvasElement>) => {
         e.preventDefault();
+        cancelZoomAnimation();
         const rect = canvasRef.current?.getBoundingClientRect();
         if (!rect) return;
         const mx = (e.clientX - rect.left) * (CANVAS_W / rect.width);
@@ -326,16 +398,60 @@ export default function PhilippineMap() {
 
     useEffect(() => { draw(); }, [draw]);
 
-    const handleMouseMove = (e: React.MouseEvent<HTMLCanvasElement>) => {
+    const handleCanvasClick = (e: React.MouseEvent<HTMLCanvasElement>) => {
         const rect = canvasRef.current?.getBoundingClientRect();
         if (!rect) return;
+
+        const mx = (e.clientX - rect.left) * (CANVAS_W / rect.width);
+        const my = (e.clientY - rect.top) * (CANVAS_H / rect.height);
+        const hit = allFeatures.find(f =>
+            f.rings.some(r =>
+                pointInPolygon(
+                    mx,
+                    my,
+                    r.map(p => project(p[0], p[1])) as [number, number][]
+                )
+            )
+        );
+
+        if (hit) {
+            setSelectedFeatureId(hit.id);
+            setHoveredId(hit.id);
+            setTooltip({ x: e.clientX, y: e.clientY, data: hit });
+        }
+    };
+
+    const handleMouseMove = (e: React.MouseEvent<HTMLCanvasElement>) => {
         if (isDragging.current) {
-            setTransform(p => ({ ...p, x: p.x + (e.clientX - lastPos.current.x) / transform.scale, y: p.y + (e.clientY - lastPos.current.y) / transform.scale }));
+            const dx = e.clientX - lastPos.current.x;
+            const dy = e.clientY - lastPos.current.y;
             lastPos.current = { x: e.clientX, y: e.clientY };
+
+            pendingDragDelta.current = {
+                dx: pendingDragDelta.current.dx + dx,
+                dy: pendingDragDelta.current.dy + dy,
+            };
+
+            if (dragAnimRef.current === null) {
+                dragAnimRef.current = requestAnimationFrame(() => {
+                    const { dx: totalDx, dy: totalDy } = pendingDragDelta.current;
+                    pendingDragDelta.current = { dx: 0, dy: 0 };
+                    dragAnimRef.current = null;
+
+                    setTransform(p => ({
+                        ...p,
+                        x: p.x + totalDx / p.scale,
+                        y: p.y + totalDy / p.scale,
+                    }));
+                });
+            }
+
             return;
         }
 
-        if (lockedTooltipId !== null) {
+        const rect = canvasRef.current?.getBoundingClientRect();
+        if (!rect) return;
+        if (selectedFeatureId !== null) {
             return;
         }
 
@@ -347,67 +463,213 @@ export default function PhilippineMap() {
     };
 
     return (
-        <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center p-6 select-none font-sans overflow-hidden">
+        <div
+            className="min-h-screen w-screen bg-slate-950 flex flex-col items-center justify-center p-6 select-none font-sans overflow-hidden"
+            onMouseDown={e => {
+                const t = e.target as Node;
+                const insideMap = mapContainerRef.current?.contains(t) ?? false;
+                const insideTooltip = tooltipRef.current?.contains(t) ?? false;
+                const insideSearch = searchContainerRef.current?.contains(t) ?? false;
+                if (!insideMap && !insideTooltip && !insideSearch) {
+                    setSelectedFeatureId(null);
+                    setHoveredId(null);
+                    setTooltip(null);
+                    setIsSearchOpen(false);
+                }
+            }}
+        >
             <header className="mb-8 text-center">
-                <h1 className="text-5xl font-black text-white tracking-tighter uppercase italic">PH <span className="text-sky-400">Explorer</span></h1>
+                <h1 className="text-5xl font-black text-white tracking-tighter uppercase italic">PH <span className="text-sky-400">DIRECTORY</span></h1>
             </header>
+            <div className="flex  gap-5 items-center justify-center">
 
-            {/* Directory Search */}
-            <div className="relative w-full max-w-[460px] mb-6 z-50">
-                <div className="bg-slate-900 border border-slate-800 rounded-2xl px-4 py-3 flex items-center">
-                    <input
-                        className="bg-transparent text-white outline-none w-full text-sm"
-                        placeholder="Search from Directory..."
-                        value={searchQuery}
-                        onChange={e => { setSearchQuery(e.target.value); setIsSearchOpen(true); }}
-                    />
-                </div>
-                {isSearchOpen && searchQuery.length > 1 && (
-                    <div className="absolute top-full w-full mt-2 bg-slate-900 border border-slate-800 rounded-xl max-h-48 overflow-y-auto">
-                        {searchOptions.filter(o => o.name.toLowerCase().includes(searchQuery.toLowerCase())).map((o, i) => (
-                            <button key={i} onClick={() => handleFocus(o.name)} className="w-full text-left p-3 text-sm text-slate-300 hover:bg-sky-500 hover:text-white capitalize border-b border-white/5 last:border-none">
-                                {o.name} <span className="text-[9px] opacity-40 float-right mt-1">{o.region}</span>
-                            </button>
-                        ))}
+                <aside>
+                    <div ref={mapContainerRef} className="relative rounded-[2.5rem] border border-slate-800 bg-slate-900 shadow-2xl overflow-hidden cursor-move">
+                        <div ref={mapContainerRef}>
+                            <canvas
+
+                                ref={canvasRef}
+                                width={CANVAS_W}
+                                height={CANVAS_H}
+                                onWheel={handleWheel}
+                                onMouseDown={e => {
+                                    isDragging.current = true;
+                                    lastPos.current = { x: e.clientX, y: e.clientY };
+                                    setTooltip(null);
+
+                                }}
+                                onMouseMove={handleMouseMove}
+                                onMouseUp={() => {
+                                    isDragging.current = false;
+                                }}
+                                onMouseLeave={() => {
+                                    isDragging.current = false;
+                                    if (!selectedFeatureId) setTooltip(null);
+                                }}
+                                onClick={e => {
+                                    handleCanvasClick(e);
+                                }}
+                            />
+                        </div>
+
+                        <div>
+                            <div className="absolute top-6 left-6 px-4 py-1.5 bg-slate-950/60 backdrop-blur-xl rounded-full border border-white/10 text-[10px] text-sky-400 font-black tracking-widest">
+                                ZOOM: {transform.scale.toFixed(1)}x
+                            </div>
+                            <div>
+
+                            </div>
+                        </div>
                     </div>
-                )}
-            </div>
 
-            <div className="relative rounded-[2.5rem] border border-slate-800 bg-slate-900 shadow-2xl overflow-hidden cursor-move">
-                <canvas
-                    ref={canvasRef} width={CANVAS_W} height={CANVAS_H}
-                    onWheel={handleWheel}
-                    onMouseDown={e => { isDragging.current = true; lastPos.current = { x: e.clientX, y: e.clientY }; }}
-                    onMouseMove={handleMouseMove}
-                    onMouseUp={() => isDragging.current = false}
-                    onMouseLeave={() => { isDragging.current = false; setLockedTooltipId(null); setTooltip(null); }}
-                />
-                <div className="absolute top-6 left-6 px-4 py-1.5 bg-slate-950/60 backdrop-blur-xl rounded-full border border-white/10 text-[10px] text-sky-400 font-black tracking-widest">
-                    ZOOM: {transform.scale.toFixed(1)}x
-                </div>
-            </div>
-
-            {tooltip && (
-                <div className="fixed z-50 transform -translate-x-1/2 -translate-y-[115%]" style={{ left: tooltip.x, top: tooltip.y }}>
-                    <div className="bg-slate-900/95 border border-sky-500/40 backdrop-blur-2xl p-5 rounded-3xl shadow-2xl min-w-[220px] text-white pointer-events-auto">
-                        <span className="text-sky-400 font-black text-[10px] uppercase tracking-[0.2em]">{tooltip.data.regionLabel}</span>
-                        <h3 className="text-2xl font-black mt-1 tracking-tight">{tooltip.data.properties.adm2_en}</h3>
-                        <button
-                            className="mt-3 inline-flex items-center rounded-full bg-sky-500 px-3 py-1 text-[11px] font-semibold text-slate-950 hover:bg-sky-400 transition"
-                            onClick={e => {
-                                e.stopPropagation();
-                                setLockedTooltipId(tooltip.data.id);
-                                handleRedirect({
-                                    region: tooltip.data.regionLabel,
-                                    city: tooltip.data.properties.adm2_en,
-                                });
-                            }}
+                    {tooltip && (
+                        <div
+                            className="fixed z-50 transform -translate-x-1/2 -translate-y-[110%] transition-all duration-200 ease-out"
+                            style={{ left: tooltip.x, top: tooltip.y }}
+                            ref={tooltipRef}
                         >
-                            View regional offices
-                        </button>
+                            {/* Main Container with Glassmorphism */}
+                            <div className="relative group bg-slate-950/80 border border-white/10 backdrop-blur-xl p-1 rounded-[2rem] shadow-[0_20px_50px_rgba(0,0,0,0.5)] min-w-[240px] overflow-hidden">
+
+                                {/* Subtle Inner Glow Effect */}
+                                <div className="absolute inset-0 bg-gradient-to-br from-sky-500/10 via-transparent to-transparent opacity-50" />
+
+                                <div className="relative p-5">
+                                    {/* Header Section */}
+                                    <div className="flex flex-col gap-0.5">
+                                        <span className="flex items-center gap-2">
+                                            <span className="h-1 w-1 rounded-full bg-sky-400 animate-pulse" />
+                                            <span className="text-sky-400/80 font-bold text-[10px] uppercase tracking-[0.25em]">
+                                                {tooltip.data.regionLabel}
+                                            </span>
+                                        </span>
+                                        <h3 className="text-2xl font-semibold text-white tracking-tight leading-tight">
+                                            {tooltip.data.properties.adm2_en}
+                                        </h3>
+                                    </div>
+
+                                    {/* Action Section */}
+                                    <div className="mt-6 pt-4 border-t border-white/5">
+                                        <button
+                                            className="group/btn relative w-full overflow-hidden rounded-2xl bg-white px-4 py-2.5 text-sm font-bold text-slate-950 transition-all active:scale-95"
+                                            onClick={(e) => {
+                                                handleRedirect({
+                                                    region: tooltip.data.regionLabel,
+                                                    city: tooltip.data.properties.adm2_en,
+                                                });
+                                            }}
+                                        >
+                                            <span className="relative z-10 flex items-center justify-center gap-2">
+                                                View Regional Offices
+                                                <svg
+                                                    className="w-4 h-4 transition-transform group-hover/btn:translate-x-1"
+                                                    fill="none" viewBox="0 0 24 24" stroke="currentColor"
+                                                >
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                                                </svg>
+                                            </span>
+                                            {/* Button Hover Shine */}
+                                            <div className="absolute inset-0 bg-gradient-to-r from-sky-400 to-blue-500 opacity-0 group-hover/btn:opacity-100 transition-opacity" />
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Tooltip Tail / Indicator */}
+                            <div className="absolute left-1/2 -bottom-2 -translate-x-1/2 w-4 h-4 bg-slate-950/80 rotate-45 border-r border-b border-white/10" />
+                        </div>
+                    )}
+                </aside>
+
+
+
+                <main className="flex flex-col gap-2 h-full items-center p-4 overflow-y-auto">
+
+                    {/* Directory Search */}
+                    <div ref={searchContainerRef} className="relative w-full max-w-[460px] mb-4 z-50">
+                        <div className="bg-slate-900 border border-slate-800 rounded-2xl px-4 py-3 flex items-center">
+                            <input
+                                className="bg-transparent text-white outline-none w-full text-sm"
+                                placeholder="Search from Directory..."
+                                value={searchQuery}
+                                onChange={e => { setSearchQuery(e.target.value); setIsSearchOpen(true); }}
+                                onKeyDown={e => {
+                                    if (e.key === "Enter") {
+                                        const term = searchQuery.toLowerCase();
+                                        const firstMatch = searchOptions.find(o => o.name.toLowerCase().includes(term));
+                                        if (firstMatch) {
+                                            handleFocus(firstMatch.name);
+                                            setIsSearchOpen(false);
+                                        }
+                                    }
+                                }}
+                            />
+                        </div>
+                        {isSearchOpen && searchQuery.length > 1 && (
+                            <div className="absolute top-full w-full mt-2 bg-slate-900 border border-slate-800 rounded-xl max-h-48 overflow-y-auto">
+                                {searchOptions.filter(o => o.name.toLowerCase().includes(searchQuery.toLowerCase())).map((o, i) => (
+                                    <button
+                                        key={i}
+                                        onClick={e => {
+                                            e.stopPropagation()
+                                            handleFocus(o.name.toLowerCase());
+                                            setSearchQuery(o.name);
+
+                                        }}
+                                        className="w-full text-left p-3 text-sm text-slate-300 hover:bg-sky-500 hover:text-white capitalize border-b border-white/5 last:border-none"
+                                    >
+                                        {o.name} <span className="text-[9px] opacity-40 float-right mt-1">{o.region}</span>
+                                    </button>
+                                ))}
+                            </div>
+                        )}
                     </div>
-                </div>
-            )}
+
+                    <div className="w-[80%] h-[1px] bg-slate-400" />
+
+                    <h3 className="text-lg font-bold text-white tracking-tight leading-tight">COMELEC OFFICES</h3>
+
+                    <div className="w-full max-w-[460px] mb-6 grid grid-cols-1 gap-3">
+                        <QuickLink
+                            icon={<Building2 size={18} />}
+                            label="Main Office"
+                            href={directoryData.contactinformation.mainoffice[0].directory}
+                            color="bg-blue-600"
+                        />
+                        <QuickLink
+                            icon={<Globe size={18} />}
+                            label="Regional Offices"
+                            href={directoryData.contactinformation.regionaloffices[0].href}
+                            color="bg-emerald-600"
+                        />
+                        <QuickLink
+                            icon={<MapPin size={18} />}
+                            label="NCR Offices"
+                            href={directoryData.contactinformation.ncroffices[0].href}
+                            color="bg-purple-600"
+                        />
+                    </div>
+
+                </main>
+
+            </div>
+
         </div>
+    );
+}
+
+function QuickLink({ icon, label, href, color }: { icon: ReactNode; label: string; href: string; color: string }) {
+    return (
+        <a
+            href={href}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center justify-between px-3 py-3 bg-slate-900 border border-slate-800 rounded-2xl hover:border-sky-500 hover:bg-slate-900/80 transition-all group"
+        >
+            <div className="flex items-center gap-3">
+                <div className={`p-2 rounded-xl ${color} text-white shadow-lg`}>{icon}</div>
+                <span className="font-semibold text-slate-100 text-xs">{label}</span>
+            </div>
+        </a>
     );
 }

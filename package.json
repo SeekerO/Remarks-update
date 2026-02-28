@@ -45,6 +45,8 @@
     "framer-motion": "^12.23.25",
     "fuzzball": "^2.2.2",
     "glob": "^10.4.5",
+    "google-auth-library": "^10.6.1",
+    "google-spreadsheet": "^5.2.0",
     "googleapis": "^152.0.0",
     "gsap": "^3.14.1",
     "hamburger-react": "^2.5.2",
