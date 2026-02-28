@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 
 const toBase64 = (file: File): Promise<{ base64: string; mediaType: string }> =>
     new Promise((resolve, reject) => {
@@ -71,6 +71,14 @@ const TimeCardExtractor: React.FC = () => {
     const [sheetName, setSheetName] = useState('Sheet1');
     const [transferring, setTransferring] = useState(false);
     const [transferMsg, setTransferMsg] = useState('');
+
+
+    const [date, setDate] = useState(() => {
+        const now = new Date();
+        return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+    });
+    const [employeeName, setEmployeeName] = useState('');
+    const [supervisorName, setSupervisorName] = useState('');
 
     const processImage = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
@@ -172,7 +180,7 @@ Rules:
             const res = await fetch('/api/dtr/transfer', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ rows: extractedData, sheetId, sheetName }),
+                body: JSON.stringify({ rows: extractedData, sheetId, sheetName, date: date, name: employeeName, supervisor: supervisorName }),
             });
             const result = await res.json();
             if (!res.ok) throw new Error(result.error ?? 'Unknown error');
@@ -201,6 +209,24 @@ Rules:
         }
 
         return `${h.toString().padStart(2, '0')}:${minutes}`;
+    };
+
+    useEffect(() => {
+        const saved = localStorage.getItem('dtr-preset');
+        if (saved) {
+            const { name, supervisor, sheetId, sheetName } = JSON.parse(saved);
+            setEmployeeName(name);
+            setSupervisorName(supervisor);
+            setSheetId(sheetId);
+            setSheetName(sheetName);
+        }
+    }, []);
+
+    // 2. Save current inputs to localStorage
+    const savePreset = () => {
+        const preset = { name: employeeName, supervisor: supervisorName, sheetId, sheetName };
+        localStorage.setItem('dtr-preset', JSON.stringify(preset));
+        alert('✅ Information saved to browser!');
     };
 
     // This a test feature DTR extractor, which is why it's in the admin section. It allows you to upload a photo of a DTR form, uses Groq's vision+language model to extract the time entries, and then optionally send them to Google Sheets or export as Excel. It's meant to be a demo of what's possible with vision+language models and custom APIs, and also a potential real tool for anyone who still has to deal with paper DTRs.
@@ -251,8 +277,23 @@ Rules:
                         {/* Google Sheets config */}
                         {extractedData.length > 0 && (
                             <div className="border border-slate-700 rounded-lg p-4 space-y-3">
-                                <p className="text-xs text-slate-400 uppercase tracking-widest mb-1">Send to Google Sheets</p>
 
+                                <div className='flex flex-wrap justify-between items-center'>
+                                    <p className="text-xs text-slate-400 uppercase tracking-widest mb-1">Send to Google Sheets</p>
+                                    <button
+                                        onClick={savePreset}
+                                        className="group relative flex items-center gap-2 overflow-hidden rounded-md border border-blue-500/30 bg-blue-600 px-4 py-2 text-xs font-medium text-white shadow-lg transition-all hover:bg-blue-700 hover:shadow-blue-500/20 active:scale-95"
+                                    >
+                                        <svg
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            className="h-3 w-3 transition-transform group-hover:rotate-12"
+                                            fill="none" viewBox="0 0 24 24" stroke="currentColor"
+                                        >
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
+                                        </svg>
+                                        <span>Save Preset</span>
+                                    </button>
+                                </div>
                                 <div>
                                     <label className="block text-xs text-slate-500 mb-1">Spreadsheet ID</label>
                                     <input
@@ -271,6 +312,39 @@ Rules:
                                         type="text"
                                         value={sheetName}
                                         onChange={e => setSheetName(e.target.value)}
+                                        placeholder="Sheet1"
+                                        className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white placeholder-slate-600 focus:outline-none focus:border-blue-500 transition-colors"
+                                    />
+                                </div>
+
+                                <div>
+                                    <label className="block text-xs text-slate-500 mb-1">Set Date</label>
+                                    <input
+                                        type="text"
+                                        value={date}
+                                        onChange={e => setDate(e.target.value)}
+                                        placeholder="Sheet1"
+                                        className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white placeholder-slate-600 focus:outline-none focus:border-blue-500 transition-colors"
+                                    />
+                                </div>
+
+                                <div>
+                                    <label className="block text-xs text-slate-500 mb-1">Set Employee Name</label>
+                                    <input
+                                        type="text"
+                                        value={employeeName}
+                                        onChange={e => setEmployeeName(e.target.value)}
+                                        placeholder="Sheet1"
+                                        className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white placeholder-slate-600 focus:outline-none focus:border-blue-500 transition-colors"
+                                    />
+                                </div>
+
+                                <div>
+                                    <label className="block text-xs text-slate-500 mb-1">Set Director Name</label>
+                                    <input
+                                        type="text"
+                                        value={supervisorName}
+                                        onChange={e => setSupervisorName(e.target.value)}
                                         placeholder="Sheet1"
                                         className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white placeholder-slate-600 focus:outline-none focus:border-blue-500 transition-colors"
                                     />
