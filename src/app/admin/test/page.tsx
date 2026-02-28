@@ -135,6 +135,8 @@ Rules:
         }
     };
 
+    // This a test feature DTR extractor, which is why it's in the admin section. It allows you to upload a photo of a DTR form, uses Groq's vision+language model to extract the time entries, and then optionally send them to Google Sheets or export as Excel. It's meant to be a demo of what's possible with vision+language models and custom APIs, and also a potential real tool for anyone who still has to deal with paper DTRs.
+
     return (
         <div style={{ fontFamily: "'IBM Plex Mono', monospace" }} className="w-screen min-h-screen bg-slate-950 text-slate-100 p-8">
             <div className="w-full h-full mx-auto overflow-y-auto">
