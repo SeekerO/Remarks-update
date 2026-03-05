@@ -229,6 +229,14 @@ export const navItems: NavItem[] = [
         active: true,
         requiredRole: "admin",
         sublinks: [],
+      },
+      {
+        name: "Time Log",
+        href: "/admin/timelog",
+        icon: RiAdminFill,
+        active: true,
+        requiredRole: "admin",
+        sublinks: [],
       }
     ],
   },
