@@ -103,7 +103,7 @@ const ConfirmModal: React.FC<{
     return (
         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4" onClick={onCancel}>
             <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
-            <div className="relative bg-white dark:bg-[#111118] rounded-t-2xl mx-10 sm:rounded-2xl border border-slate-200 dark:border-white/[0.1] shadow-2xl w-full sm:max-w-sm p-6 pb-10 flex flex-col gap-5"
+            <div className="relative bg-white dark:bg-[#111118] rounded-t-2xl mx-5 sm:rounded-2xl border border-slate-200 dark:border-white/[0.1] shadow-2xl w-full sm:max-w-sm p-6 pb-10 flex flex-col gap-5"
                 onClick={e => e.stopPropagation()}>
                 <div className="text-center">
                     <div className="text-3xl mb-2">{icons[field]}</div>
