@@ -883,7 +883,7 @@ const TimeLogPanel: React.FC = () => {
 const DTRPage: React.FC = () => {
     const [tab, setTab] = useState<'logger' | 'timelog'>('logger');
     return (
-        <div className="font-syne min-h-screen w-full text-slate-800 dark:text-slate-100 transition-colors duration-300">
+        <div className="font-syne min-h-screen w-full overflow-y-auto text-slate-800 dark:text-slate-100 transition-colors duration-300">
             <div className="max-w-3xl mx-auto px-3 sm:px-6 py-4 sm:py-8 pb-16 sm:pb-24">
 
                 {/* Header */}
