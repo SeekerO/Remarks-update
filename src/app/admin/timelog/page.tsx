@@ -111,12 +111,12 @@ const ConfirmModal: React.FC<{
                     <h2 className="font-syne text-lg font-bold text-slate-800 dark:text-slate-100">Confirm {FIELD_LABELS[field]}</h2>
                     <p className="font-dm-mono text-xs text-slate-400 dark:text-slate-500 mt-1">Adjust time if needed, then confirm</p>
                 </div>
-                <div className=' flex flex-col'>
+                <div className=' flex flex-col justify-center items-center'>
                     <label className="font-dm-mono block text-[10px] uppercase tracking-widest mb-1.5 text-slate-400 dark:text-slate-500">Time (24h)</label>
                     <input type="time" value={time} onChange={e => onTimeChange(e.target.value)}
-                        className="font-dm-mono  border rounded-xl px-4 py-3 text-center text-2xl tabular-nums transition-colors bg-slate-50 border-slate-200 text-slate-800 focus:border-indigo-400 focus:outline-none dark:bg-white/[0.04] dark:border-white/[0.08] dark:text-slate-100 dark:focus:border-indigo-500/50 " />
+                        className="font-dm-mono  border rounded-xl min-w-full max-w-[350px] px-4 py-3 text-center text-2xl tabular-nums transition-colors bg-slate-50 border-slate-200 text-slate-800 focus:border-indigo-400 focus:outline-none dark:bg-white/[0.04] dark:border-white/[0.08] dark:text-slate-100 dark:focus:border-indigo-500/50 " />
                 </div>
-                <div className="flex  flex-wrap gap-3">
+                <div className="flex  gap-3">
                     <button onClick={onCancel}
                         className="flex-1 py-2.5 rounded-xl font-dm-mono text-sm border text-slate-600 border-slate-200 hover:bg-slate-50 dark:border-white/[0.1] dark:text-slate-400 dark:hover:bg-white/[0.04] transition-colors">
                         Cancel
