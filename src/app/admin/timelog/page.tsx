@@ -110,7 +110,7 @@ const ConfirmModal: React.FC<{
                     <h2 className="font-syne text-lg font-bold text-slate-800 dark:text-slate-100">Confirm {FIELD_LABELS[field]}</h2>
                     <p className="font-dm-mono text-xs text-slate-400 dark:text-slate-500 mt-1">Adjust time if needed, then confirm</p>
                 </div>
-                <div className='w-full'>
+                <div className='w-full flex flex-col'>
                     <label className="font-dm-mono block text-[10px] uppercase tracking-widest mb-1.5 text-slate-400 dark:text-slate-500">Time (24h)</label>
                     <input type="time" value={time} onChange={e => onTimeChange(e.target.value)}
                         className="font-dm-mono w-full border rounded-xl px-4 py-3 text-center text-2xl tabular-nums transition-colors bg-slate-50 border-slate-200 text-slate-800 focus:border-indigo-400 focus:outline-none dark:bg-white/[0.04] dark:border-white/[0.08] dark:text-slate-100 dark:focus:border-indigo-500/50 " />

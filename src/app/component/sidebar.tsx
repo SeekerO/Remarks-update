@@ -32,7 +32,7 @@ const footerBorderClasses = "border-t border-gray-200/50 dark:border-gray-700/50
 // --- Sidebar Component ---
 
 const Sidebar: React.FC = () => {
-    const [isCollapsed, setIsCollapsed] = useState(false);
+    const [isCollapsed, setIsCollapsed] = useState(true);
     const pathname = usePathname();
     const [isSettings, setIsSettings] = useState(false);
     const settingsRef = useRef<HTMLDivElement>(null);
