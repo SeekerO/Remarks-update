@@ -85,8 +85,8 @@ const LiveClock: React.FC = () => {
     }, []);
     return (
         <div className="text-center select-none">
-            <div className="font-dm-mono text-4xl sm:text-5xl font-bold tabular-nums tracking-tight text-slate-800 dark:text-slate-100">{time}</div>
-            <div className="font-dm-mono text-xs mt-1 text-slate-400 dark:text-slate-500">{date}</div>
+            <div className="font-dm-mono text-3xl sm:text-5xl font-bold tabular-nums tracking-tight text-slate-800 dark:text-slate-100">{time}</div>
+            <div className="font-dm-mono text-[10px] sm:text-xs mt-1 text-slate-400 dark:text-slate-500">{date}</div>
         </div>
     );
 };
@@ -101,9 +101,9 @@ const ConfirmModal: React.FC<{
 }> = ({ field, time, onTimeChange, onConfirm, onCancel }) => {
     const icons: Record<PunchField, string> = { morningIn: '🌅', lunch: '🍽️', afternoonOut: '🌇' };
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={onCancel}>
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4" onClick={onCancel}>
             <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
-            <div className="relative bg-white dark:bg-[#111118] rounded-2xl border border-slate-200 dark:border-white/[0.1] shadow-2xl w-full max-w-sm p-6 flex flex-col gap-5"
+            <div className="relative bg-white dark:bg-[#111118] rounded-t-2xl sm:rounded-2xl border border-slate-200 dark:border-white/[0.1] shadow-2xl w-full sm:max-w-sm p-6 flex flex-col gap-5"
                 onClick={e => e.stopPropagation()}>
                 <div className="text-center">
                     <div className="text-3xl mb-2">{icons[field]}</div>
@@ -320,7 +320,7 @@ const TimeLoggerPanel: React.FC = () => {
             <div className="flex flex-col gap-6">
 
                 {/* ── Hero clock card ── */}
-                <div className="rounded-2xl border border-slate-200 dark:border-white/[0.08] bg-white dark:bg-white/[0.02] px-6 py-8 flex flex-col items-center gap-5">
+                <div className="rounded-2xl border border-slate-200 dark:border-white/[0.08] bg-white dark:bg-white/[0.02] px-4 sm:px-6 py-6 sm:py-8 flex flex-col items-center gap-4 sm:gap-5">
                     <LiveClock />
 
                     {/* Name input + save profile row */}
@@ -379,65 +379,67 @@ const TimeLoggerPanel: React.FC = () => {
                                 : isNext ? 'border-slate-200 dark:border-white/[0.1] bg-white dark:bg-white/[0.03]'
                                     : 'border-slate-100 dark:border-white/[0.04] bg-slate-50/60 dark:bg-white/[0.01] opacity-60'
                                 }`}>
-                                <div className="p-5 flex flex-col gap-4">
-                                    <div className="flex items-start justify-between">
-                                        <div>
-                                            <span className="text-2xl">{card.icon}</span>
-                                            <div className="font-syne text-sm font-bold mt-1.5 text-slate-800 dark:text-slate-100">{card.label}</div>
-                                            <div className="font-dm-mono text-[10px] text-slate-400 dark:text-slate-500 mt-0.5">{card.sublabel}</div>
+                                {/* Mobile: horizontal row layout. Desktop: vertical card */}
+                                <div className="p-4 sm:p-5 flex sm:flex-col gap-3 sm:gap-4">
+                                    {/* Left/top: icon + label + time */}
+                                    <div className="flex sm:flex-col items-center sm:items-start gap-3 sm:gap-0 flex-1 min-w-0">
+                                        <div className="flex items-center gap-2 sm:block">
+                                            <span className="text-xl sm:text-2xl">{card.icon}</span>
+                                            <div className="sm:mt-1.5">
+                                                <div className="font-syne text-sm font-bold text-slate-800 dark:text-slate-100 leading-tight">{card.label}</div>
+                                                <div className="font-dm-mono text-[10px] text-slate-400 dark:text-slate-500 hidden sm:block mt-0.5">{card.sublabel}</div>
+                                            </div>
                                         </div>
+                                    </div>
+
+                                    {/* Right/bottom: punched time or button */}
+                                    <div className="flex flex-col justify-center items-end sm:items-stretch gap-2 shrink-0 sm:shrink">
                                         {done && (
-                                            <div className={`font-dm-mono text-right ${card.timeColor}`}>
-                                                <div className="flex flex-col items-end gap-0.5">
-                                                    <div className="text-[10px] text-slate-400 dark:text-slate-500 uppercase tracking-widest">Punched</div>
-                                                    <div className="text-xl font-bold tabular-nums">{t}</div>
-                                                </div>
+                                            <div className={`font-dm-mono text-right sm:text-left ${card.timeColor}`}>
+                                                <div className="text-[10px] text-slate-400 dark:text-slate-500 uppercase tracking-widest hidden sm:block">Punched</div>
+                                                <div className="text-lg sm:text-xl font-bold tabular-nums">{t}</div>
+                                            </div>
+                                        )}
+                                        {!done && isNext && (
+                                            <button onClick={() => initPunch(card.field)}
+                                                className={`px-4 sm:w-full py-2.5 sm:py-3 rounded-xl font-dm-mono text-xs sm:text-sm font-bold text-white flex items-center justify-center gap-2 bg-gradient-to-r ${card.gradient} shadow-lg ${card.glow} transition-all hover:scale-[1.02] hover:shadow-xl active:scale-[0.98] whitespace-nowrap`}>
+                                                Punch
+                                            </button>
+                                        )}
+                                        {!done && !isNext && (
+                                            <div className="font-dm-mono text-[10px] text-slate-300 dark:text-slate-700 text-right sm:text-left">
+                                                {!punches.morningIn ? 'Clock in first' : 'Next'}
+                                            </div>
+                                        )}
+                                        {/* Sync status */}
+                                        {done && (
+                                            <div className="flex items-center gap-1.5 justify-end sm:justify-start">
+                                                {sync === 'syncing' && (
+                                                    <div className="flex items-center gap-1 font-dm-mono text-[10px] text-indigo-500 dark:text-indigo-400">
+                                                        <span className="w-2.5 h-2.5 border border-indigo-400 border-t-transparent rounded-full animate-spin" />
+                                                        <span className="hidden sm:inline">Syncing…</span>
+                                                    </div>
+                                                )}
+                                                {sync === 'ok' && (
+                                                    <div className={`font-dm-mono text-[10px] flex items-center gap-1 ${card.timeColor}`}>
+                                                        ✓ <span className="hidden sm:inline">Synced</span>
+                                                    </div>
+                                                )}
+                                                {sync === 'error' && (
+                                                    <div className="font-dm-mono text-[10px] flex items-center gap-1 text-red-500 dark:text-red-400">
+                                                        <span>⚠</span>
+                                                        <button onClick={() => syncToSheets(punches, card.field)}
+                                                            className="underline underline-offset-2 hover:text-red-700 dark:hover:text-red-300">
+                                                            Retry
+                                                        </button>
+                                                    </div>
+                                                )}
+                                                {!sync && (
+                                                    <div className={`font-dm-mono text-[10px] ${card.timeColor}`}>✓</div>
+                                                )}
                                             </div>
                                         )}
                                     </div>
-
-                                    {/* Punch button — only shows when it's the next unpunched */}
-                                    {!done && isNext && (
-                                        <button onClick={() => initPunch(card.field)}
-                                            className={`w-full py-3 rounded-xl font-dm-mono text-sm font-bold text-white flex items-center justify-center gap-2 bg-gradient-to-r ${card.gradient} shadow-lg ${card.glow} transition-all hover:scale-[1.02] hover:shadow-xl active:scale-[0.98]`}>
-                                            Punch {card.label}
-                                        </button>
-                                    )}
-                                    {!done && !isNext && (
-                                        <div className="font-dm-mono text-[10px] text-slate-300 dark:text-slate-700">
-                                            {!punches.morningIn ? 'Clock in first' : 'Complete previous step'}
-                                        </div>
-                                    )}
-
-                                    {/* Sync status — shown after punch */}
-                                    {done && (
-                                        <div className="flex items-center gap-1.5">
-                                            {sync === 'syncing' && (
-                                                <div className="flex items-center gap-1.5 font-dm-mono text-[10px] text-indigo-500 dark:text-indigo-400">
-                                                    <span className="w-3 h-3 border border-indigo-400 border-t-transparent rounded-full animate-spin" />
-                                                    Syncing…
-                                                </div>
-                                            )}
-                                            {sync === 'ok' && (
-                                                <div className={`font-dm-mono text-[10px] flex items-center gap-1 ${card.timeColor}`}>
-                                                    ✓ Synced to Sheets
-                                                </div>
-                                            )}
-                                            {sync === 'error' && (
-                                                <div className="font-dm-mono text-[10px] flex items-center gap-1.5 text-red-500 dark:text-red-400">
-                                                    <span>⚠ Sync failed</span>
-                                                    <button
-                                                        onClick={() => syncToSheets(punches, card.field)}
-                                                        className="underline underline-offset-2 hover:text-red-700 dark:hover:text-red-300 transition-colors">
-                                                        Retry
-                                                    </button>
-                                                </div>
-                                            )}
-                                            {!sync && (
-                                                <div className={`font-dm-mono text-[10px] flex items-center gap-1 ${card.timeColor}`}>✓ Recorded</div>
-                                            )}
-                                        </div>
-                                    )}
                                 </div>
                             </div>
                         );
@@ -447,7 +449,7 @@ const TimeLoggerPanel: React.FC = () => {
                 {/* ── Today's record table ── */}
                 {Object.keys(punches).length > 0 && (
                     <div className="rounded-2xl border border-slate-200 dark:border-white/[0.08] overflow-hidden">
-                        <div className="px-5 py-2.5 border-b border-slate-100 dark:border-white/[0.06] flex items-center justify-between">
+                        <div className="px-4 py-2.5 border-b border-slate-100 dark:border-white/[0.06] flex items-center justify-between">
                             <span className="font-dm-mono text-[10px] uppercase tracking-widest text-slate-400 dark:text-slate-500">Today's Record</span>
                             <div className="flex gap-2">
                                 <button onClick={exportCSV}
@@ -456,29 +458,29 @@ const TimeLoggerPanel: React.FC = () => {
                                 </button>
                                 <button onClick={resetSession}
                                     className="font-dm-mono flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] border transition-colors text-amber-600 bg-amber-50 border-amber-200 hover:bg-amber-100 dark:text-amber-400 dark:bg-amber-500/10 dark:border-amber-500/25">
-                                    ↺ Reset Punches
+                                    ↺ Reset
                                 </button>
                             </div>
                         </div>
-                        <div className="overflow-auto">
+                        <div className="overflow-x-auto">
                             <table className="font-dm-mono w-full text-xs">
                                 <thead>
                                     <tr className="border-b border-slate-100 dark:border-white/[0.06] bg-slate-50 dark:bg-[#0d0d14]">
                                         {[
                                             ['Day', 'text-slate-400 dark:text-slate-500'],
-                                            ['Morning In', 'text-blue-500 dark:text-blue-400'],
+                                            ['AM In', 'text-blue-500 dark:text-blue-400'],
                                             ['Lunch', 'text-violet-500 dark:text-violet-400'],
-                                            ['Afternoon Out', 'text-orange-500 dark:text-orange-400'],
+                                            ['PM Out', 'text-orange-500 dark:text-orange-400'],
                                         ].map(([h, cls]) => (
-                                            <th key={h} className={`px-4 py-2.5 text-left font-normal text-[10px] uppercase tracking-widest ${cls}`}>{h}</th>
+                                            <th key={h} className={`px-3 sm:px-4 py-2.5 text-left font-normal text-[10px] uppercase tracking-widest ${cls}`}>{h}</th>
                                         ))}
                                     </tr>
                                 </thead>
                                 <tbody>
                                     <tr className="border-t border-slate-100 dark:border-white/[0.04]">
-                                        <td className="px-4 py-3 font-semibold text-slate-700 dark:text-slate-200 tabular-nums">{String(nowDay()).padStart(2, '0')}</td>
+                                        <td className="px-3 sm:px-4 py-3 font-semibold text-slate-700 dark:text-slate-200 tabular-nums">{String(nowDay()).padStart(2, '0')}</td>
                                         {(['morningIn', 'lunch', 'afternoonOut'] as PunchField[]).map((f, fi) => (
-                                            <td key={f} className={`px-4 py-3 tabular-nums font-semibold ${punches[f] ? ['text-blue-600 dark:text-blue-300', 'text-violet-600 dark:text-violet-300', 'text-orange-600 dark:text-orange-300'][fi] : 'text-slate-300 dark:text-slate-700'}`}>
+                                            <td key={f} className={`px-3 sm:px-4 py-3 tabular-nums font-semibold ${punches[f] ? ['text-blue-600 dark:text-blue-300', 'text-violet-600 dark:text-violet-300', 'text-orange-600 dark:text-orange-300'][fi] : 'text-slate-300 dark:text-slate-700'}`}>
                                                 {punches[f] || '—'}
                                             </td>
                                         ))}
@@ -491,17 +493,17 @@ const TimeLoggerPanel: React.FC = () => {
 
                 {/* ── Google Sheets config ── */}
                 <div className="rounded-2xl border border-slate-200 dark:border-white/[0.08] overflow-hidden">
-                    <div className="px-5 py-2.5 border-b border-slate-100 dark:border-white/[0.06] flex items-center justify-between">
-                        <div className="flex items-center gap-2">
+                    <div className="px-4 py-2.5 border-b border-slate-100 dark:border-white/[0.06] flex items-center justify-between gap-2">
+                        <div className="min-w-0">
                             <span className="font-dm-mono text-[10px] uppercase tracking-widest text-slate-400 dark:text-slate-500">Google Sheets Config</span>
-                            <span className="font-dm-mono text-[10px] text-slate-400 dark:text-slate-600">— auto-syncs on each punch</span>
+                            <span className="font-dm-mono text-[10px] text-slate-400 dark:text-slate-600 hidden sm:inline"> — auto-syncs on each punch</span>
                         </div>
                         <button onClick={resetAll}
-                            className="font-dm-mono flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] border transition-colors text-red-600 bg-red-50 border-red-200 hover:bg-red-100 dark:text-red-400 dark:bg-red-500/10 dark:border-red-500/25">
-                            🗑 Reset All Data
+                            className="font-dm-mono shrink-0 flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] border transition-colors text-red-600 bg-red-50 border-red-200 hover:bg-red-100 dark:text-red-400 dark:bg-red-500/10 dark:border-red-500/25">
+                            🗑 Reset All
                         </button>
                     </div>
-                    <div className="p-5 grid sm:grid-cols-2 grid-cols-1 gap-4">
+                    <div className="p-4 sm:p-5 grid sm:grid-cols-2 grid-cols-1 gap-3 sm:gap-4">
                         {[
                             { label: 'Spreadsheet ID', value: sheetId, setter: setSheetId, placeholder: '1BxiMVs0XRA5nFMd…', hint: 'From URL: /spreadsheets/d/ID/edit' },
                             { label: 'Sheet Name (tab)', value: sheetName, setter: setSheetName, placeholder: 'Sheet1' },
@@ -593,7 +595,7 @@ const HowToUseGuide: React.FC = () => {
 
             {open && (
                 <div className="border-t border-slate-100 dark:border-white/[0.06] p-5 flex flex-col gap-4">
-                    <div className="grid sm:grid-cols-2 grid-cols-1 gap-3">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         {steps.map((step, i) => (
                             <div key={i} className="flex gap-3 p-3 rounded-xl bg-slate-50 dark:bg-white/[0.02] border border-slate-100 dark:border-white/[0.05]">
                                 <div className="shrink-0 w-8 h-8 rounded-lg bg-white dark:bg-white/[0.06] border border-slate-200 dark:border-white/[0.08] flex items-center justify-center text-base">
@@ -803,72 +805,66 @@ const TimeLogPanel: React.FC = () => {
                             <p className="font-dm-mono text-sm text-slate-400 dark:text-slate-500">Loading DTR data…</p>
                         </div>
                     ) : entries.length > 0 ? (
-                        <div className="overflow-auto">
-                            <table className="font-dm-mono w-full text-xs min-w-max">
-                                <thead className="sticky top-0 z-10">
-                                    {/* Group headers */}
-                                    <tr className="bg-slate-50 dark:bg-[#0d0d14] border-b border-slate-100 dark:border-white/[0.06]">
-                                        <th rowSpan={2} className="px-3 py-2 text-left font-normal text-[10px] uppercase tracking-widest text-slate-400 dark:text-slate-500 border-r border-slate-100 dark:border-white/[0.06]">Date</th>
-                                        <th rowSpan={2} className="px-3 py-2 text-left font-normal text-[10px] uppercase tracking-widest text-slate-400 dark:text-slate-500 border-r border-slate-100 dark:border-white/[0.06]">Day</th>
-                                        <th colSpan={2} className="px-3 py-1.5 text-center font-normal text-[10px] uppercase tracking-widest text-blue-500 dark:text-blue-400 border-r border-slate-100 dark:border-white/[0.06]">A M</th>
-                                        <th colSpan={2} className="px-3 py-1.5 text-center font-normal text-[10px] uppercase tracking-widest text-violet-500 dark:text-violet-400 border-r border-slate-100 dark:border-white/[0.06]">P M</th>
-                                        <th colSpan={2} className="px-3 py-1.5 text-center font-normal text-[10px] uppercase tracking-widest text-orange-500 dark:text-orange-400 border-r border-slate-100 dark:border-white/[0.06]">O T</th>
-                                        <th colSpan={2} className="px-3 py-1.5 text-center font-normal text-[10px] uppercase tracking-widest text-emerald-500 dark:text-emerald-400 border-r border-slate-100 dark:border-white/[0.06]">Reg. Days</th>
-                                        <th colSpan={2} className="px-3 py-1.5 text-center font-normal text-[10px] uppercase tracking-widest text-rose-500 dark:text-rose-400">Sat/Sun</th>
-                                    </tr>
-                                    <tr className="bg-slate-50 dark:bg-[#0d0d14] border-b border-slate-200 dark:border-white/[0.08]">
-                                        {['IN', 'OUT', 'IN', 'OUT', 'IN', 'OUT', 'HRS', 'MINS', 'HRS', 'MINS'].map((h, i) => (
-                                            <th key={i} className={`px-3 py-1.5 text-center font-normal text-[10px] uppercase tracking-widest ${i < 2 ? 'text-blue-400 dark:text-blue-500' :
-                                                i < 4 ? 'text-violet-400 dark:text-violet-500' :
-                                                    i < 6 ? 'text-orange-400 dark:text-orange-500' :
-                                                        i < 8 ? 'text-emerald-400 dark:text-emerald-500' :
-                                                            'text-rose-400 dark:text-rose-500'
-                                                } ${i === 1 || i === 3 || i === 5 || i === 7 ? 'border-r border-slate-100 dark:border-white/[0.06]' : ''}`}>{h}</th>
-                                        ))}
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {getDtrRows().map((row, ri) => {
-                                        const weekend = isWeekend(row.day);
-                                        const hasEntry = hasAnyEntry(row);
-                                        return (
-                                            <tr key={ri} className={`border-t border-slate-100 dark:border-white/[0.04] transition-colors ${weekend ? 'bg-slate-50/80 dark:bg-white/[0.01]' :
-                                                hasEntry ? 'hover:bg-indigo-50/40 dark:hover:bg-indigo-500/[0.04]' :
-                                                    'hover:bg-slate-50/60 dark:hover:bg-white/[0.01]'
-                                                }`}>
-                                                {/* Date */}
-                                                <td className={`px-3 py-2 font-bold tabular-nums border-r border-slate-100 dark:border-white/[0.04] ${hasEntry ? 'text-indigo-600 dark:text-indigo-300' : weekend ? 'text-slate-400 dark:text-slate-600' : 'text-slate-500 dark:text-slate-500'}`}>
-                                                    {String(row.date).padStart(2, '0')}
-                                                </td>
-                                                {/* Day name */}
-                                                <td className={`px-3 py-2 border-r border-slate-100 dark:border-white/[0.04] ${weekend ? 'text-rose-400 dark:text-rose-500 italic' : 'text-slate-500 dark:text-slate-500'}`}>
-                                                    {row.day || '—'}
-                                                </td>
-                                                {/* AM IN */}
-                                                <td className={`px-3 py-2 text-center tabular-nums ${row.amIn ? 'text-blue-600 dark:text-blue-300 font-semibold' : 'text-slate-300 dark:text-slate-700'}`}>{row.amIn || '—'}</td>
-                                                {/* AM OUT */}
-                                                <td className={`px-3 py-2 text-center tabular-nums border-r border-slate-100 dark:border-white/[0.04] ${row.amOut ? 'text-blue-500 dark:text-blue-400' : 'text-slate-300 dark:text-slate-700'}`}>{row.amOut || '—'}</td>
-                                                {/* PM IN */}
-                                                <td className={`px-3 py-2 text-center tabular-nums ${row.pmIn ? 'text-violet-600 dark:text-violet-300 font-semibold' : 'text-slate-300 dark:text-slate-700'}`}>{row.pmIn || '—'}</td>
-                                                {/* PM OUT */}
-                                                <td className={`px-3 py-2 text-center tabular-nums border-r border-slate-100 dark:border-white/[0.04] ${row.pmOut ? 'text-violet-500 dark:text-violet-400' : 'text-slate-300 dark:text-slate-700'}`}>{row.pmOut || '—'}</td>
-                                                {/* OT IN */}
-                                                <td className={`px-3 py-2 text-center tabular-nums ${row.otIn ? 'text-orange-600 dark:text-orange-300 font-semibold' : 'text-slate-300 dark:text-slate-700'}`}>{row.otIn || '—'}</td>
-                                                {/* OT OUT */}
-                                                <td className={`px-3 py-2 text-center tabular-nums border-r border-slate-100 dark:border-white/[0.04] ${row.otOut ? 'text-orange-500 dark:text-orange-400' : 'text-slate-300 dark:text-slate-700'}`}>{row.otOut || '—'}</td>
-                                                {/* HRS REG */}
-                                                <td className={`px-3 py-2 text-center tabular-nums ${row.hrsReg ? 'text-emerald-600 dark:text-emerald-300' : 'text-slate-300 dark:text-slate-700'}`}>{row.hrsReg || '—'}</td>
-                                                {/* MINS REG */}
-                                                <td className={`px-3 py-2 text-center tabular-nums border-r border-slate-100 dark:border-white/[0.04] ${row.minsReg ? 'text-emerald-500 dark:text-emerald-400' : 'text-slate-300 dark:text-slate-700'}`}>{row.minsReg || '—'}</td>
-                                                {/* SAT/SUN HRS */}
-                                                <td className={`px-3 py-2 text-center tabular-nums ${row.hrsSat ? 'text-rose-600 dark:text-rose-300' : 'text-slate-300 dark:text-slate-700'}`}>{row.hrsSat || '—'}</td>
-                                                {/* SAT/SUN MINS */}
-                                                <td className={`px-3 py-2 text-center tabular-nums ${row.minsSat ? 'text-rose-500 dark:text-rose-400' : 'text-slate-300 dark:text-slate-700'}`}>{row.minsSat || '—'}</td>
-                                            </tr>
-                                        );
-                                    })}
-                                </tbody>
-                            </table>
+                        <div>
+                            {/* Scroll hint on mobile */}
+                            <div className="sm:hidden px-4 py-1.5 border-b border-slate-100 dark:border-white/[0.06] flex items-center gap-1.5">
+                                <span className="font-dm-mono text-[10px] text-slate-400 dark:text-slate-500">← Scroll to see all columns →</span>
+                            </div>
+                            <div className="overflow-x-auto">
+                                <table className="font-dm-mono w-full text-[11px] min-w-[640px]">
+                                    <thead className="sticky top-0 z-10">
+                                        {/* Group headers */}
+                                        <tr className="bg-slate-50 dark:bg-[#0d0d14] border-b border-slate-100 dark:border-white/[0.06]">
+                                            <th rowSpan={2} className="px-2 sm:px-3 py-2 text-left font-normal text-[10px] uppercase tracking-widest text-slate-400 dark:text-slate-500 border-r border-slate-100 dark:border-white/[0.06]">Date</th>
+                                            <th rowSpan={2} className="px-2 sm:px-3 py-2 text-left font-normal text-[10px] uppercase tracking-widest text-slate-400 dark:text-slate-500 border-r border-slate-100 dark:border-white/[0.06]">Day</th>
+                                            <th colSpan={2} className="px-2 sm:px-3 py-1.5 text-center font-normal text-[10px] uppercase tracking-widest text-blue-500 dark:text-blue-400 border-r border-slate-100 dark:border-white/[0.06]">A M</th>
+                                            <th colSpan={2} className="px-2 sm:px-3 py-1.5 text-center font-normal text-[10px] uppercase tracking-widest text-violet-500 dark:text-violet-400 border-r border-slate-100 dark:border-white/[0.06]">P M</th>
+                                            <th colSpan={2} className="px-2 sm:px-3 py-1.5 text-center font-normal text-[10px] uppercase tracking-widest text-orange-500 dark:text-orange-400 border-r border-slate-100 dark:border-white/[0.06]">O T</th>
+                                            <th colSpan={2} className="px-2 sm:px-3 py-1.5 text-center font-normal text-[10px] uppercase tracking-widest text-emerald-500 dark:text-emerald-400 border-r border-slate-100 dark:border-white/[0.06]">Reg.</th>
+                                            <th colSpan={2} className="px-2 sm:px-3 py-1.5 text-center font-normal text-[10px] uppercase tracking-widest text-rose-500 dark:text-rose-400">Sat/Sun</th>
+                                        </tr>
+                                        <tr className="bg-slate-50 dark:bg-[#0d0d14] border-b border-slate-200 dark:border-white/[0.08]">
+                                            {['IN', 'OUT', 'IN', 'OUT', 'IN', 'OUT', 'HRS', 'MIN', 'HRS', 'MIN'].map((h, i) => (
+                                                <th key={i} className={`px-2 sm:px-3 py-1.5 text-center font-normal text-[10px] uppercase tracking-widest ${i < 2 ? 'text-blue-400 dark:text-blue-500' :
+                                                    i < 4 ? 'text-violet-400 dark:text-violet-500' :
+                                                        i < 6 ? 'text-orange-400 dark:text-orange-500' :
+                                                            i < 8 ? 'text-emerald-400 dark:text-emerald-500' :
+                                                                'text-rose-400 dark:text-rose-500'
+                                                    } ${i === 1 || i === 3 || i === 5 || i === 7 ? 'border-r border-slate-100 dark:border-white/[0.06]' : ''}`}>{h}</th>
+                                            ))}
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {getDtrRows().map((row, ri) => {
+                                            const weekend = isWeekend(row.day);
+                                            const hasEntry = hasAnyEntry(row);
+                                            return (
+                                                <tr key={ri} className={`border-t border-slate-100 dark:border-white/[0.04] transition-colors ${weekend ? 'bg-slate-50/80 dark:bg-white/[0.01]' :
+                                                    hasEntry ? 'hover:bg-indigo-50/40 dark:hover:bg-indigo-500/[0.04]' :
+                                                        'hover:bg-slate-50/60 dark:hover:bg-white/[0.01]'
+                                                    }`}>
+                                                    <td className={`px-2 sm:px-3 py-1.5 sm:py-2 font-bold tabular-nums border-r border-slate-100 dark:border-white/[0.04] ${hasEntry ? 'text-indigo-600 dark:text-indigo-300' : weekend ? 'text-slate-400 dark:text-slate-600' : 'text-slate-500 dark:text-slate-500'}`}>
+                                                        {String(row.date).padStart(2, '0')}
+                                                    </td>
+                                                    <td className={`px-2 sm:px-3 py-1.5 sm:py-2 border-r border-slate-100 dark:border-white/[0.04] whitespace-nowrap ${weekend ? 'text-rose-400 dark:text-rose-500 italic' : 'text-slate-500 dark:text-slate-500'}`}>
+                                                        {row.day || '—'}
+                                                    </td>
+                                                    <td className={`px-2 sm:px-3 py-1.5 sm:py-2 text-center tabular-nums ${row.amIn ? 'text-blue-600 dark:text-blue-300 font-semibold' : 'text-slate-300 dark:text-slate-700'}`}>{row.amIn || '—'}</td>
+                                                    <td className={`px-2 sm:px-3 py-1.5 sm:py-2 text-center tabular-nums border-r border-slate-100 dark:border-white/[0.04] ${row.amOut ? 'text-blue-500 dark:text-blue-400' : 'text-slate-300 dark:text-slate-700'}`}>{row.amOut || '—'}</td>
+                                                    <td className={`px-2 sm:px-3 py-1.5 sm:py-2 text-center tabular-nums ${row.pmIn ? 'text-violet-600 dark:text-violet-300 font-semibold' : 'text-slate-300 dark:text-slate-700'}`}>{row.pmIn || '—'}</td>
+                                                    <td className={`px-2 sm:px-3 py-1.5 sm:py-2 text-center tabular-nums border-r border-slate-100 dark:border-white/[0.04] ${row.pmOut ? 'text-violet-500 dark:text-violet-400' : 'text-slate-300 dark:text-slate-700'}`}>{row.pmOut || '—'}</td>
+                                                    <td className={`px-2 sm:px-3 py-1.5 sm:py-2 text-center tabular-nums ${row.otIn ? 'text-orange-600 dark:text-orange-300 font-semibold' : 'text-slate-300 dark:text-slate-700'}`}>{row.otIn || '—'}</td>
+                                                    <td className={`px-2 sm:px-3 py-1.5 sm:py-2 text-center tabular-nums border-r border-slate-100 dark:border-white/[0.04] ${row.otOut ? 'text-orange-500 dark:text-orange-400' : 'text-slate-300 dark:text-slate-700'}`}>{row.otOut || '—'}</td>
+                                                    <td className={`px-2 sm:px-3 py-1.5 sm:py-2 text-center tabular-nums ${row.hrsReg ? 'text-emerald-600 dark:text-emerald-300' : 'text-slate-300 dark:text-slate-700'}`}>{row.hrsReg || '—'}</td>
+                                                    <td className={`px-2 sm:px-3 py-1.5 sm:py-2 text-center tabular-nums border-r border-slate-100 dark:border-white/[0.04] ${row.minsReg ? 'text-emerald-500 dark:text-emerald-400' : 'text-slate-300 dark:text-slate-700'}`}>{row.minsReg || '—'}</td>
+                                                    <td className={`px-2 sm:px-3 py-1.5 sm:py-2 text-center tabular-nums ${row.hrsSat ? 'text-rose-600 dark:text-rose-300' : 'text-slate-300 dark:text-slate-700'}`}>{row.hrsSat || '—'}</td>
+                                                    <td className={`px-2 sm:px-3 py-1.5 sm:py-2 text-center tabular-nums ${row.minsSat ? 'text-rose-500 dark:text-rose-400' : 'text-slate-300 dark:text-slate-700'}`}>{row.minsSat || '—'}</td>
+                                                </tr>
+                                            );
+                                        })}
+                                    </tbody>
+                                </table>
+                            </div>
                         </div>
                     ) : !loading && fetchMsg.startsWith('✓') ? (
                         <div className="flex flex-col items-center justify-center py-16">
@@ -886,8 +882,8 @@ const TimeLogPanel: React.FC = () => {
 const DTRPage: React.FC = () => {
     const [tab, setTab] = useState<'logger' | 'timelog'>('logger');
     return (
-        <div className="font-syne min-h-screen w-full overflow-y-auto text-slate-800 dark:text-slate-100 transition-colors duration-300">
-            <div className="max-w-3xl mx-auto px-4 sm:px-6 py-8 pb-24">
+        <div className="font-syne min-h-screen w-full text-slate-800 dark:text-slate-100 transition-colors duration-300">
+            <div className="max-w-3xl mx-auto px-3 sm:px-6 py-4 sm:py-8 pb-16 sm:pb-24">
 
                 {/* Header */}
                 <div className="mb-6">
