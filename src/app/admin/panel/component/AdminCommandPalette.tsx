@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Search, Shield, MessageSquare, Ban, UserPlus, Key, User, CheckCircle } from 'lucide-react';
 import { UserProfile } from "@/lib/types/adminTypes";
@@ -115,8 +115,53 @@ export default function AdminCommandPalette({
         setSelectedUser(null);
     };
 
+    // ─── Mobile swipe-up to open ───────────────────────────────────────────────
+const touchStartY = useRef<number | null>(null);
+
+useEffect(() => {
+    const handleTouchStart = (e: TouchEvent) => {
+        touchStartY.current = e.touches[0].clientY;
+    };
+
+    const handleTouchEnd = (e: TouchEvent) => {
+        if (touchStartY.current === null) return;
+        const deltaY = touchStartY.current - e.changedTouches[0].clientY;
+// Swipe down ≥ 60px from the top 80px of the screen
+const fromTop = touchStartY.current < 80;
+if (fromTop && deltaY <= -60 && !isOpen) {
+    setIsOpen(true);
+    setMode('search');
+    setSelectedUser(null);
+    setSearch("");
+}
+touchStartY.current = null;
+    };
+
+    window.addEventListener('touchstart', handleTouchStart, { passive: true });
+    window.addEventListener('touchend', handleTouchEnd, { passive: true });
+    return () => {
+        window.removeEventListener('touchstart', handleTouchStart);
+        window.removeEventListener('touchend', handleTouchEnd);
+    };
+}, [isOpen]);
+
     return (
         <AnimatePresence>
+            {!isOpen && (
+    <motion.div
+        className="fixed bottom-0 left-0 right-0 z-[999] flex flex-col items-center pb-3 pt-2 md:hidden"
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.5 }}
+        aria-label="Swipe up to open command palette"
+    >
+        {/* Pill handle */}
+        <div className="w-10 h-1.5 rounded-full bg-gray-400/50 dark:bg-gray-500/50 mb-1" />
+        <p className="text-[10px] text-gray-400 dark:text-gray-500 tracking-wide select-none">
+            swipe up to search
+        </p>
+    </motion.div>
+)}
             {isOpen && (
                 <div className="fixed inset-0 bg-slate-950/40 backdrop-blur-md z-[1000] w-full h-full flex flex-col justify-center items-center">
 

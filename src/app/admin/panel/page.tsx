@@ -105,14 +105,18 @@ export default function AdminPanel() {
             />
 
             <div className="p-6 md:p-10 min-h-screen w-full  font-sans overflow-y-auto">
-                <header className="mb-8 border-b border-gray-200 dark:border-gray-700 pb-4 flex justify-between items-end">
-                    <div>
-                        <h1 className="text-3xl font-extrabold text-gray-900 dark:text-white flex items-center">
-                            <Users className="w-8 h-8 mr-3 text-blue-600" />
-                            User Management
-                        </h1>
-                    </div>
-                </header>
+<header className="mb-8 border-b border-gray-200 dark:border-gray-700 pb-4 flex justify-between items-end">
+    <div>
+        <h1 className="text-3xl font-extrabold text-gray-900 dark:text-white flex items-center">
+            <Users className="w-8 h-8 mr-3 text-blue-600" />
+            User Management
+        </h1>
+    </div>
+    {/* Desktop shortcut hint */}
+    <p className="hidden md:block text-xs text-gray-400 dark:text-gray-500 font-mono">
+        Press <kbd className="px-1.5 py-0.5 bg-gray-100 dark:bg-gray-700 rounded border border-gray-300 dark:border-gray-600">⌘K</kbd> to quick-search
+    </p>
+</header>
 
                 {/* Filter Section */}
                 <div className="bg-white dark:bg-gray-800 p-5 rounded-xl shadow-md mb-8 border border-gray-100 dark:border-gray-700">

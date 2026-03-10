@@ -52,8 +52,6 @@ const PermissionsModal: React.FC<PermissionsModalProps> = ({ user, onClose, onSa
         }
     };
 
-    console.log(selectedPages)
-
     return (
         <div className="fixed inset-0 w-screen h-screen justify-center items-center flex backdrop-blur-sm bg-black/50 z-[999]">
             <div className="w-[600px] max-h-[80vh] bg-white dark:bg-gray-800 rounded-xl shadow-2xl flex flex-col overflow-hidden">
