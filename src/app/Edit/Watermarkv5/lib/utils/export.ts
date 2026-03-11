@@ -10,7 +10,6 @@ export const exportSingleImage = async (
   const mimeType = `image/${options.format}`;
   const quality = options.quality / 100;
 
-  // Apply scale to an offscreen canvas
   const exportCanvas = applyScale(canvas, options.scale);
 
   return new Promise((resolve) => {
@@ -48,7 +47,6 @@ export const exportAsZip = async (
   for (const [index, getBlob] of getBlobFuncs.entries()) {
     if (signal?.aborted) return;
 
-    // If scale !== 1 or format isn't png, re-render from canvas
     const canvas = canvases.get(index);
     let blob: Blob | null = null;
 
@@ -86,7 +84,6 @@ export const exportAsZip = async (
   saveAs(content, `${zipName}.zip`);
 };
 
-// Scale canvas to an offscreen canvas
 function applyScale(source: HTMLCanvasElement, scale: number): HTMLCanvasElement {
   if (scale === 1) return source;
   const out = document.createElement('canvas');
