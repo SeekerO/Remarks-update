@@ -462,7 +462,7 @@ export default function PreviewArea() {
             </div>
 
             {images.length > 0 && (
-                <div className="sticky top-[70px] z-30 bg-white/90 dark:bg-gray-900/90 backdrop-blur border border-gray-200 dark:border-gray-700 rounded-xl shadow-md py-3 px-3 sm:py-4 sm:px-4 space-y-3">
+                <div className="sticky lg:top-4 top-[70px] z-30 bg-white/90 dark:bg-gray-900/90 backdrop-blur border border-gray-200 dark:border-gray-700 rounded-xl shadow-md py-3 px-3 sm:py-4 sm:px-4 space-y-3">
                     <div className="flex flex-wrap items-center gap-2 sm:gap-3">
                         <div className="relative flex-1 min-w-[110px] sm:min-w-[160px]">
                             <input

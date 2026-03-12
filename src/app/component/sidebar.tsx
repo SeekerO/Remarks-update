@@ -137,7 +137,7 @@ const Sidebar: React.FC = () => {
 
     return (
         <>
-            <div className={`${sidebarWidthClass} ${sidebarRootClasses} ${!isCollapsed ? "overflow-y-auto" : "overflow-hidden"} lg:mr-1 justify-between flex flex-col h-full`}>
+            <div className={`${sidebarWidthClass} ${sidebarRootClasses} ${!isCollapsed ? "overflow-y-auto" : "overflow-hidden"} lg:mr-1 justify-between flex flex-col h-full sticky`}>
 
                 <div className="fixed pointer-events-none z-0 rounded-full w-[500px] h-[500px]"
                     style={{ top: '-200px', right: '-120px', background: 'radial-gradient(circle, rgba(99,102,241,0.13) 0%, transparent 70%)' }} />

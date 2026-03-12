@@ -12,26 +12,15 @@ interface AuthGuardProps {
 
 type UserRole = 'admin' | 'standard';
 
-// Pages that bypass all checks
 const ALWAYS_ACCESSIBLE = ['/login', '/dashboard', '/', '/not-found'];
+const PUBLIC_PAGES = ['/login', '/not-found'];
 
 const AuthGuard = ({ children, redirectTo = '/login' }: AuthGuardProps) => {
-  const [isMounted, setIsMounted] = useState(false);
   const [accessChecked, setAccessChecked] = useState(false);
-  const { user } = useAuth();
+  const [accessGranted, setAccessGranted] = useState(false);
+  const { user, isLoading } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
-
-  // Mount
-  useEffect(() => {
-    setIsMounted(true);
-  }, []);
-
-  // Reset access check ONLY when path or user changes — but never on /not-found
-  useEffect(() => {
-    if (pathname === '/not-found') return;
-    setAccessChecked(false);
-  }, [pathname, user?.uid]);
 
   const getAccessibleHrefs = (allowedPages: PageId[] | null): string[] => {
     if (allowedPages === null) {
@@ -66,32 +55,38 @@ const AuthGuard = ({ children, redirectTo = '/login' }: AuthGuardProps) => {
     );
   };
 
-  // ── Main access check ──────────────────────────────────────────────────────
   useEffect(() => {
-    if (!isMounted || accessChecked) return;
+    // Wait for auth to finish loading before doing anything
+    if (isLoading) return;
 
-    // Step 1 — bypass checks for special pages
-    if (ALWAYS_ACCESSIBLE.includes(pathname) && pathname !== '/login') {
+    setAccessChecked(false);
+    setAccessGranted(false);
+
+    // Public pages — always render immediately
+    if (PUBLIC_PAGES.includes(pathname)) {
       setAccessChecked(true);
+      setAccessGranted(true);
       return;
     }
 
-    // Step 2 — check authentication
+    // No user — redirect to login
     if (!user) {
       sessionStorage.setItem('redirectAfterLogin', pathname);
-      setAccessChecked(true);
       router.replace('/login');
+      setAccessChecked(true);
+      setAccessGranted(false);
       return;
     }
 
-    // Step 3 — check canChat permission
+    // User exists but has no canChat — show access denied for protected pages
     if (!user.canChat) {
       setAccessChecked(true);
-      router.replace('/');
+      setAccessGranted(false);
+      if (pathname !== '/') router.replace('/');
       return;
     }
 
-    // Step 4 — resolve allowed pages
+    // Resolve allowed pages based on role
     const userRole: UserRole = user.isAdmin ? 'admin' : 'standard';
     const allowedPages: PageId[] | null = userRole === 'admin'
       ? null
@@ -99,39 +94,37 @@ const AuthGuard = ({ children, redirectTo = '/login' }: AuthGuardProps) => {
 
     const accessibleHrefs = getAccessibleHrefs(allowedPages);
 
-    // Step 5 — handle login page redirect
+    // Handle login redirect after successful auth
     if (pathname === '/login') {
       const savedPath = sessionStorage.getItem('redirectAfterLogin');
       sessionStorage.removeItem('redirectAfterLogin');
       const destination = savedPath && savedPath !== '/login' && hasAccessToPath(savedPath, accessibleHrefs)
         ? savedPath
         : accessibleHrefs[0] ?? '/dashboard';
-      setAccessChecked(true);
       router.replace(destination);
-      return;
-    }
-
-    // Step 6 — check if page exists/is accessible
-    if (!hasAccessToPath(pathname, accessibleHrefs)) {
       setAccessChecked(true);
-      router.replace('/not-found');
+      setAccessGranted(false);
       return;
     }
 
-    // All checks passed
+    // Check if user has access to current path
+    if (!hasAccessToPath(pathname, accessibleHrefs)) {
+      router.replace('/not-found');
+      setAccessChecked(true);
+      setAccessGranted(false);
+      return;
+    }
+
+    // All checks passed — grant access
     setAccessChecked(true);
+    setAccessGranted(true);
 
-  }, [user, isMounted, pathname, router, accessChecked]);
+  }, [user, isLoading, pathname]);
 
-  // ── Render Control ─────────────────────────────────────────────────────────
+  // ── Render Control ──────────────────────────────────────────────────────
 
-  // Always render login and not-found immediately
-  if (pathname === '/login' || pathname === '/not-found') {
-    return <>{children}</>;
-  }
-
-  // Show loading while checking
-  if (!isMounted || !accessChecked) {
+  // Still loading auth state — show nothing (or a spinner)
+  if (isLoading || !accessChecked) {
     return (
       <div className='p-[50px] text-center'>
         <h1>Verifying Access...</h1>
@@ -140,18 +133,13 @@ const AuthGuard = ({ children, redirectTo = '/login' }: AuthGuardProps) => {
     );
   }
 
-  // Not authenticated
-  if (!user) {
-    return (
-      <div className='p-[50px] text-center'>
-        <h1>Redirecting to login...</h1>
-      </div>
-    );
+  // Access granted — render children
+  if (accessGranted) {
+    return <>{children}</>;
   }
 
-  // No canChat
-  if (!user.canChat) {
-    if (pathname === '/') return <>{children}</>;
+  // User exists but no canChat permission
+  if (user && !user.canChat) {
     return (
       <div className='p-[50px] text-center'>
         <h1>Access Denied</h1>
@@ -160,7 +148,13 @@ const AuthGuard = ({ children, redirectTo = '/login' }: AuthGuardProps) => {
     );
   }
 
-  return <>{children}</>;
+  // Fallback — redirecting (no flash of content)
+  return (
+    <div className='p-[50px] text-center'>
+      <h1>Redirecting...</h1>
+      <p>Please wait...</p>
+    </div>
+  );
 };
 
 export default AuthGuard;
