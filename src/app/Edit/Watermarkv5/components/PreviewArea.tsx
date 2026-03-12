@@ -118,7 +118,7 @@ export default function PreviewArea() {
     const [fileName, setFileName] = useState("watermarked_images");
     const [exportOptions, setExportOptions] = useState<ExportOptions>(defaultExportOptions);
     const [showExportPanel, setShowExportPanel] = useState(false);
-    const [gridSize, setGridSize] = useState<GridSize>(3);
+    const [gridSize, setGridSize] = useState<GridSize>(typeof window !== 'undefined' && window.innerWidth < 640 ? 1 : 3);
     const [forceLoadAll, setForceLoadAll] = useState(false);
     const [estimatedSize, setEstimatedSize] = useState<string | null>(null);
 
@@ -422,11 +422,11 @@ export default function PreviewArea() {
 
     // ── Render ────────────────────────────────────────────────────────────────
     return (
-        <div className="space-y-6 p-6 min-h-screen">
+        <div className="space-y-4 p-3 sm:p-6 min-h-screen">
 
             {/* Page header */}
             <div className="flex items-center justify-between">
-                <h2 className="text-2xl font-extrabold text-gray-900 dark:text-white flex items-center gap-3">
+                <h2 className="text-lg sm:text-2xl font-extrabold text-gray-900 dark:text-white flex items-center gap-3">
                     Image Previews
                     {images.length > 0 && (
                         <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-sm font-semibold bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
@@ -461,18 +461,17 @@ export default function PreviewArea() {
                 )}
             </div>
 
-            {/* Sticky download / export bar */}
             {images.length > 0 && (
-                <div className="sticky top-0 z-50 bg-white/90 dark:bg-gray-900/90 backdrop-blur border border-gray-200 dark:border-gray-700 rounded-xl shadow-md py-4 px-4 space-y-3">
-                    <div className="flex flex-wrap items-center gap-3">
-                        <div className="relative flex-1 min-w-[160px]">
+                <div className="sticky top-0 z-50 bg-white/90 dark:bg-gray-900/90 backdrop-blur border border-gray-200 dark:border-gray-700 rounded-xl shadow-md py-3 px-3 sm:py-4 sm:px-4 space-y-3">
+                    <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+                        <div className="relative flex-1 min-w-[110px] sm:min-w-[160px]">
                             <input
                                 type="text"
                                 placeholder="File name"
                                 value={fileName}
                                 maxLength={256}
                                 onChange={(e) => setFileName(e.target.value)}
-                                className="w-full px-3 pl-12 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                                className="w-full px-3 pl-10 sm:pl-12 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
                             />
                             <span className="absolute left-2 top-1/2 -translate-y-1/2 text-[10px] italic text-gray-400 border-r border-gray-300 pr-1.5">
                                 {fileName.length}/256
@@ -492,35 +491,27 @@ export default function PreviewArea() {
 
                         <button
                             onClick={() => setShowExportPanel(v => !v)}
-                            className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-200 transition-colors"
+                            className="flex items-center gap-1.5 px-2.5 sm:px-3 py-2 text-sm font-medium border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-200 transition-colors"
                         >
                             <Settings2 className="w-4 h-4" />
-                            Export
+                            <span className="hidden sm:inline">Export</span>
                             {showExportPanel ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
                         </button>
 
                         <button
                             onClick={downloadAll}
                             disabled={processing}
-                            className="flex flex-col items-center px-5 py-3 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold rounded-lg shadow transition-all hover:scale-105 text-sm relative"
+                            className="flex items-center gap-1.5 px-3 sm:px-5 py-2 sm:py-3 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold rounded-lg shadow transition-all hover:scale-105 text-sm relative"
                         >
-                            <span className="flex items-center gap-2">
-                                <div className="flex flex-col items-center">
-                                    <HiOutlineFolderDownload className="text-lg" />
-                                    {estimatedSize && (
-                                        <span className="text-[8px] font-normal opacity-75 absolute left-[14px] -bottom-[1px]">
-                                            {estimatedSize}
-                                        </span>
-                                    )}
-                                </div>
-                                Download ZIP
-                            </span>
-
-
-
+                            <HiOutlineFolderDownload className="text-lg flex-shrink-0" />
+                            <span>ZIP</span>
+                            {estimatedSize && (
+                                <span className="hidden sm:inline text-[10px] font-normal opacity-75 ml-0.5">
+                                    ~{estimatedSize}
+                                </span>
+                            )}
                         </button>
                     </div>
-
 
                     {showExportPanel && (
                         <div className="pt-3 border-t border-gray-100 dark:border-gray-700">
