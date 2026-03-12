@@ -160,7 +160,7 @@ interface MobileTabBarProps {
 
 function MobileTabBar({ tabs, activeTab, onTabChange, onOpen, panelOpen }: MobileTabBarProps) {
     return (
-        <div className="fixed  bottom-0 left-20 right-0 z-0 bg-white/95 dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700 safe-area-bottom">
+        <div className="fixed  bottom-0 left-20 right-0 z-30 bg-white/95 dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700 safe-area-bottom">
             <div className="flex items-center h-16">
                 {tabs.map(({ id, label, icon: Icon, count, countColor }) => {
                     const isActive = activeTab === id && panelOpen;
