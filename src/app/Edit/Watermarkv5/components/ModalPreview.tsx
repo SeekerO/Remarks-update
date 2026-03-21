@@ -232,10 +232,10 @@ const ModalPreview = ({
             exit={{ opacity: 0 }}
             className="fixed inset-0 z-50 flex overflow-hidden
                 bg-gray-100 dark:bg-[#060709]"
-            style={{
-                // subtle radial only in dark mode — light mode uses flat gray
-            }}
         >
+
+
+            {/* asd */}
             {/* ── Canvas Area ─────────────────────────────────────────── */}
             <div
                 ref={containerRef}
@@ -249,17 +249,6 @@ const ModalPreview = ({
                 onTouchEnd={onTouchEnd}
                 style={{ cursor: zoom > 1 ? (isPanning ? "grabbing" : "grab") : "default" }}
             >
-                {/* Subtle grid — visible in dark, very faint in light */}
-                <div
-                    className="absolute inset-0 pointer-events-none
-                        opacity-[0.04] dark:opacity-[0.03]"
-                    style={{
-                        backgroundImage:
-                            "linear-gradient(currentColor 1px, transparent 1px), linear-gradient(90deg, currentColor 1px, transparent 1px)",
-                        backgroundSize: "40px 40px",
-                    }}
-                />
-
                 <motion.canvas
                     ref={modalCanvasRef}
                     id={modalCanvasId}
@@ -505,6 +494,8 @@ const ModalPreview = ({
                     </motion.div>
                 )}
             </AnimatePresence>
+
+
 
         </motion.div >
     );

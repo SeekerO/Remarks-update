@@ -84,15 +84,6 @@ export const navItems: NavItem[] = [
     active: false,
     sublinks: [
       {
-        name: "Watermark V4",
-        href: "/Edit/Watermarkv4",
-        icon: IoWater,
-        active: true,
-        pagePermissionId: "watermarkv4",
-        requiredRole: "admin",
-        sublinks: [],
-      },
-      {
         name: "Watermark V5",
         href: "/Edit/Watermarkv5",
         icon: IoWater,
@@ -190,14 +181,6 @@ export const navItems: NavItem[] = [
     pagePermissionId: "directory",
     sublinks: [
       {
-        name: "Field Office",
-        href: "/directory/fieldoffice",
-        icon: IoIosPin,
-        active: true,
-        pagePermissionId: "directory",
-        sublinks: [],
-      },
-      {
         name: "3D World",
         href: "/directory/3dplanet",
         icon: IoIosPin,
@@ -238,14 +221,6 @@ export const navItems: NavItem[] = [
         requiredRole: "admin",
         sublinks: [],
       },
-      {
-        name: "Image Directory",
-        href: "/admin/directory",
-        icon: RiAdminFill,
-        active: true,
-        requiredRole: "admin",
-        sublinks: [],
-      }
     ],
   },
 ];

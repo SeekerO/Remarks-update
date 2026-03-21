@@ -423,7 +423,6 @@ export default function PreviewArea() {
     // ── Render ────────────────────────────────────────────────────────────────
     return (
         <div className="space-y-4 p-3 sm:p-6 min-h-screen">
-
             {/* Page header */}
             <div className="flex items-center justify-between">
                 <h2 className="text-lg sm:text-2xl font-extrabold text-gray-900 dark:text-white flex items-center gap-3">

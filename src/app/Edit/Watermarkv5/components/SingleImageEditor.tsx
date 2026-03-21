@@ -285,6 +285,7 @@ export default function SingleImageEditor({
                 : "ring-1 ring-gray-200 dark:ring-gray-700 hover:ring-indigo-300 dark:hover:ring-indigo-700 shadow-md hover:shadow-lg"
             }`}
         >
+
             {/* Canvas */}
             <canvas
                 ref={canvasRef}

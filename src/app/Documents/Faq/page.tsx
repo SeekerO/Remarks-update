@@ -1,657 +1,481 @@
 "use client";
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
-import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import { useAuth } from '@/app/Chat/AuthContext';
-import Link from 'next/link';
-import faqData from '@/lib/json/faq.json';
-import BreadCrumb from '@/app/component/breadcrumb';
-import TimerSettingsModal from './component/TimeSetter';
-import { IoIosTimer } from "react-icons/io"
+import React, { useState, useEffect, useCallback, useMemo, useRef } from "react";
+import { useAuth } from "@/app/Chat/AuthContext";
+import Link from "next/link";
+import BreadCrumb from "@/app/component/breadcrumb";
+import TimerSettingsModal from "./component/TimeSetter";
+import { IoIosTimer } from "react-icons/io";
 import { MdFormatListBulletedAdd } from "react-icons/md";
-// Define the type for a single FAQ item
-interface FaqItem {
-  topic: string;
-  details: string;
-  timerStartTime?: number | null; // Timestamp when the timer started (ms)
-}
 
-// Helper function to format seconds into HH:MM:SS
+// ── Firestore service ─────────────────────────────────────────────────────────
+import {
+  type FaqItem,
+  subscribeToFaqs,
+  addFaq,
+  updateFaq,
+  deleteFaq,
+  setFaqTimer,
+  seedFaqs,
+} from "@/lib/firebase/firebase.actions.firestore/faqFirestore";
+
+// NOTE: Import your faq.json only for the one-time seed button:
+import faqData from "@/lib/json/faq.json";
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+
 const formatTime = (totalSeconds: number): string => {
-  if (totalSeconds < 0) totalSeconds = 0; // Ensure no negative time
-
+  if (totalSeconds < 0) totalSeconds = 0;
   const hours = Math.floor(totalSeconds / 3600);
   const minutes = Math.floor((totalSeconds % 3600) / 60);
   const seconds = Math.floor(totalSeconds % 60);
-
-  const pad = (num: number) => String(num).padStart(2, '0');
-
+  const pad = (n: number) => String(n).padStart(2, "0");
   return `${pad(hours)}:${pad(minutes)}:${pad(seconds)}`;
 };
 
-
-const useDebounce = (value: any, delay: number) => {
-  const [debouncedValue, setDebouncedValue] = useState<any>(value);
-
+function useDebounce<T>(value: T, delay: number): T {
+  const [debouncedValue, setDebouncedValue] = useState<T>(value);
   useEffect(() => {
-    const handler = setTimeout(() => {
-      setDebouncedValue(value);
-    }, delay);
-
-    // Cleanup function to clear the timeout if value or delay changes
-    return () => {
-      clearTimeout(handler);
-    };
-  }, [value, delay]); // Re-run effect if value or delay changes
-
+    const handler = setTimeout(() => setDebouncedValue(value), delay);
+    return () => clearTimeout(handler);
+  }, [value, delay]);
   return debouncedValue;
-};
-// Main App component
+}
+
+// ── Component ─────────────────────────────────────────────────────────────────
+
 const FAQ = () => {
   const { user } = useAuth();
-  // State for the FAQ data, initialized with default data (will be updated by useEffect on client)
-  const [faqs, setFaqs] = useState<FaqItem[]>(faqData as FaqItem[]);
-  // State for the raw search query input
-  const [searchQuery, setSearchQuery] = useState<string>('');
-  // Debounced search query for efficient filtering
-  const debouncedSearchQuery = useDebounce(searchQuery, 300); // Debounce by 300ms
-  // State to track which card is expanded (index or null)
-  const [expandedCard, setExpandedCard] = useState<number | null>(null);
-  // State to track which card is in edit mode (index or null)
-  const [editingCard, setEditingCard] = useState<number | null>(null);
-  // State for the form data when a card is being edited
-  const [editFormData, setEditFormData] = useState<FaqItem>({ topic: '', details: '' });
-  // State for message box
-  const [message, setMessage] = useState<string>('');
 
-  // New state for global timer duration (in seconds)
-  // FIX: Initialize with a server-safe default value. localStorage access is moved to useEffect.
-  const [globalTimerDuration, setGlobalTimerDuration] = useState<number>(300);
+  // ── State ──────────────────────────────────────────────────────────────────
+  const [faqs, setFaqs] = useState<FaqItem[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  // State for timer Hour, Minutes and Seconds
+  const [searchQuery, setSearchQuery] = useState("");
+  const debouncedSearchQuery = useDebounce(searchQuery, 300);
+
+  const [expandedCard, setExpandedCard] = useState<string | null>(null);
+  const [editingCard, setEditingCard] = useState<string | null>(null);
+  const [editFormData, setEditFormData] = useState<Pick<FaqItem, "topic" | "details">>({ topic: "", details: "" });
+
+  const [globalTimerDuration, setGlobalTimerDuration] = useState(300);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [hours, setHours] = useState<string>('');
-  const [minutes, setMinutes] = useState<string>('');
-  const [seconds, setSeconds] = useState<string>('');
+  const [hours, setHours] = useState("");
+  const [minutes, setMinutes] = useState("");
+  const [seconds, setSeconds] = useState("");
 
-  // State to force re-render for timer updates (only for display)
-  const [currentTime, setCurrentTime] = useState<number>(Date.now());
+  const [currentTime, setCurrentTime] = useState(Date.now());
+  const [message, setMessage] = useState("");
 
-  // State for new FAQ form
-  const [newFaqFormData, setNewFaqFormData] = useState<FaqItem>({ topic: '', details: '' });
+  const [newFaqFormData, setNewFaqFormData] = useState<Pick<FaqItem, "topic" | "details">>({ topic: "", details: "" });
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [faqToDelete, setFaqToDelete] = useState<string | null>(null);
+  const [openMenuIndex, setOpenMenuIndex] = useState<string | null>(null);
 
-  // State to manage the visibility of the Add FAQ modal
-  const [isAddModalOpen, setIsAddModalOpen] = useState<boolean>(false);
-  // State to manage the visibility of the Delete confirmation modal
-  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState<boolean>(false);
-  // State to store the index of the FAQ to be deleted
-  const [faqToDelete, setFaqToDelete] = useState<number | null>(null);
-
-  // New state to manage the open state of the three-dot menu for each card
-  const [openMenuIndex, setOpenMenuIndex] = useState<number | null>(null);
-  // Reference for the menu container to detect outside clicks
   const menuRef = useRef<HTMLDivElement>(null);
 
+  // ── Helpers ────────────────────────────────────────────────────────────────
+  const showMessage = (msg: string, duration = 3000) => {
+    setMessage(msg);
+    setTimeout(() => setMessage(""), duration);
+  };
 
-  // ********************************************
-  // ** FIX 1: Initial Load Effect (Runs only on client mount) **
-  // ********************************************
+  // ── Firestore real-time subscription ──────────────────────────────────────
   useEffect(() => {
-    // 1. Load FAQs
-    try {
-      const savedFaqs = localStorage.getItem('faqData');
-      if (savedFaqs) {
-        setFaqs(JSON.parse(savedFaqs));
-      }
-    } catch (e) {
-      console.error("Failed to load data from local storage", e);
-      setMessage('Failed to load saved data.');
-      setTimeout(() => setMessage(''), 3000);
-    }
+    const unsub = subscribeToFaqs((liveFaqs) => {
+      setFaqs(liveFaqs);
+      setLoading(false);
+    });
+    return () => unsub();
+  }, []);
 
-    // 2. Load Global Timer Duration
-    try {
-      const savedDuration = localStorage.getItem('globalTimerDuration');
-      if (savedDuration) {
-        setGlobalTimerDuration(parseInt(savedDuration, 10));
-      }
-    } catch (e) {
-      console.error("Failed to load global timer from localStorage, using default.", e);
-    }
-  }, []); // Empty dependency array ensures it runs once on mount
-
-  // Effect to save FAQ data to local storage whenever `faqs` state changes
+  // ── Load global timer duration from localStorage ───────────────────────────
   useEffect(() => {
-    try {
-      localStorage.setItem('faqData', JSON.stringify(faqs));
-    } catch (e) {
-      console.error("Failed to save FAQs to local storage", e);
-    }
-  }, [faqs]);
+    const saved = localStorage.getItem("globalTimerDuration");
+    if (saved) setGlobalTimerDuration(parseInt(saved, 10));
+  }, []);
 
-  // Effect to save global timer duration to local storage whenever it changes
   useEffect(() => {
-    try {
-      localStorage.setItem('globalTimerDuration', globalTimerDuration.toString());
-    } catch (e) {
-      console.error("Failed to save global timer duration to local storage", e);
-    }
+    localStorage.setItem("globalTimerDuration", globalTimerDuration.toString());
   }, [globalTimerDuration]);
 
-  // Effect to update current time every second and manage expired timers
+  // ── Clock + expired timer cleanup ─────────────────────────────────────────
   useEffect(() => {
     const interval = setInterval(() => {
       setCurrentTime(Date.now());
 
-      setFaqs(prevFaqs => {
-        let changed = false;
-        const updatedFaqs = prevFaqs.map(faq => {
-          if (typeof faq.timerStartTime === 'number' && faq.timerStartTime !== null) {
-            const elapsedTime = (Date.now() - faq.timerStartTime) / 1000;
-            const remainingTime = globalTimerDuration - elapsedTime;
-
-            // If timer expired, reset timerStartTime to null
-            if (remainingTime <= 0 && faq.timerStartTime !== null) {
-              changed = true;
-              return { ...faq, timerStartTime: null };
-            }
+      // Reset expired timers in Firestore
+      faqs.forEach((faq) => {
+        if (faq.timerStartTime !== null && faq.timerStartTime !== undefined && faq.id) {
+          const elapsed = (Date.now() - faq.timerStartTime) / 1000;
+          if (globalTimerDuration - elapsed <= 0) {
+            setFaqTimer(faq.id, null).catch(console.error);
           }
-          return faq;
-        });
-        // Only return new array if a change occurred to prevent unnecessary re-renders
-        return changed ? updatedFaqs : prevFaqs;
-      });
-    }, 1000); // Update every second
-
-    return () => clearInterval(interval); // Cleanup on unmount
-  }, [globalTimerDuration]);
-
-
-  // Function to copy text to clipboard
-  const copyToClipboard = useCallback((text: string, topicToFind: string): void => {
-    // Find the FAQ item in the ORIGINAL array based on the topic
-    const faqToUpdateIndex = faqs.findIndex((faq) => faq.topic === topicToFind);
-
-    if (faqToUpdateIndex === -1) {
-      // This should ideally not happen if topicToFind comes from an existing FAQ
-      console.error('FAQ topic not found:', topicToFind);
-      setMessage('Error: Topic not found.');
-      setTimeout(() => setMessage(''), 3000);
-      return;
-    }
-
-    const faqToUpdate = faqs[faqToUpdateIndex];
-
-    const elapsedTime = faqToUpdate.timerStartTime ? (currentTime - faqToUpdate.timerStartTime) / 1000 : 0;
-    const remainingTime = globalTimerDuration - elapsedTime;
-
-    if (remainingTime > 0 && faqToUpdate.timerStartTime !== null) {
-      setMessage(`Copying is disabled while the timer is active for "${faqToUpdate.topic}". Remaining: ${Math.ceil(remainingTime)}s`);
-      setTimeout(() => setMessage(''), 3000);
-      return; // Prevent copy action
-    }
-
-    const copyText = async (t: string): Promise<void> => {
-      try {
-        if (navigator.clipboard && navigator.clipboard.writeText) {
-          await navigator.clipboard.writeText(t);
-          setMessage('Details copied to clipboard!');
-        } else {
-          // Fallback for older browsers
-          const textarea = document.createElement('textarea');
-          textarea.value = t;
-          textarea.style.position = 'fixed';
-          document.body.appendChild(textarea);
-          textarea.focus();
-          textarea.select();
-          document.execCommand('copy');
-          document.body.removeChild(textarea);
-          setMessage('Details copied to clipboard!');
         }
-        setTimeout(() => setMessage(''), 3000);
-      } catch (err) {
-        console.error('Failed to copy:', err);
-        setMessage('Failed to copy to clipboard.');
-        setTimeout(() => setMessage(''), 3000);
-      }
-    };
-
-    copyText(text);
-
-    // Start timer only if it's not already running for this specific topic
-    if (faqToUpdate.timerStartTime === null) {
-      setFaqs(prevFaqs => {
-        const newFaqs = [...prevFaqs];
-        // Update the specific FAQ item using its found index
-        newFaqs[faqToUpdateIndex] = { ...newFaqs[faqToUpdateIndex], timerStartTime: Date.now() };
-        return newFaqs;
       });
-      setMessage(`Timer started for "${faqToUpdate.topic}". Copying disabled until timer expires.`);
-      setTimeout(() => setMessage(''), 3000);
-    }
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [faqs, globalTimerDuration]);
 
-  }, [faqs, globalTimerDuration, currentTime]); // Dependencies for useCallback
-
-
-  // Handle search input change
-  const handleSearchChange = useCallback((e: React.ChangeEvent<HTMLInputElement>): void => {
-    setSearchQuery(e.target.value);
-  }, []);
-
-
-  // Handle expand/collapse logic ONLY
-  const handleToggleDetails = useCallback((index: number): void => {
-    setExpandedCard(prevExpanded => (prevExpanded === index ? null : index));
-  }, []);
-
-  // Handle edit button click
-  const handleEditClick = useCallback((faq: FaqItem, index: number): void => {
-    setEditingCard(index);
-    setEditFormData({ topic: faq.topic, details: faq.details });
-    setOpenMenuIndex(null); // Close menu after clicking
-  }, []);
-
-  // Handle form data change during editing
-  const handleEditFormChange = useCallback((e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>): void => {
-    const { name, value } = e.target;
-    setEditFormData(prev => ({
-      ...prev,
-      [name]: value
-    }));
-  }, []);
-
-  // Handle save button click
-  const handleSaveClick = useCallback((index: number): void => {
-    setFaqs(prevFaqs => {
-      const updatedFaqs = [...prevFaqs];
-      updatedFaqs[index] = { ...updatedFaqs[index], topic: editFormData.topic, details: editFormData.details };
-      return updatedFaqs;
-    });
-    setEditingCard(null);
-    setEditFormData({ topic: '', details: '' });
-    setMessage('Changes saved successfully!');
-    setTimeout(() => setMessage(''), 3000);
-  }, [editFormData]);
-
-  // Handle reset timer click for a specific card
-  const handleResetTimer = useCallback((index: number): void => {
-    setFaqs(prevFaqs => {
-      const newFaqs = [...prevFaqs];
-      newFaqs[index] = { ...newFaqs[index], timerStartTime: null }; // Reset timer for this card
-      return newFaqs;
-    });
-    // Use an index-safe check for the message
-    const topic = faqs[index]?.topic || 'FAQ item';
-    setMessage(`Timer for "${topic}" reset. Copying re-enabled.`);
-    setTimeout(() => setMessage(''), 3000);
-  }, [faqs]);
-
-  // Handle new FAQ form data change
-  const handleNewFaqFormChange = useCallback((e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>): void => {
-    const { name, value } = e.target;
-    setNewFaqFormData(prev => ({
-      ...prev,
-      [name]: value
-    }));
-  }, []);
-
-  // Handle adding a new FAQ
-  const handleAddFaq = useCallback(() => {
-    if (newFaqFormData.topic.trim() === '' || newFaqFormData.details.trim() === '') {
-      setMessage('Topic and Details cannot be empty.');
-      setTimeout(() => setMessage(''), 3000);
-      return;
-    }
-
-    setFaqs(prevFaqs => [
-      ...prevFaqs,
-      { ...newFaqFormData, timerStartTime: null } // New FAQs start with no active timer
-    ]);
-    setNewFaqFormData({ topic: '', details: '' }); // Clear the form
-    setMessage('New FAQ added successfully!');
-    setTimeout(() => setMessage(''), 3000);
-    setIsAddModalOpen(false); // Close the modal after adding
-  }, [newFaqFormData]);
-
-
-  // Handle opening the Add FAQ modal
-  const handleOpenAddModal = useCallback(() => {
-    setIsAddModalOpen(true);
-  }, []);
-
-  // Handle closing the Add FAQ modal
-  const handleCloseAddModal = useCallback(() => {
-    setIsAddModalOpen(false);
-    setNewFaqFormData({ topic: '', details: '' }); // Reset form when closing
-  }, []);
-
-  // Handle opening the Delete confirmation modal
-  const handleOpenDeleteModal = useCallback((index: number) => {
-    setFaqToDelete(index);
-    setIsDeleteModalOpen(true);
-    setOpenMenuIndex(null); // Close menu after clicking
-  }, []);
-
-  // Handle closing the Delete confirmation modal
-  const handleCloseDeleteModal = useCallback(() => {
-    setFaqToDelete(null);
-    setIsDeleteModalOpen(false);
-  }, []);
-
-  // Handle deleting an FAQ after confirmation
-  const confirmDelete = useCallback(() => {
-    if (faqToDelete !== null) {
-      setFaqs(prevFaqs => {
-        // Since filteredFaqs is not the state, we must ensure we delete the correct index from the main 'faqs' state.
-        // However, given your current logic, the index passed to handleOpenDeleteModal is the index in the filtered/mapped array.
-        // For simple CRUD operations like this, it's safer to pass the unique ID or the FAQ object itself, but since you're using index:
-        // *Correction*: The index passed to handleOpenDeleteModal is the index within the *filtered* list. 
-        // This is complex to resolve if editing a filtered list. For a simple index-based delete, we'll assume the index is correct 
-        // for the original array if filtering isn't active or if we're dealing with the full list. 
-        // A robust solution would involve finding the original index based on the topic/unique ID.
-
-        // *For simplicity and to maintain current functionality (assuming the index passed is the one in the state array):*
-        const newFaqs = prevFaqs.filter((_, i) => i !== faqToDelete);
-
-        // *If you were only displaying the filtered list, this would be the necessary logic:*
-        /*
-        const faqToDeleteTopic = filteredFaqs[faqToDelete].topic;
-        const originalIndex = prevFaqs.findIndex(faq => faq.topic === faqToDeleteTopic);
-        
-        if (originalIndex !== -1) {
-             const newFaqs = prevFaqs.filter((_, i) => i !== originalIndex);
-             // ...
-        }
-        */
-
-        // Sticking to original index logic for now to avoid major refactor:
-        return newFaqs;
-      });
-
-      // Use the topic from the main faqs state before it's deleted
-      const topic = faqs[faqToDelete]?.topic || 'FAQ item';
-
-      setMessage(`FAQ deleted successfully! Topic: ${topic}`);
-      setTimeout(() => setMessage(''), 3000);
-      handleCloseDeleteModal(); // Close the modal
-    }
-  }, [faqToDelete, handleCloseDeleteModal, faqs]);
-
-
-  // Handle opening/closing the three-dot menu
-  const handleMenuToggle = useCallback((index: number, e: React.MouseEvent) => {
-    e.stopPropagation(); // Prevent the parent card's onClick from firing
-    setOpenMenuIndex(openMenuIndex === index ? null : index);
-  }, [openMenuIndex]);
-
-  // Close the menu when clicking outside of it
+  // ── Outside click for menu ─────────────────────────────────────────────────
   useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
         setOpenMenuIndex(null);
       }
     };
     document.addEventListener("mousedown", handleClickOutside);
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-    };
-  }, [menuRef]);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
+  // ── Copy + start timer ─────────────────────────────────────────────────────
+  const copyToClipboard = useCallback(
+    async (faq: FaqItem) => {
+      if (!faq.id) return;
 
-  // Filter the FAQs based on the debounced search query
-  const filteredFaqs = useMemo(() => {
-    if (!debouncedSearchQuery) {
-      return faqs;
+      const elapsed = faq.timerStartTime ? (currentTime - faq.timerStartTime) / 1000 : 0;
+      const remaining = globalTimerDuration - elapsed;
+
+      if (faq.timerStartTime !== null && remaining > 0) {
+        showMessage(`Copying disabled. Timer active for "${faq.topic}". Remaining: ${Math.ceil(remaining)}s`);
+        return;
+      }
+
+      try {
+        await navigator.clipboard.writeText(faq.details);
+        showMessage("Details copied to clipboard!");
+      } catch {
+        showMessage("Failed to copy to clipboard.");
+        return;
+      }
+
+      // Start timer
+      if (!faq.timerStartTime) {
+        await setFaqTimer(faq.id, Date.now());
+        showMessage(`Timer started for "${faq.topic}".`);
+      }
+    },
+    [currentTime, globalTimerDuration]
+  );
+
+  // ── Edit ───────────────────────────────────────────────────────────────────
+  const handleEditClick = useCallback((faq: FaqItem) => {
+    if (!faq.id) return;
+    setEditingCard(faq.id);
+    setEditFormData({ topic: faq.topic, details: faq.details });
+    setOpenMenuIndex(null);
+  }, []);
+
+  const handleSaveClick = useCallback(
+    async (id: string) => {
+      try {
+        await updateFaq(id, {
+          topic: editFormData.topic.trim(),
+          details: editFormData.details.trim(),
+        });
+        setEditingCard(null);
+        showMessage("Changes saved successfully!");
+      } catch (e) {
+        console.error(e);
+        showMessage("Failed to save changes.");
+      }
+    },
+    [editFormData]
+  );
+
+  // ── Reset timer ────────────────────────────────────────────────────────────
+  const handleResetTimer = useCallback(async (faq: FaqItem) => {
+    if (!faq.id) return;
+    try {
+      await setFaqTimer(faq.id, null);
+      showMessage(`Timer reset for "${faq.topic}".`);
+    } catch (e) {
+      console.error(e);
+      showMessage("Failed to reset timer.");
     }
-    return faqs.filter((faq) =>
-      faq.topic.toLowerCase().includes(debouncedSearchQuery.toLowerCase())
-    );
-  }, [faqs, debouncedSearchQuery]);
+  }, []);
 
-  const handleApplyTimer = useCallback((): void => {
+  // ── Add ────────────────────────────────────────────────────────────────────
+  const handleAddFaq = useCallback(async () => {
+    if (!newFaqFormData.topic.trim() || !newFaqFormData.details.trim()) {
+      showMessage("Topic and Details cannot be empty.");
+      return;
+    }
+    try {
+      await addFaq({ ...newFaqFormData, timerStartTime: null });
+      setNewFaqFormData({ topic: "", details: "" });
+      setIsAddModalOpen(false);
+      showMessage("New FAQ added successfully!");
+    } catch (e) {
+      console.error(e);
+      showMessage("Failed to add FAQ.");
+    }
+  }, [newFaqFormData]);
+
+  // ── Delete ─────────────────────────────────────────────────────────────────
+  const confirmDelete = useCallback(async () => {
+    if (!faqToDelete) return;
+    try {
+      await deleteFaq(faqToDelete);
+      showMessage("FAQ deleted successfully!");
+      setIsDeleteModalOpen(false);
+      setFaqToDelete(null);
+    } catch (e) {
+      console.error(e);
+      showMessage("Failed to delete FAQ.");
+    }
+  }, [faqToDelete]);
+
+  // ── Seed (one-time migration) ──────────────────────────────────────────────
+  // const handleSeedFaqs = useCallback(async () => {
+  //   if (!confirm("Seed Firestore with faq.json? This adds all entries without checking duplicates.")) return;
+  //   try {
+  //     await seedFaqs(faqData as any);
+  //     showMessage("Firestore seeded successfully!");
+  //   } catch (e) {
+  //     console.error(e);
+  //     showMessage("Seed failed. Check console.");
+  //   }
+  // }, []);
+
+  // ── Timer modal ────────────────────────────────────────────────────────────
+  const handleApplyTimer = useCallback(() => {
     const h = parseInt(hours) || 0;
     const m = parseInt(minutes) || 0;
     const s = parseInt(seconds) || 0;
-
     if (h < 0 || m < 0 || s < 0 || m > 59 || s > 59) {
-      setMessage('Invalid time values. Please use non-negative numbers, with minutes and seconds under 60.');
-      setTimeout(() => setMessage(''), 3000);
+      showMessage("Invalid time values.");
       return;
     }
-
-    const newDuration = h * 3600 + m * 60 + s;
-    setGlobalTimerDuration(newDuration);
-    setMessage(`Timer set to ${h}h ${m}m ${s}s for all cards.`);
-    setTimeout(() => setMessage(''), 3000);
-    setIsModalOpen(false); // Close the modal after applying the timer
+    setGlobalTimerDuration(h * 3600 + m * 60 + s);
+    setIsModalOpen(false);
+    showMessage(`Timer set to ${h}h ${m}m ${s}s.`);
   }, [hours, minutes, seconds]);
 
+  // ── Filtered list ──────────────────────────────────────────────────────────
+  const filteredFaqs = useMemo(() => {
+    if (!debouncedSearchQuery) return faqs;
+    return faqs.filter((f) =>
+      f.topic.toLowerCase().includes(debouncedSearchQuery.toLowerCase())
+    );
+  }, [faqs, debouncedSearchQuery]);
 
-
-
+  // ── Auth guard ─────────────────────────────────────────────────────────────
   if (!user || (user as any)?.canChat === false) {
-
-
     return (
       <div className="min-h-screen w-screen flex items-center justify-center bg-gray-100 dark:bg-gray-900">
-        <Link href={"/"} className="text-gray-600 dark:text-gray-400 text-center px-6 py-3 bg-gray-100 dark:bg-gray-800 rounded-xl shadow-md text-base font-medium transition-colors duration-300">
+        <Link
+          href="/"
+          className="text-gray-600 dark:text-gray-400 text-center px-6 py-3 bg-gray-100 dark:bg-gray-800 rounded-xl shadow-md"
+        >
           Please log in to access the FAQ.
         </Link>
       </div>
     );
   }
 
+  // ── Render ─────────────────────────────────────────────────────────────────
   return (
     <div className="h-screen w-full p-8 flex flex-col items-center font-sans">
       <div className="max-w-4xl w-full h-full flex flex-col">
-        {/* Title and Breadcrumb */}
-        <div>
-          <BreadCrumb />
-        </div>
+        <div><BreadCrumb /></div>
 
-        <div className='flex items-center justify-between mb-6 mt-6'>
-          <h1 className="text-4xl font-extrabold text-gray-900 dark:text-white text-center">FAQ KKK</h1>
-          <label className='text-2xl text-gray-700 dark:text-gray-300'>
-            Current Time: {new Date(currentTime).toLocaleTimeString()}
+        <div className="flex items-center justify-between mb-6 mt-6">
+          <h1 className="text-4xl font-extrabold text-gray-900 dark:text-white">FAQ KKK</h1>
+          <label className="text-2xl text-gray-700 dark:text-gray-300">
+            {new Date(currentTime).toLocaleTimeString()}
           </label>
         </div>
 
-        {/* Search Bar & Add FAQ Button */}
+        {/* Search Bar & Actions */}
         <div className="mb-8 w-full flex space-x-4">
           <input
             type="text"
             placeholder="Search for a topic..."
-            value={searchQuery} // Bind to raw searchQuery
-            onChange={handleSearchChange}
-            className="w-full px-4 py-3 border border-gray-300 dark:border-gray-700 rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all duration-300 text-gray-900 dark:text-gray-100 bg-white dark:bg-gray-800"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full px-4 py-3 border border-gray-300 dark:border-gray-700 rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 dark:text-gray-100 bg-white dark:bg-gray-800"
           />
           <button
-            onClick={handleOpenAddModal}
-            className="bg-green-600 text-white px-6 py-3 rounded-xl shadow-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 transition-colors duration-200"
+            onClick={() => setIsAddModalOpen(true)}
+            className="bg-green-600 text-white px-6 py-3 rounded-xl shadow-md hover:bg-green-700"
           >
             <MdFormatListBulletedAdd size={25} />
           </button>
-
           <button
             onClick={() => setIsModalOpen(true)}
-            className="bg-purple-600 text-white px-6 py-3 rounded-xl shadow-md hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500 transition-colors duration-200"
+            className="bg-purple-600 text-white px-6 py-3 rounded-xl shadow-md hover:bg-purple-700"
           >
             <IoIosTimer size={25} />
           </button>
 
-          {/* The new modal component */}
-          <TimerSettingsModal
-            isOpen={isModalOpen}
-            onClose={() => setIsModalOpen(false)}
-            hours={hours}
-            setHours={setHours}
-            minutes={minutes}
-            setMinutes={setMinutes}
-            seconds={seconds}
-            setSeconds={setSeconds}
-            onApply={handleApplyTimer}
-          />
-
+          {/* One-time seed button — remove after first use */}
+          {/* <button
+            onClick={handleSeedFaqs}
+            title="Seed Firestore from faq.json (one-time)"
+            className="bg-yellow-500 text-white px-4 py-3 rounded-xl shadow-md hover:bg-yellow-600 text-xs font-bold"
+          >
+            SEED
+          </button> */}
         </div>
 
-        {/* Message Box */}
+        <TimerSettingsModal
+          isOpen={isModalOpen}
+          onClose={() => setIsModalOpen(false)}
+          hours={hours}
+          setHours={setHours}
+          minutes={minutes}
+          setMinutes={setMinutes}
+          seconds={seconds}
+          setSeconds={setSeconds}
+          onApply={handleApplyTimer}
+        />
+
+        {/* Message Toast */}
         {message && (
           <div className="fixed top-5 right-5 z-50 bg-blue-500 text-white px-4 py-3 rounded-lg shadow-lg animate-pulse">
             {message}
           </div>
         )}
 
+        {/* Loading State */}
+        {loading && (
+          <div className="flex items-center justify-center h-full">
+            <p className="text-gray-500 dark:text-gray-400 text-lg animate-pulse">Loading FAQs from Firestore…</p>
+          </div>
+        )}
+
         {/* FAQ Cards */}
-        <div className="space-y-4 h-full overflow-y-auto pr-2">
-          {filteredFaqs.length > 0 ? (
-            filteredFaqs.map((faq) => {
-              // NOTE: This 'index' is the index in the *filteredFaqs* array, not the main 'faqs' state array.
-              // For editing/deleting, you need to find the index in the original 'faqs' array.
+        {!loading && (
+          <div className="space-y-4 h-full overflow-y-auto pr-2">
+            {filteredFaqs.length > 0 ? (
+              filteredFaqs.map((faq) => {
+                const id = faq.id!;
+                const elapsed = faq.timerStartTime ? (currentTime - faq.timerStartTime) / 1000 : 0;
+                const remaining = globalTimerDuration - elapsed;
+                const displayTime = formatTime(remaining);
+                const canCopy = !faq.timerStartTime || remaining <= 0;
+                const isEditing = editingCard === id;
+                const isExpanded = expandedCard === id;
 
-              // Find the original index for state updates (Edit/Delete/Reset Timer)
-              // NOTE: This assumes that topic names are unique identifiers.
-              const originalIndex = faqs.findIndex(item => item.topic === faq.topic && item.details === faq.details);
-
-              const elapsedTime = faq.timerStartTime ? (currentTime - faq.timerStartTime) / 1000 : 0; // in seconds
-              const remainingTime = globalTimerDuration - elapsedTime;
-              const displayTime = formatTime(remainingTime);
-
-              // Determine if copy button/action should be visually disabled or show tooltip
-              const canCopyCurrent = faq.timerStartTime === null || undefined || remainingTime <= 0;
-
-              // Check if the card currently in edit mode is the one corresponding to the original index
-              const isEditing = editingCard === originalIndex;
-              const isExpanded = expandedCard === originalIndex;
-
-
-              return (
-                <div
-                  key={originalIndex} // Use originalIndex as key for stability
-                  className={`bg-white dark:bg-gray-800 rounded-xl shadow-lg transition-all duration-300 hover:shadow-xl overflow-hidden relative 
-                  ${canCopyCurrent ? "border-green-500 border-2" : "border-red-500 border-2"}
-                  `}
-                >
-                  {/* Topic/Header Section */}
+                return (
                   <div
-                    className="flex justify-between items-center p-6 cursor-pointer select-none border-b border-gray-200 dark:border-gray-700"
-                    onClick={() => handleToggleDetails(originalIndex)} // Use originalIndex
+                    key={id}
+                    className={`bg-white dark:bg-gray-800 rounded-xl shadow-lg transition-all duration-300 hover:shadow-xl overflow-hidden relative
+                      ${canCopy ? "border-green-500 border-2" : "border-red-500 border-2"}`}
                   >
-                    {isEditing ? (
-                      <input
-                        type="text"
-                        name="topic"
-                        value={editFormData.topic}
-                        onChange={handleEditFormChange}
-                        className={`text-xl font-bold text-gray-900 dark:text-white w-full bg-gray-100 dark:bg-gray-700 p-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 `}
-                      />
-                    ) : (
-                      <h2
-                        className={`text-xl font-bold flex flex-col truncate w-full ${canCopyCurrent ? 'text-gray-900 dark:text-white' : 'text-gray-500 dark:text-gray-400 cursor-not-allowed'}`}
-                        onClick={(e) => {
-                          e.stopPropagation(); // Prevent parent div's click from firing
-                          copyToClipboard(faq.details, faq.topic); // This now attempts to copy and starts timer if allowed
-                        }}
-                        title={canCopyCurrent ? "Click to copy details and start timer" : `Copying disabled while timer is active. Expires in ${Math.ceil(remainingTime)}s.`}
-                      >
-                        {faq.topic}
-                        <span className={`text-md font-medium italic ${remainingTime <= 10 && !canCopyCurrent ? 'text-red-500' : 'text-blue-500'} dark:text-blue-400`}>
-                          Timer: {displayTime}
-                        </span>
-                      </h2>
-                    )}
-
-                    <div className="flex items-center space-x-2 relative" ref={menuRef}>
+                    {/* Card Header */}
+                    <div
+                      className="flex justify-between items-center p-6 cursor-pointer select-none border-b border-gray-200 dark:border-gray-700"
+                      onClick={() => setExpandedCard(isExpanded ? null : id)}
+                    >
                       {isEditing ? (
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleSaveClick(originalIndex); // Use originalIndex
-                          }}
-                          className="bg-green-500 text-white px-3 py-1 rounded-full text-sm hover:bg-green-600 transition-colors duration-200"
-                        >
-                          Save
-                        </button>
+                        <input
+                          type="text"
+                          value={editFormData.topic}
+                          onChange={(e) => setEditFormData((p) => ({ ...p, topic: e.target.value }))}
+                          className="text-xl font-bold text-gray-900 dark:text-white w-full bg-gray-100 dark:bg-gray-700 p-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        />
                       ) : (
-                        <>
-                          {!canCopyCurrent && ( // Show reset button only if timer is active
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleResetTimer(originalIndex); // Use originalIndex
-                              }}
-                              className="bg-yellow-500 text-white px-3 py-1 rounded-full text-sm hover:bg-yellow-600 transition-colors duration-200"
-                            >
-                              Reset Time
-                            </button>
-                          )}
-                          <button
-                            onClick={(e) => handleMenuToggle(originalIndex, e)} // Use originalIndex
-                            className="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                          >
-                            <svg className="w-6 h-6 text-gray-500 dark:text-gray-400" fill="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                              <path d="M12 8c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z"></path>
-                            </svg>
-                          </button>
-                          {openMenuIndex === originalIndex && (
-                            <div className="absolute right-20 z-20 w-48 rounded-md shadow-lg bg-white dark:bg-gray-700 ring-1 ring-black ring-opacity-5">
-                              <div className="py-1">
-                                <button
-                                  onClick={() => handleEditClick(faq, originalIndex)} // Use originalIndex
-                                  className="text-gray-700 dark:text-gray-300 block w-full text-left px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-600"
-                                >
-                                  Edit
-                                </button>
-                                <button
-                                  onClick={() => handleOpenDeleteModal(originalIndex)} // Use originalIndex
-                                  className="text-gray-700 dark:text-gray-300 block w-full text-left px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-600"
-                                >
-                                  Delete
-                                </button>
-                              </div>
-                            </div>
-                          )}
-                        </>
+                        <h2
+                          className={`text-xl font-bold flex flex-col truncate w-full
+                            ${canCopy ? "text-gray-900 dark:text-white" : "text-gray-500 dark:text-gray-400 cursor-not-allowed"}`}
+                          onClick={(e) => { e.stopPropagation(); copyToClipboard(faq); }}
+                          title={canCopy ? "Click to copy & start timer" : `Timer active — ${Math.ceil(remaining)}s left`}
+                        >
+                          {faq.topic}
+                          <span className={`text-md font-medium italic ${remaining <= 10 && !canCopy ? "text-red-500" : "text-blue-500"}`}>
+                            Timer: {displayTime}
+                          </span>
+                        </h2>
                       )}
-                      <svg
-                        className={`w-6 h-6 text-gray-500 dark:text-gray-400 transform transition-transform duration-300 ${isExpanded ? 'rotate-180' : 'rotate-0'}`}
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                        xmlns="http://www.w3.org/2000/svg"
-                      >
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path>
-                      </svg>
+
+                      {/* Action buttons */}
+                      <div className="flex items-center space-x-2 relative" ref={menuRef}>
+                        {isEditing ? (
+                          <button
+                            onClick={(e) => { e.stopPropagation(); handleSaveClick(id); }}
+                            className="bg-green-500 text-white px-3 py-1 rounded-full text-sm hover:bg-green-600"
+                          >
+                            Save
+                          </button>
+                        ) : (
+                          <>
+                            {!canCopy && (
+                              <button
+                                onClick={(e) => { e.stopPropagation(); handleResetTimer(faq); }}
+                                className="bg-yellow-500 text-white px-3 py-1 rounded-full text-sm hover:bg-yellow-600"
+                              >
+                                Reset Time
+                              </button>
+                            )}
+                            <button
+                              onClick={(e) => { e.stopPropagation(); setOpenMenuIndex(openMenuIndex === id ? null : id); }}
+                              className="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700"
+                            >
+                              <svg className="w-6 h-6 text-gray-500" fill="currentColor" viewBox="0 0 24 24">
+                                <path d="M12 8c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z" />
+                              </svg>
+                            </button>
+                            {openMenuIndex === id && (
+                              <div className="absolute right-20 z-20 w-48 rounded-md shadow-lg bg-white dark:bg-gray-700 ring-1 ring-black ring-opacity-5">
+                                <div className="py-1">
+                                  <button
+                                    onClick={() => handleEditClick(faq)}
+                                    className="text-gray-700 dark:text-gray-300 block w-full text-left px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-600"
+                                  >
+                                    Edit
+                                  </button>
+                                  <button
+                                    onClick={() => { setFaqToDelete(id); setIsDeleteModalOpen(true); setOpenMenuIndex(null); }}
+                                    className="text-gray-700 dark:text-gray-300 block w-full text-left px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-600"
+                                  >
+                                    Delete
+                                  </button>
+                                </div>
+                              </div>
+                            )}
+                          </>
+                        )}
+                        <svg
+                          className={`w-6 h-6 text-gray-500 transform transition-transform duration-300 ${isExpanded ? "rotate-180" : "rotate-0"}`}
+                          fill="none" stroke="currentColor" viewBox="0 0 24 24"
+                        >
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+                        </svg>
+                      </div>
+                    </div>
+
+                    {/* Details Dropdown */}
+                    <div className={`transition-all duration-500 ease-in-out overflow-hidden ${isExpanded ? "max-h-96 opacity-100 p-6 pt-4" : "max-h-0 opacity-0"}`}>
+                      {isEditing ? (
+                        <textarea
+                          value={editFormData.details}
+                          onChange={(e) => setEditFormData((p) => ({ ...p, details: e.target.value }))}
+                          rows={10}
+                          className="w-full text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 p-2 rounded-lg resize-y focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        />
+                      ) : (
+                        <pre className="select-none text-gray-700 dark:text-gray-300 whitespace-pre-wrap leading-relaxed">
+                          {faq.details}
+                        </pre>
+                      )}
                     </div>
                   </div>
-
-                  {/* Details Section (Dropdown) */}
-                  <div
-                    className={`transition-all duration-500 ease-in-out overflow-hidden ${isExpanded ? 'max-h-96 opacity-100 p-6 pt-0' : 'max-h-0 opacity-0'}`}
-                  >
-                    {isEditing ? (
-                      <textarea
-                        name="details"
-                        value={editFormData.details}
-                        onChange={handleEditFormChange}
-                        rows={10}
-                        className="w-full text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 p-2 rounded-lg resize-y focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      />
-                    ) : (
-                      <pre className="select-none text-gray-700 dark:text-gray-300 whitespace-pre-wrap leading-relaxed">
-                        {faq.details}
-                      </pre>
-                    )}
-                  </div>
-                </div>
-              );
-            })
-          ) : (
-            <p className="text-center text-gray-500 dark:text-gray-400 mt-8">{`No results found for "${searchQuery}".`}</p>
-          )}
-        </div>
+                );
+              })
+            ) : (
+              <p className="text-center text-gray-500 dark:text-gray-400 mt-8">
+                {`No results found for "${searchQuery}".`}
+              </p>
+            )}
+          </div>
+        )}
       </div>
 
-      {/* Add New FAQ Modal */}
+      {/* Add FAQ Modal */}
       {isAddModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
           <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 w-full max-w-md mx-4">
@@ -659,31 +483,25 @@ const FAQ = () => {
             <div className="space-y-4">
               <input
                 type="text"
-                name="topic"
-                placeholder="New Topic"
+                placeholder="Topic"
                 value={newFaqFormData.topic}
-                onChange={handleNewFaqFormChange}
-                className="w-full px-4 py-3 border border-gray-300 dark:border-gray-700 rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all duration-300 text-gray-900 dark:text-gray-100 bg-white dark:bg-gray-700"
+                onChange={(e) => setNewFaqFormData((p) => ({ ...p, topic: e.target.value }))}
+                className="w-full px-4 py-3 border border-gray-300 dark:border-gray-700 rounded-xl text-gray-900 dark:text-gray-100 bg-white dark:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
               <textarea
-                name="details"
-                placeholder="New Details"
+                placeholder="Details"
                 value={newFaqFormData.details}
-                onChange={handleNewFaqFormChange}
+                onChange={(e) => setNewFaqFormData((p) => ({ ...p, details: e.target.value }))}
                 rows={5}
-                className="w-full px-4 py-3 border border-gray-300 dark:border-gray-700 rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all duration-300 text-gray-900 dark:text-gray-100 bg-white dark:bg-gray-700 resize-y"
+                className="w-full px-4 py-3 border border-gray-300 dark:border-gray-700 rounded-xl text-gray-900 dark:text-gray-100 bg-white dark:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-y"
               />
               <div className="flex justify-end space-x-2">
-                <button
-                  onClick={handleCloseAddModal}
-                  className="bg-gray-500 text-white px-6 py-3 rounded-xl shadow-md hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-500 transition-colors duration-200"
-                >
+                <button onClick={() => { setIsAddModalOpen(false); setNewFaqFormData({ topic: "", details: "" }); }}
+                  className="bg-gray-500 text-white px-6 py-3 rounded-xl hover:bg-gray-600">
                   Cancel
                 </button>
-                <button
-                  onClick={handleAddFaq}
-                  className="bg-green-600 text-white px-6 py-3 rounded-xl shadow-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 transition-colors duration-200"
-                >
+                <button onClick={handleAddFaq}
+                  className="bg-green-600 text-white px-6 py-3 rounded-xl hover:bg-green-700">
                   Add FAQ
                 </button>
               </div>
@@ -693,22 +511,20 @@ const FAQ = () => {
       )}
 
       {/* Delete Confirmation Modal */}
-      {isDeleteModalOpen && faqToDelete !== null && (
+      {isDeleteModalOpen && faqToDelete && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
           <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 w-full max-w-sm mx-4 text-center">
             <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">Delete FAQ</h2>
-            <p className="text-gray-700 dark:text-gray-300 mb-6">Are you sure you want to delete the topic: **{faqs[faqToDelete]?.topic}**?</p>
+            <p className="text-gray-700 dark:text-gray-300 mb-6">
+              Are you sure you want to delete <strong>{faqs.find((f) => f.id === faqToDelete)?.topic}</strong>?
+            </p>
             <div className="flex justify-center space-x-4">
-              <button
-                onClick={handleCloseDeleteModal}
-                className="bg-gray-500 text-white px-6 py-3 rounded-xl shadow-md hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-500 transition-colors duration-200"
-              >
+              <button onClick={() => { setIsDeleteModalOpen(false); setFaqToDelete(null); }}
+                className="bg-gray-500 text-white px-6 py-3 rounded-xl hover:bg-gray-600">
                 Cancel
               </button>
-              <button
-                onClick={confirmDelete}
-                className="bg-red-600 text-white px-6 py-3 rounded-xl shadow-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 transition-colors duration-200"
-              >
+              <button onClick={confirmDelete}
+                className="bg-red-600 text-white px-6 py-3 rounded-xl hover:bg-red-700">
                 Delete
               </button>
             </div>
