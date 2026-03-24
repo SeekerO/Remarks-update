@@ -14,6 +14,8 @@ export interface FooterSettings {
   offsetX: number;
   offsetY: number;
   rotation?: number;
+  autoFit: boolean;
+  fitScale: number
 }
 
 export interface ShadowSettings {

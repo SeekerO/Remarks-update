@@ -5,7 +5,7 @@ import React, { useRef, useState } from "react";
 // import BreadCrumb from "../component/breadcrumb";
 import { compareExcelFilesFuzzy } from "@/lib/util/compare";
 import SideMenu from "./component/sidemenu";
-import { useAuth } from "../Chat/AuthContext";
+import { useAuth } from "../../lib/auth/AuthContext";
 import { IoSearch } from "react-icons/io5";
 import { MdUploadFile, MdPeopleAlt, MdPlayArrow, MdDelete } from 'react-icons/md';
 

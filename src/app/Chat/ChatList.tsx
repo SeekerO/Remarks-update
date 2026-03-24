@@ -2,9 +2,9 @@
 "use client";
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
-import React, { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useUserChats } from './hooks/useUserChats';
-import { useAuth } from './AuthContext';
+import { useAuth } from '../../lib/auth/AuthContext';
 import { createChat } from '../../lib/firebase/firebase.actions/createChat';
 import { ref, onValue } from 'firebase/database';
 import { db } from '../../lib/firebase/firebase';

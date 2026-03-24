@@ -1,17 +1,22 @@
 "use client"
-/* eslint-disable @typescript-eslint/no-explicit-any */
-
 
 import DynamicColumn from "./component/dynamicColumn";
 
 const Remarks = () => {
-
-  return <div className="h-screen w-screen flex flex-col ">
-
-    <div className="p-5 h-full w-full">
-      <DynamicColumn />
+  return (
+    <div className="h-screen w-screen flex flex-col bg-[#070710] overflow-hidden">
+      {/* Radial glow */}
+      <div className="pointer-events-none fixed inset-0 z-0">
+        <div className="absolute top-0 right-0 w-[500px] h-[500px] rounded-full opacity-15"
+          style={{ background: "radial-gradient(circle at 100% 0%, rgba(99,102,241,0.5) 0%, transparent 60%)" }} />
+        <div className="absolute bottom-0 left-0 w-[400px] h-[400px] rounded-full opacity-10"
+          style={{ background: "radial-gradient(circle at 0% 100%, rgba(20,184,166,0.4) 0%, transparent 60%)" }} />
+      </div>
+      <div className="relative z-10 p-5 h-full w-full">
+        <DynamicColumn />
+      </div>
     </div>
-  </div>
+  );
 };
 
 export default Remarks;

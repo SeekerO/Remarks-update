@@ -1,9 +1,10 @@
 'use client';
 
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { Upload, Download, X, Loader2, Image as ImageIcon, Info, RotateCcw } from 'lucide-react';
+import { Upload, Download, X, Loader2, Image as ImageIcon, RotateCcw, Sparkles } from 'lucide-react';
+import { IoLogoBuffer, IoIosColorWand, IoIosPin } from "react-icons/io";
 
-const PureBackgroundRemover: React.FC = () => {
+export default function BackgroundRemover() {
     const [originalImage, setOriginalImage] = useState<string | null>(null);
     const [processedImage, setProcessedImage] = useState<string | null>(null);
     const [loading, setLoading] = useState(false);
@@ -13,229 +14,310 @@ const PureBackgroundRemover: React.FC = () => {
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const segmentationRef = useRef<any>(null);
 
-    // 1. Initialize MediaPipe on Mount
+    /* ── Init MediaPipe on mount ── */
     useEffect(() => {
-        const initMediaPipe = async () => {
+        const init = async () => {
             try {
-                const mpSelfie = await import('@mediapipe/selfie_segmentation');
-                // Handle CommonJS vs ESM export differences
-                const SelfieClass = mpSelfie.SelfieSegmentation || (mpSelfie as any).default;
+                const mp = await import('@mediapipe/selfie_segmentation');
+                const SelfieClass = mp.SelfieSegmentation || (mp as any).default;
+                if (!SelfieClass) return;
 
-                if (SelfieClass) {
-                    const selfieSegmentation = new SelfieClass({
-                        locateFile: (file: string) => `https://cdn.jsdelivr.net/npm/@mediapipe/selfie_segmentation/${file}`,
-                    });
-
-                    selfieSegmentation.setOptions({
-                        modelSelection: 1, // 1 for General (better quality), 0 for Landscape (faster)
-                    });
-
-                    selfieSegmentation.onResults(handleSegmentationResults);
-                    segmentationRef.current = selfieSegmentation;
-                    setModelLoaded(true);
-                }
+                const seg = new SelfieClass({
+                    locateFile: (file: string) =>
+                        `https://cdn.jsdelivr.net/npm/@mediapipe/selfie_segmentation/${file}`,
+                });
+                seg.setOptions({ modelSelection: 1 });
+                seg.onResults(handleResults);
+                segmentationRef.current = seg;
+                setModelLoaded(true);
             } catch (err) {
-                console.error("Failed to load MediaPipe:", err);
+                console.error('MediaPipe failed to load:', err);
             }
         };
-
-        initMediaPipe();
+        init();
     }, []);
 
-    // 2. The Core Canvas Logic
-    const handleSegmentationResults = (results: any) => {
-        if (!canvasRef.current) return;
+    /* ── Core canvas logic ── */
+    const handleResults = (results: any) => {
         const canvas = canvasRef.current;
+        if (!canvas) return;
         const ctx = canvas.getContext('2d');
         if (!ctx) return;
 
-        // Clear and resize
         ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-        // Step A: Draw the mask provided by the AI
         ctx.drawImage(results.segmentationMask, 0, 0, canvas.width, canvas.height);
-
-        // Step B: Use 'source-in' to composite the original image over the mask
-        // This keeps only the pixels that overlap with the "person" mask
         ctx.globalCompositeOperation = 'source-in';
         ctx.drawImage(results.image, 0, 0, canvas.width, canvas.height);
-
-        // Step C: Reset composite mode for future operations
         ctx.globalCompositeOperation = 'source-over';
 
         setProcessedImage(canvas.toDataURL('image/png'));
         setLoading(false);
     };
 
-    // 3. File Handling
+    /* ── File handling ── */
     const processFile = (file: File) => {
         if (!file.type.startsWith('image/')) return;
         setLoading(true);
         const reader = new FileReader();
-        reader.onload = (event) => {
-            setOriginalImage(event.target?.result as string);
+        reader.onload = (e) => {
+            setOriginalImage(e.target?.result as string);
             setProcessedImage(null);
             setLoading(false);
         };
         reader.readAsDataURL(file);
     };
 
-    // 4. Drag and Drop Logic
     const handleDrag = useCallback((e: React.DragEvent) => {
         e.preventDefault();
         e.stopPropagation();
-        setDragActive(e.type === "dragenter" || e.type === "dragover");
+        setDragActive(e.type === 'dragenter' || e.type === 'dragover');
     }, []);
 
     const handleDrop = useCallback((e: React.DragEvent) => {
         e.preventDefault();
         e.stopPropagation();
         setDragActive(false);
-        if (e.dataTransfer.files?.[0]) {
-            processFile(e.dataTransfer.files[0]);
-        }
+        if (e.dataTransfer.files?.[0]) processFile(e.dataTransfer.files[0]);
     }, []);
 
+    /* ── Run segmentation ── */
     const runSegmentation = async () => {
         if (!originalImage || !segmentationRef.current) return;
         setLoading(true);
-
         const img = new Image();
         img.src = originalImage;
         await img.decode();
-
         if (canvasRef.current) {
             canvasRef.current.width = img.width;
             canvasRef.current.height = img.height;
         }
-
         await segmentationRef.current.send({ image: img });
     };
 
     const downloadImage = () => {
         if (!processedImage) return;
-        const link = document.createElement('a');
-        link.href = processedImage;
-        link.download = 'no-bg.png';
-        link.click();
+        const a = document.createElement('a');
+        a.href = processedImage;
+        a.download = 'no-bg.png';
+        a.click();
     };
 
-    return (
-        <div className="min-h-screen w-screen overflow-y-auto bg-slate-50 dark:bg-slate-950 p-6 flex flex-col items-center">
-            <div className="max-w-5xl w-full space-y-8">
-                {/* Header */}
-                <div className="text-center space-y-2">
-                    <h1 className="text-4xl font-extrabold text-slate-900 dark:text-white tracking-tight">
-                        AI Background Remover
-                    </h1>
-                    <p className="text-slate-500 dark:text-slate-400">
-                        Privacy-first: Processing happens entirely in your browser.
-                    </p>
-                </div>
+    const reset = () => {
+        setOriginalImage(null);
+        setProcessedImage(null);
+    };
 
-                {!originalImage ? (
-                    /* Upload Zone */
+    /* ════════════════════════════════════════════
+       RENDER
+       ════════════════════════════════════════════ */
+    return (
+        <div className="min-h-full w-full bg-gray-50 dark:bg-[#0f0e17] overflow-y-auto">
+
+
+            {/* ── Page header ── */}
+            <div className="sticky top-0 z-20 bg-white/80 dark:bg-[#0f0e17]/80 backdrop-blur-md border-b border-black/[0.06] dark:border-white/[0.06] px-6 py-4">
+                <div className="max-w-4xl mx-auto flex items-center justify-between">
+                    <div className="pointer-events-none absolute top-0 right-0 w-64 h-64 rounded-full opacity-30"
+                        style={{ background: "radial-gradient(circle at 100% 0%, rgba(99,102,241,0.4) 0%, transparent 60%)" }} />
+                    <div className="pointer-events-none absolute bottom-0 left-0 w-48 h-48 rounded-full opacity-20"
+                        style={{ background: "radial-gradient(circle at 0% 100%, rgba(99,102,241,0.3) 0%, transparent 60%)" }} />
+
+                    <div className="flex items-center gap-2.5">
+                        <div className="w-8 h-8 rounded-lg bg-indigo-600/20 border border-indigo-500/30 flex items-center justify-center">
+                            <IoIosColorWand className="w-4 h-4 text-indigo-400" />
+                        </div>
+                        <div>
+                            <h1 className="text-base font-bold text-white leading-tight">Background Remover</h1>
+                            <p className="text-[10px] text-white/30 tracking-wider uppercase">100% client-side · your images never leave this device</p>
+                        </div>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                        {/* Model status pill */}
+                        <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-medium border
+              ${modelLoaded
+                                ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20'
+                                : 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20'
+                            }`}
+                        >
+                            <div className={`w-1.5 h-1.5 rounded-full ${modelLoaded ? 'bg-emerald-400' : 'bg-amber-400 animate-pulse'}`} />
+                            {modelLoaded ? 'AI ready' : 'Loading AI…'}
+                        </div>
+
+                        {originalImage && (
+                            <button
+                                onClick={reset}
+                                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium
+                  text-gray-500 dark:text-white/40
+                  hover:bg-gray-100 dark:hover:bg-white/[0.05]
+                  transition-colors"
+                            >
+                                <RotateCcw className="w-3 h-3" />
+                                Reset
+                            </button>
+                        )}
+                    </div>
+                </div>
+            </div>
+
+            <div className="max-w-4xl mx-auto px-6 py-8">
+
+                {/* ══ UPLOAD ZONE ══ */}
+                {!originalImage && (
                     <div
                         onDragEnter={handleDrag}
                         onDragLeave={handleDrag}
                         onDragOver={handleDrag}
                         onDrop={handleDrop}
-                        className={`relative border-2 border-dashed rounded-3xl p-16 text-center transition-all duration-300 ${dragActive
-                            ? 'border-blue-500 bg-blue-500/10 scale-[1.01]'
-                            : 'border-slate-300 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm'
+                        className={`relative flex flex-col items-center justify-center rounded-2xl border-2 border-dashed
+              transition-all duration-200 cursor-pointer
+              min-h-[360px]
+              ${dragActive
+                                ? 'border-indigo-400 bg-indigo-500/5 dark:bg-indigo-500/10 scale-[1.01]'
+                                : 'border-black/10 dark:border-white/10 bg-white dark:bg-white/[0.02] hover:border-indigo-300 dark:hover:border-indigo-500/40 hover:bg-indigo-500/[0.02]'
                             }`}
                     >
                         <input
                             type="file"
                             id="file-upload"
-                            hidden
+                            className="absolute inset-0 opacity-0 cursor-pointer"
                             accept="image/*"
                             onChange={(e) => e.target.files?.[0] && processFile(e.target.files[0])}
                         />
-                        <div className="flex flex-col items-center">
-                            <div className="w-20 h-20 bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center mb-6">
-                                <Upload className="w-10 h-10 text-blue-600" />
-                            </div>
-                            <h3 className="text-xl font-bold mb-2">Drag & Drop Image</h3>
-                            <p className="text-slate-500 mb-8">or click to browse from your computer</p>
 
-                            <label
-                                htmlFor="file-upload"
-                                className="px-8 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold cursor-pointer transition-all shadow-lg shadow-blue-500/25"
+                        <div className="flex flex-col items-center gap-4 pointer-events-none select-none">
+                            <div className={`w-16 h-16 rounded-2xl flex items-center justify-center transition-colors
+                ${dragActive ? 'bg-indigo-500/15' : 'bg-gray-100 dark:bg-white/[0.05]'}`}
                             >
-                                Choose Image
-                            </label>
+                                <Upload className={`w-7 h-7 transition-colors ${dragActive ? 'text-indigo-400' : 'text-gray-400 dark:text-white/25'}`} />
+                            </div>
+
+                            <div className="text-center">
+                                <p className="text-sm font-medium text-gray-600 dark:text-white/50">
+                                    {dragActive ? 'Drop to upload' : 'Drag & drop your image'}
+                                </p>
+                                <p className="text-xs text-gray-400 dark:text-white/25 mt-1">
+                                    or click anywhere to browse · PNG, JPG, WebP
+                                </p>
+                            </div>
                         </div>
                     </div>
-                ) : (
-                    /* Editor View */
-                    <div className="grid lg:grid-cols-2 gap-8 animate-in fade-in zoom-in duration-300">
-                        <div className="space-y-4">
-                            <div className="flex justify-between items-center">
-                                <span className="text-sm font-bold uppercase tracking-widest text-slate-400">Original</span>
-                                <button onClick={() => setOriginalImage(null)} className="text-slate-400 hover:text-red-500 transition-colors">
-                                    <X className="w-5 h-5" />
+                )}
+
+                {/* ══ EDITOR VIEW ══ */}
+                {originalImage && (
+                    <div className="grid md:grid-cols-2 gap-6">
+
+                        {/* Original */}
+                        <div className="space-y-3">
+                            <div className="flex items-center justify-between">
+                                <p className="text-[11px] font-medium uppercase tracking-[0.07em] text-gray-400 dark:text-white/25">
+                                    Original
+                                </p>
+                                <button
+                                    onClick={reset}
+                                    className="w-6 h-6 flex items-center justify-center rounded-md
+                    text-gray-300 dark:text-white/20
+                    hover:text-red-400 dark:hover:text-red-400
+                    hover:bg-red-500/10
+                    transition-colors"
+                                >
+                                    <X className="w-3.5 h-3.5" />
                                 </button>
                             </div>
-                            <div className="relative aspect-square rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-800 bg-slate-100 dark:bg-slate-900">
+                            <div className="relative aspect-square rounded-xl overflow-hidden
+                bg-white dark:bg-white/[0.03]
+                border border-black/[0.07] dark:border-white/[0.07]">
                                 <img src={originalImage} className="w-full h-full object-contain" alt="Original" />
                             </div>
                         </div>
 
-                        <div className="space-y-4">
-                            <div className="flex justify-between items-center">
-                                <span className="text-sm font-bold uppercase tracking-widest text-slate-400">Result</span>
+                        {/* Result */}
+                        <div className="space-y-3">
+                            <div className="flex items-center justify-between">
+                                <p className="text-[11px] font-medium uppercase tracking-[0.07em] text-gray-400 dark:text-white/25">
+                                    Result
+                                </p>
                                 {processedImage && (
-                                    <button onClick={downloadImage} className="text-blue-500 hover:text-blue-600 flex items-center gap-1 text-sm font-bold">
-                                        <Download className="w-4 h-4" /> Save PNG
+                                    <button
+                                        onClick={downloadImage}
+                                        className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium
+                      bg-indigo-500/10 text-indigo-500 dark:text-indigo-400
+                      hover:bg-indigo-500/20
+                      border border-indigo-500/20
+                      transition-colors"
+                                    >
+                                        <Download className="w-3 h-3" />
+                                        Save PNG
                                     </button>
                                 )}
                             </div>
-                            <div className="relative aspect-square rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 bg-[url('https://www.transparenttextures.com/patterns/checkerboard.png')]">
+
+                            {/* Checkerboard bg for transparency */}
+                            <div
+                                className="relative aspect-square rounded-xl overflow-hidden border border-black/[0.07] dark:border-white/[0.07]"
+                                style={{
+                                    backgroundImage:
+                                        'linear-gradient(45deg,#e5e5e5 25%,transparent 25%,transparent 75%,#e5e5e5 75%),' +
+                                        'linear-gradient(45deg,#e5e5e5 25%,transparent 25%,transparent 75%,#e5e5e5 75%)',
+                                    backgroundSize: '16px 16px',
+                                    backgroundPosition: '0 0, 8px 8px',
+                                }}
+                            >
                                 {processedImage ? (
-                                    <img src={processedImage} className="w-full h-full object-contain" alt="Processed" />
+                                    <img src={processedImage} className="w-full h-full object-contain" alt="Result" />
                                 ) : (
-                                    <div className="flex flex-col items-center justify-center h-full text-slate-400">
+                                    <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-white/60 dark:bg-black/30">
                                         {loading ? (
                                             <>
-                                                <Loader2 className="w-12 h-12 animate-spin text-blue-500 mb-4" />
-                                                <p className="font-medium animate-pulse">Removing background...</p>
+                                                <Loader2 className="w-8 h-8 text-indigo-400 animate-spin" />
+                                                <p className="text-xs font-medium text-gray-500 dark:text-white/40 animate-pulse">
+                                                    Removing background…
+                                                </p>
                                             </>
                                         ) : (
-                                            <div className="text-center px-6">
-                                                <ImageIcon className="w-12 h-12 mx-auto mb-4 opacity-20" />
-                                                <button
-                                                    onClick={runSegmentation}
-                                                    disabled={!modelLoaded}
-                                                    className="px-6 py-2 bg-slate-800 dark:bg-slate-700 text-white rounded-lg font-bold hover:bg-slate-700 disabled:opacity-50"
-                                                >
-                                                    {modelLoaded ? "Start AI Processing" : "Loading AI Engine..."}
-                                                </button>
-                                            </div>
+                                            <button
+                                                onClick={runSegmentation}
+                                                disabled={!modelLoaded}
+                                                className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-medium
+                          bg-indigo-500 hover:bg-indigo-600 active:bg-indigo-700
+                          disabled:opacity-50 disabled:cursor-not-allowed
+                          text-white transition-colors shadow-sm"
+                                            >
+                                                <Sparkles className="w-4 h-4" />
+                                                {modelLoaded ? 'Remove background' : 'Loading AI engine…'}
+                                            </button>
                                         )}
                                     </div>
                                 )}
                             </div>
                         </div>
+
                     </div>
                 )}
 
-                {originalImage && (
-                    <div className="flex justify-center pt-4">
-                        <button
-                            onClick={() => { setOriginalImage(null); setProcessedImage(null); }}
-                            className="flex items-center gap-2 text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 font-medium transition-colors"
-                        >
-                            <RotateCcw className="w-4 h-4" /> Upload a different image
-                        </button>
-                    </div>
-                )}
+                {/* ── Info strip ── */}
+                <div className="mt-8 flex flex-wrap items-center gap-4 px-4 py-3 rounded-xl
+          bg-white dark:bg-white/[0.02]
+          border border-black/[0.06] dark:border-white/[0.06]">
+                    {[
+                        { label: 'Engine', value: 'MediaPipe Selfie Segmentation' },
+                        { label: 'Privacy', value: 'No server upload — runs in browser' },
+                        { label: 'Output', value: 'Transparent PNG' },
+                    ].map(({ label, value }) => (
+                        <div key={label} className="flex items-center gap-2">
+                            <span className="text-[10px] font-medium uppercase tracking-[0.06em] text-gray-300 dark:text-white/20">
+                                {label}
+                            </span>
+                            <span className="text-[11px] text-gray-500 dark:text-white/40">{value}</span>
+                        </div>
+                    ))}
+                </div>
+
             </div>
 
-            {/* Internal processing canvas */}
+            {/* Hidden processing canvas */}
             <canvas ref={canvasRef} className="hidden" />
         </div>
     );
-};
-
-export default PureBackgroundRemover;
+}

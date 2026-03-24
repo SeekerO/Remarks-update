@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
-import UseGuard from "./component/withAuth";
-import ThemeWrapper from "./component/wrapper/night-mode-wrapper";
+import UseGuard from "../lib/auth/withAuth";
+import ThemeWrapper from "./component/wrapper/night_mode_wrapper";
 import "./globals.css"
-import { AuthProvider } from "./Chat/AuthContext";
+import { AuthProvider } from "../lib/auth/AuthContext";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -16,9 +16,9 @@ const geistMono = Geist_Mono({
 });
 
 // --- SEO Configuration Start ---
-const APP_NAME = "KKK Tool - SeekerDev";
+const APP_NAME = "Avexi";
 const APP_DESCRIPTION = "A modern, professional tool suite for web and mobile developers. Build clean, error-free components with React, Next.js, and TypeScript.";
-const APP_URL = "https://kkk-tool.vercel.app"; // **[IMPORTANT]: Change this to your actual domain**
+const APP_URL = "https://avexi.vercel.app"; // **[IMPORTANT]: Change this to your actual domain**
 
 export const metadata: Metadata = {
   // 1. Primary Metadata
@@ -65,7 +65,7 @@ export const metadata: Metadata = {
 
   // 5. Icons and PWA
   icons: {
-    icon: '/favicon.ico', // **[ACTION]: Ensure you have your favicon in /public**
+    icon: '/Avexi.svg', // **[ACTION]: Ensure you have your favicon in /public**
     apple: '/apple-icon.png',
   },
 };

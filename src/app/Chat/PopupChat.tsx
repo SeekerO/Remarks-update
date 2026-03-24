@@ -2,7 +2,7 @@
 "use client";
 import React, { useState } from 'react';
 import ChatRoom from './ChatRoom'; // Chat room component
-import { useAuth } from './AuthContext'; // Authentication context
+import { useAuth } from '../../lib/auth/AuthContext'; // Authentication context
 import ChatList from './ChatList'; // Chat list component
 import { IoArrowBackCircle, IoChatbubblesSharp, IoClose } from "react-icons/io5"; // Back icon
 

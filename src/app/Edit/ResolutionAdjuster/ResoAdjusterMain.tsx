@@ -1,203 +1,324 @@
-"use client"
+"use client";
 
 import React, { useState, useRef, useCallback } from 'react';
-import { Upload, Download, ImageIcon, RefreshCcw, Maximize2 } from 'lucide-react';
+import { Upload, Download, RefreshCcw, ImageIcon, Maximize2 } from 'lucide-react';
+import { MdOutlineAdminPanelSettings, MdOpacity } from "react-icons/md";
 
-interface ImageMetadata {
+interface ImageMeta {
     name: string;
     originalSize: string;
     newSize: string;
     dimensions: { w: number; h: number };
 }
 
-const ProfessionalResizer: React.FC = () => {
-    const [file, setFile] = useState<File | null>(null);
+/* ── Format bytes helper ── */
+const fmt = (bytes: number) => {
+    if (bytes === 0) return '0 B';
+    const i = Math.floor(Math.log(bytes) / Math.log(1024));
+    return `${(bytes / Math.pow(1024, i)).toFixed(2)} ${['B', 'KB', 'MB'][i]}`;
+};
+
+export default function ResolutionAdjuster() {
     const [previews, setPreviews] = useState<{ original: string; processed: string } | null>(null);
-    const [quality, setQuality] = useState<number>(0.3); // 0.1 to 1.0
-    const [meta, setMeta] = useState<ImageMetadata | null>(null);
+    const [quality, setQuality] = useState(0.5);
+    const [meta, setMeta] = useState<ImageMeta | null>(null);
     const [isDragging, setIsDragging] = useState(false);
 
     const canvasRef = useRef<HTMLCanvasElement>(null);
 
-    const formatSize = (bytes: number) => {
-        if (bytes === 0) return '0 B';
-        const i = Math.floor(Math.log(bytes) / Math.log(1024));
-        return `${(bytes / Math.pow(1024, i)).toFixed(2)} ${['B', 'KB', 'MB'][i]}`;
-    };
-
-    const processImage = useCallback((imgSource: string, fileName: string, originalSize: number) => {
+    /* ── Process image ── */
+    const processImage = useCallback((src: string, fileName: string, originalSize: number) => {
         const img = new Image();
         img.onload = () => {
             const canvas = canvasRef.current;
             if (!canvas) return;
-
             const ctx = canvas.getContext('2d');
             if (!ctx) return;
 
-            // Logic: Maintain aspect ratio but downscale based on quality slider
-            const width = img.width * quality;
-            const height = img.height * quality;
-
-            canvas.width = width;
-            canvas.height = height;
+            const w = Math.round(img.width * quality);
+            const h = Math.round(img.height * quality);
+            canvas.width = w;
+            canvas.height = h;
 
             ctx.imageSmoothingEnabled = true;
             ctx.imageSmoothingQuality = 'high';
-            ctx.drawImage(img, 0, 0, width, height);
+            ctx.drawImage(img, 0, 0, w, h);
 
-            const resultData = canvas.toDataURL('image/jpeg', 0.8);
-            setPreviews({ original: imgSource, processed: resultData });
+            const result = canvas.toDataURL('image/jpeg', 0.85);
+            const head = result.indexOf(',') + 1;
+            const newBytes = Math.round((result.length - head) * 0.75);
 
-            // Estimate result size
-            const head = resultData.indexOf(',') + 1;
-            const resultSize = Math.round((resultData.length - head) * 0.75);
-
-            setMeta({
-                name: fileName,
-                originalSize: formatSize(originalSize),
-                newSize: formatSize(resultSize),
-                dimensions: { w: Math.round(width), h: Math.round(height) }
-            });
+            setPreviews({ original: src, processed: result });
+            setMeta({ name: fileName, originalSize: fmt(originalSize), newSize: fmt(newBytes), dimensions: { w, h } });
         };
-        img.src = imgSource;
+        img.src = src;
     }, [quality]);
 
-    const handleFile = (e: React.ChangeEvent<HTMLInputElement> | React.DragEvent) => {
-        let selectedFile: File | undefined;
-
-        if ('files' in e.target) {
-            selectedFile = e.target.files?.[0];
-        } else if ('dataTransfer' in e) {
-            e.preventDefault();
-            selectedFile = e.dataTransfer.files[0];
-            setIsDragging(false);
-        }
-
-        if (selectedFile && selectedFile.type.startsWith('image/')) {
-            setFile(selectedFile);
-            const reader = new FileReader();
-            reader.onload = (ev) => processImage(ev.target?.result as string, selectedFile!.name, selectedFile!.size);
-            reader.readAsDataURL(selectedFile);
-        }
+    /* ── File handler ── */
+    const handleFile = (file: File) => {
+        if (!file.type.startsWith('image/')) return;
+        const reader = new FileReader();
+        reader.onload = (e) => processImage(e.target?.result as string, file.name, file.size);
+        reader.readAsDataURL(file);
     };
 
-    return (
-        <div className="max-w-5xl mx-auto p-6 font-sans antialiased text-slate-900">
-            {/* Header */}
-            <div className="mb-10 text-center">
-                <h1 className="text-3xl font-bold tracking-tight dark:text-slate-100 text-slate-900 sm:text-4xl">Image Optic</h1>
-                <p className="mt-2 dark:text-slate-400 text-slate-500">Professional-grade client-side image downsampling.</p>
-            </div>
+    const onInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (e.target.files?.[0]) handleFile(e.target.files[0]);
+    };
 
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-                {/* Controls Side */}
-                <div className="lg:col-span-4 space-y-6">
-                    <div className="p-6 rounded-2xl border dark:border-slate-600 border-slate-200 shadow-sm">
-                        <label className="text-sm font-semibold dark:text-slate-100 text-slate-700 block mb-4 uppercase tracking-wider">
-                            Resolution Scale
-                        </label>
-                        <input
-                            type="range" min="0.05" max="1" step="0.05"
-                            value={quality}
-                            onChange={(e) => {
-                                setQuality(parseFloat(e.target.value));
-                                if (previews) processImage(previews.original, meta!.name, 0); // Re-process
-                            }}
-                            className="w-full h-1.5 bg-slate-100 rounded-lg appearance-none cursor-pointer accent-indigo-600"
-                        />
-                        <div className="flex justify-between mt-2 text-xs font-medium text-slate-400">
-                            <span>Low Res</span>
-                            <span className="text-indigo-600 font-bold">{Math.round(quality * 100)}%</span>
-                            <span>Full Res</span>
+    const onDrop = (e: React.DragEvent) => {
+        e.preventDefault();
+        setIsDragging(false);
+        if (e.dataTransfer.files?.[0]) handleFile(e.dataTransfer.files[0]);
+    };
+
+    /* ── Reprocess on quality change ── */
+    const handleQualityChange = (val: number) => {
+        setQuality(val);
+        if (previews) processImage(previews.original, meta!.name, 0);
+    };
+
+    const pct = Math.round(quality * 100);
+
+    /* ════════════════════════════════════════════
+       RENDER
+       ════════════════════════════════════════════ */
+    return (
+        <div className="min-h-full w-full bg-gray-50 dark:bg-[#0f0e17] overflow-y-auto">
+
+            {/* ── Page header ── */}
+            <div className="sticky top-0 z-20 bg-white/80 dark:bg-[#0f0e17]/80 backdrop-blur-md
+        border-b border-black/[0.06] dark:border-white/[0.06] px-6 py-4">
+                <div className="max-w-4xl mx-auto flex items-center justify-between">
+                    <div className="flex items-center gap-2.5">
+                        <div className="w-8 h-8 rounded-lg bg-indigo-600/20 border border-indigo-500/30 flex items-center justify-center">
+                            <MdOpacity className="w-4 h-4 text-indigo-400" />
+                        </div>
+                        <div>
+                            <h1 className="text-base font-bold text-white leading-tight">Background Remover</h1>
+                            <p className="text-xs text-gray-400 dark:text-white/30 mt-0.5">Client-side image downsampling · no upload required</p>
                         </div>
                     </div>
 
-                    {meta && (
-                        <div className=" rounded-2xl p-6 border border-0.5 dark:border-slate-600 text-white shadow-lg shadow-gray-300 dark:shadow-gray-800">
-                            <h3 className="text-sm font-bold uppercase tracking-widest opacity-80 mb-4">Export Details</h3>
-                            <div className="space-y-3">
-                                <div className="flex justify-between items-center border-b border-indigo-500 pb-2">
-                                    <span className="text-xs opacity-80 text-white">Dimensions</span>
-                                    <span className="text-sm font-mono">{meta.dimensions.w} × {meta.dimensions.h} px</span>
-                                </div>
-                                <div className="flex justify-between items-center border-b border-indigo-500 pb-2">
-                                    <span className="text-xs opacity-80 text-white">Original</span>
-                                    <span className="text-sm font-mono line-through opacity-60">{meta.originalSize}</span>
-                                </div>
-                                <div className="flex justify-between items-center pt-1">
-                                    <span className="text-xs opacity-80 text-white">Optimized</span>
-                                    <span className="text-lg font-bold">{meta.newSize}</span>
-                                </div>
-                            </div>
-                            <a
-                                href={previews?.processed}
-                                download={`optimized-${meta.name}`}
-                                className="mt-6 w-full flex items-center justify-center gap-2 dark:bg-slate-900 hover:scale-105 bg-white text-indigo-600 py-3 rounded-xl font-bold hover:bg-indigo-50 transition-all active:scale-95"
-                            >
-                                <Download size={18} />
-                                Download Image
-                            </a>
-                        </div>
+
+                    {previews && (
+                        <button
+                            onClick={() => { setPreviews(null); setMeta(null); }}
+                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium
+                text-gray-500 dark:text-white/40
+                hover:bg-gray-100 dark:hover:bg-white/[0.05]
+                transition-colors"
+                        >
+                            <RefreshCcw className="w-3 h-3" />
+                            New image
+                        </button>
                     )}
                 </div>
+            </div>
 
-                {/* Workspace Side */}
-                <div className="lg:col-span-8">
-                    {!previews ? (
-                        <div
-                            onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
-                            onDragLeave={() => setIsDragging(false)}
-                            onDrop={handleFile}
-                            className={`relative border-2 border-dashed rounded-3xl h-[450px] flex flex-col items-center justify-center transition-all duration-200 ${isDragging ? 'border-indigo-500 bg-indigo-50' : 'border-slate-200 bg-slate-50/50 hover:bg-slate-50'
-                                }`}
-                        >
-                            <div className="p-4 bg-white rounded-2xl shadow-sm mb-4">
-                                <Upload className="text-indigo-600" size={32} />
-                            </div>
-                            <p className="text-slate-900 font-semibold text-lg">Drop your image here</p>
-                            <p className="text-slate-500 text-sm mt-1">PNG, JPG or WebP up to 20MB</p>
-                            <input
-                                type="file"
-                                className="absolute inset-0 opacity-0 cursor-pointer"
-                                onChange={handleFile}
-                                accept="image/*"
-                            />
-                        </div>
-                    ) : (
-                        <div className=" border border-slate-600 rounded-3xl overflow-hidden shadow-sm">
-                            <div className="p-4 border-b border-slate-100 flex justify-between items-center ">
-                                <span className="text-sm font-medium dark:text-slate-200 text-slate-600 flex items-center gap-2">
-                                    <ImageIcon size={16} /> {meta?.name}
+            <div className="max-w-4xl mx-auto px-6 py-8">
+                <div className="grid lg:grid-cols-[280px_1fr] gap-6">
+
+                    {/* ── Left: controls ── */}
+                    <div className="space-y-4">
+
+                        {/* Quality slider card */}
+                        <div className="rounded-xl bg-white dark:bg-white/[0.03] border border-black/[0.07] dark:border-white/[0.07] p-5">
+                            <div className="flex items-center justify-between mb-4">
+                                <p className="text-xs font-medium uppercase tracking-[0.07em] text-gray-400 dark:text-white/30">
+                                    Resolution scale
+                                </p>
+                                <span className="text-sm font-semibold font-mono text-indigo-500 dark:text-indigo-400">
+                                    {pct}%
                                 </span>
-                                <button
-                                    onClick={() => setPreviews(null)}
-                                    className="text-slate-400 hover:text-red-500 transition-colors"
-                                >
-                                    <RefreshCcw size={18} />
-                                </button>
                             </div>
-                            <div className="p-8 flex items-center justify-center bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] dark:bg-slate-700 bg-slate-400">
-                                <div className="relative group">
-                                    <img
-                                        src={previews.processed}
-                                        className="max-h-[500px] rounded-lg shadow-2xl transition-all"
-                                        alt="Processed"
-                                    />
-                                    <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity">
-                                        <span className="bg-black/50 backdrop-blur-md text-white px-3 py-1 rounded-full text-xs flex items-center gap-2">
-                                            <Maximize2 size={12} /> Preview
+
+                            {/* Custom slider */}
+                            <div className="relative">
+                                <input
+                                    type="range"
+                                    min="0.05"
+                                    max="1"
+                                    step="0.05"
+                                    value={quality}
+                                    onChange={(e) => handleQualityChange(parseFloat(e.target.value))}
+                                    className="w-full h-1.5 appearance-none rounded-full cursor-pointer
+                    bg-gray-200 dark:bg-white/10
+                    accent-indigo-500"
+                                    style={{
+                                        background: `linear-gradient(to right, #6366f1 0%, #6366f1 ${pct}%, transparent ${pct}%, transparent 100%)`,
+                                    }}
+                                />
+                            </div>
+
+                            <div className="flex justify-between mt-2">
+                                <span className="text-[10px] text-gray-300 dark:text-white/20">5%</span>
+                                <span className="text-[10px] text-gray-300 dark:text-white/20">100%</span>
+                            </div>
+
+                            {/* Scale presets */}
+                            <div className="grid grid-cols-4 gap-1.5 mt-4">
+                                {[25, 50, 75, 100].map((v) => (
+                                    <button
+                                        key={v}
+                                        onClick={() => handleQualityChange(v / 100)}
+                                        className={`py-1.5 rounded-lg text-[11px] font-medium transition-colors border
+                      ${pct === v
+                                                ? 'bg-indigo-500/15 text-indigo-500 dark:text-indigo-400 border-indigo-500/25'
+                                                : 'border-black/[0.07] dark:border-white/[0.07] text-gray-400 dark:text-white/30 hover:border-indigo-300 dark:hover:border-indigo-500/30'
+                                            }`}
+                                    >
+                                        {v}%
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+
+                        {/* Export details card — only when image is loaded */}
+                        {meta && (
+                            <div className="rounded-xl bg-white dark:bg-white/[0.03] border border-black/[0.07] dark:border-white/[0.07] p-5 space-y-3">
+                                <p className="text-xs font-medium uppercase tracking-[0.07em] text-gray-400 dark:text-white/30 mb-1">
+                                    Export details
+                                </p>
+
+                                {[
+                                    { label: 'Dimensions', value: `${meta.dimensions.w} × ${meta.dimensions.h} px` },
+                                    { label: 'Original', value: meta.originalSize, muted: true },
+                                    { label: 'Optimised', value: meta.newSize },
+                                ].map(({ label, value, muted }) => (
+                                    <div key={label} className="flex items-center justify-between py-2 border-b border-black/[0.05] dark:border-white/[0.05] last:border-0">
+                                        <span className="text-xs text-gray-400 dark:text-white/30">{label}</span>
+                                        <span className={`text-xs font-mono font-medium ${muted ? 'line-through text-gray-300 dark:text-white/20' : 'text-gray-700 dark:text-white/70'}`}>
+                                            {value}
                                         </span>
+                                    </div>
+                                ))}
+
+                                <a
+                                    href={previews?.processed}
+                                    download={`optimised-${meta.name}`}
+                                    className="flex items-center justify-center gap-2 w-full py-2.5 rounded-xl
+                    bg-indigo-500 hover:bg-indigo-600 active:bg-indigo-700
+                    text-white text-sm font-medium
+                    transition-colors no-underline mt-2"
+                                >
+                                    <Download className="w-4 h-4" />
+                                    Download image
+                                </a>
+                            </div>
+                        )}
+                    </div>
+
+                    {/* ── Right: preview / upload ── */}
+                    <div>
+                        {!previews ? (
+                            /* Drop zone */
+                            <div
+                                onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
+                                onDragLeave={() => setIsDragging(false)}
+                                onDrop={onDrop}
+                                className={`relative flex flex-col items-center justify-center rounded-2xl
+                  border-2 border-dashed min-h-[400px] transition-all duration-200 cursor-pointer
+                  ${isDragging
+                                        ? 'border-indigo-400 bg-indigo-500/5 dark:bg-indigo-500/10 scale-[1.01]'
+                                        : 'border-black/10 dark:border-white/10 bg-white dark:bg-white/[0.02] hover:border-indigo-300 dark:hover:border-indigo-500/40'
+                                    }`}
+                            >
+                                <input
+                                    type="file"
+                                    accept="image/*"
+                                    onChange={onInputChange}
+                                    className="absolute inset-0 opacity-0 cursor-pointer"
+                                />
+                                <div className="flex flex-col items-center gap-4 pointer-events-none select-none">
+                                    <div className={`w-16 h-16 rounded-2xl flex items-center justify-center transition-colors
+                    ${isDragging ? 'bg-indigo-500/15' : 'bg-gray-100 dark:bg-white/[0.05]'}`}
+                                    >
+                                        <Upload className={`w-7 h-7 transition-colors ${isDragging ? 'text-indigo-400' : 'text-gray-400 dark:text-white/25'}`} />
+                                    </div>
+                                    <div className="text-center">
+                                        <p className="text-sm font-medium text-gray-600 dark:text-white/50">
+                                            {isDragging ? 'Drop to upload' : 'Drag & drop your image'}
+                                        </p>
+                                        <p className="text-xs text-gray-400 dark:text-white/25 mt-1">
+                                            or click to browse · PNG, JPG, WebP up to 20MB
+                                        </p>
                                     </div>
                                 </div>
                             </div>
+                        ) : (
+                            /* Preview */
+                            <div className="rounded-2xl overflow-hidden border border-black/[0.07] dark:border-white/[0.07] bg-white dark:bg-white/[0.02]">
+                                {/* Toolbar */}
+                                <div className="flex items-center justify-between px-4 py-3 border-b border-black/[0.06] dark:border-white/[0.06]">
+                                    <div className="flex items-center gap-2">
+                                        <ImageIcon className="w-4 h-4 text-gray-300 dark:text-white/20" />
+                                        <span className="text-xs font-medium text-gray-500 dark:text-white/40 truncate max-w-[200px]">
+                                            {meta?.name}
+                                        </span>
+                                    </div>
+                                    <button
+                                        onClick={() => { setPreviews(null); setMeta(null); }}
+                                        className="w-6 h-6 flex items-center justify-center rounded-md
+                      text-gray-300 dark:text-white/20
+                      hover:text-red-400 hover:bg-red-500/10
+                      transition-colors"
+                                    >
+                                        <RefreshCcw className="w-3.5 h-3.5" />
+                                    </button>
+                                </div>
+
+                                {/* Image preview on checkerboard */}
+                                <div
+                                    className="relative flex items-center justify-center p-6 min-h-[340px]"
+                                    style={{
+                                        backgroundImage:
+                                            'linear-gradient(45deg,#f0f0f0 25%,transparent 25%,transparent 75%,#f0f0f0 75%),' +
+                                            'linear-gradient(45deg,#f0f0f0 25%,transparent 25%,transparent 75%,#f0f0f0 75%)',
+                                        backgroundSize: '20px 20px',
+                                        backgroundPosition: '0 0, 10px 10px',
+                                    }}
+                                >
+                                    <div className="relative group">
+                                        <img
+                                            src={previews.processed}
+                                            className="max-h-[400px] rounded-xl shadow-2xl"
+                                            alt="Preview"
+                                        />
+                                        <div className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity">
+                                            <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-full
+                        bg-black/50 backdrop-blur-sm text-white text-[10px] font-medium">
+                                                <Maximize2 className="w-3 h-3" />
+                                                {meta?.dimensions.w} × {meta?.dimensions.h}
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                </div>
+
+                {/* ── Info strip ── */}
+                <div className="mt-6 flex flex-wrap items-center gap-4 px-4 py-3 rounded-xl
+          bg-white dark:bg-white/[0.02]
+          border border-black/[0.06] dark:border-white/[0.06]">
+                    {[
+                        { label: 'Method', value: 'Canvas 2D downsampling' },
+                        { label: 'Privacy', value: 'No server upload — runs in browser' },
+                        { label: 'Output', value: 'JPEG at 85% quality' },
+                    ].map(({ label, value }) => (
+                        <div key={label} className="flex items-center gap-2">
+                            <span className="text-[10px] font-medium uppercase tracking-[0.06em] text-gray-300 dark:text-white/20">
+                                {label}
+                            </span>
+                            <span className="text-[11px] text-gray-500 dark:text-white/40">{value}</span>
                         </div>
-                    )}
+                    ))}
                 </div>
             </div>
 
             <canvas ref={canvasRef} className="hidden" />
         </div>
     );
-};
-
-export default ProfessionalResizer;
+}

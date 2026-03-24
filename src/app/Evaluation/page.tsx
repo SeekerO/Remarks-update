@@ -8,7 +8,7 @@ import { IoSearchOutline } from "react-icons/io5";
 import { MdDelete } from "react-icons/md";
 // import BreadCrumb from '../component/breadcrumb';
 import extractIdFromUrl from '@/lib/util/extractIdFromURL';
-import { useAuth } from '../Chat/AuthContext';
+import { useAuth } from '../../lib/auth/AuthContext';
 // Define the shape of a row dynamically
 interface SheetRow extends Record<string, string> {
     id: string; // Assuming the first column serves as a unique identifier

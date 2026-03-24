@@ -15,6 +15,125 @@ interface WatermarkSettings {
     rotation?: number;
 }
 
+export const FooterControlsBlock = ({
+    selectedFooterId,
+    currentFooterSettings,
+    updateFooterSettings,
+}: {
+    selectedFooterId: string | null;
+    currentFooterSettings: any;
+    updateFooterSettings: (s: any) => void;
+}) => {
+    if (!selectedFooterId || !currentFooterSettings) return null;
+
+    const autoFit: boolean = currentFooterSettings.autoFit ?? true;
+    const fitVal: number = currentFooterSettings.fitScale ?? 25;
+
+    const sliders = [
+        { label: "Opacity", key: "opacity", min: 0, max: 1, val: currentFooterSettings.opacity ?? 1, unit: "%", display: String(Math.round((currentFooterSettings.opacity ?? 1) * 100)), step: 0.01, always: true },
+        { label: "Offset X", key: "offsetX", min: -500, max: 500, val: currentFooterSettings.offsetX ?? 0, unit: "px", always: false },
+        { label: "Offset Y", key: "offsetY", min: -500, max: 500, val: currentFooterSettings.offsetY ?? 0, unit: "px", always: false },
+        { label: "Scale", key: "scale", min: 0.1, max: 5, val: currentFooterSettings.scale ?? 1, unit: "×", display: (currentFooterSettings.scale ?? 1).toFixed(2), step: 0.01, always: false },
+        { label: "Rotation", key: "rotation", min: -180, max: 180, val: currentFooterSettings.rotation ?? 0, unit: "°", always: true },
+    ].filter(({ always, key }) => {
+        if (always) return true;
+        if (autoFit) return key === "offsetX" || key === "offsetY";
+        return true;
+    });
+
+    return (
+        <div className="space-y-3 pt-2 border-t border-gray-100 dark:border-gray-800">
+
+            {/* Auto Fit toggle */}
+            <div className="flex items-center justify-between py-2 px-3 rounded-lg bg-green-50 dark:bg-green-900/10 border border-green-200 dark:border-green-800/40">
+                <div>
+                    <p className="text-xs font-semibold text-green-800 dark:text-green-300">Auto Fit</p>
+                    <p className="text-[10px] text-green-600 dark:text-green-400 leading-snug mt-0.5">
+                        Bottom-center · auto-scaled to canvas
+                    </p>
+                </div>
+                <button
+                    onClick={() => updateFooterSettings({ autoFit: !autoFit })}
+                    className={`relative w-11 h-6 rounded-full transition-colors duration-200 focus:outline-none flex-shrink-0
+                        ${autoFit ? 'bg-green-500' : 'bg-gray-300 dark:bg-gray-600'}`}
+                >
+                    <div className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform duration-200
+                        ${autoFit ? 'translate-x-5' : 'translate-x-0'}`} />
+                </button>
+            </div>
+
+            {/* Fit Size slider — only visible in auto-fit mode */}
+            {autoFit && (
+                <div className="space-y-1">
+                    <div className="flex items-center justify-between">
+                        <span className="text-xs font-medium text-gray-600 dark:text-gray-400">
+                            Fit Size
+                        </span>
+                        <span className="text-xs font-bold text-green-600 dark:text-green-400 tabular-nums">
+                            {fitVal}%
+                        </span>
+                    </div>
+                    <input
+                        type="range"
+                        min={5}
+                        max={100}
+                        step={1}
+                        value={fitVal}
+                        onChange={(e) => updateFooterSettings({ fitScale: parseInt(e.target.value) })}
+                        className="w-full h-1.5 rounded-full appearance-none cursor-pointer"
+                        style={{
+                            background: `linear-gradient(to right,
+                                rgb(34,197,94) 0%,
+                                rgb(34,197,94) ${((fitVal - 5) / 95) * 100}%,
+                                rgb(229,231,235) ${((fitVal - 5) / 95) * 100}%,
+                                rgb(229,231,235) 100%)`
+                        }}
+                    />
+                    <div className="flex justify-between mt-0.5">
+                        <span className="text-[10px] text-gray-400">5% · tiny</span>
+                        <span className="text-[10px] text-gray-400">100% · full width</span>
+                    </div>
+                </div>
+            )}
+
+            {/* Opacity / Offsets / Scale / Rotation */}
+            {sliders.map(({ label, key, min, max, val, unit, display, step }) => (
+                <div key={key} className="space-y-1">
+                    <div className="flex items-center justify-between">
+                        <span className="text-xs font-medium text-gray-600 dark:text-gray-400">
+                            {label}
+                            {autoFit && (key === "offsetX" || key === "offsetY") && (
+                                <span className="ml-1 text-[9px] text-green-500 font-semibold">nudge</span>
+                            )}
+                        </span>
+                        <span className="text-xs font-bold text-green-600 dark:text-green-400 tabular-nums">
+                            {display ?? val}{unit}
+                        </span>
+                    </div>
+                    <input
+                        type="range"
+                        min={min}
+                        max={max}
+                        step={step ?? 1}
+                        value={val}
+                        onChange={(e) => updateFooterSettings({
+                            [key]: step ? parseFloat(e.target.value) : parseInt(e.target.value)
+                        })}
+                        className="w-full h-1.5 rounded-full appearance-none cursor-pointer"
+                        style={{
+                            background: `linear-gradient(to right,
+                                rgb(34,197,94) 0%,
+                                rgb(34,197,94) ${((val - min) / (max - min)) * 100}%,
+                                rgb(229,231,235) ${((val - min) / (max - min)) * 100}%,
+                                rgb(229,231,235) 100%)`
+                        }}
+                    />
+                </div>
+            ))}
+        </div>
+    );
+};
+
 const calculateEdgeDistance = (position: string, paddingX: number, paddingY: number) => {
     let minDistance = Infinity;
     const edges: string[] = [];
@@ -382,12 +501,12 @@ export default function ImageControls() {
 
                                     {/* Sliders */}
                                     {[
-                                        { label: "Width",     key: "width",    min: 10,   max: 1000, val: currentLogoSettings.width,              unit: "px" },
-                                        { label: "Height",    key: "height",   min: 10,   max: 1000, val: currentLogoSettings.height,             unit: "px" },
-                                        { label: "Padding X", key: "paddingX", min: 0,    max: 100,  val: currentLogoSettings.paddingX,           unit: "px", warn: edgeInfo?.edges.includes("left") || edgeInfo?.edges.includes("right") },
-                                        { label: "Padding Y", key: "paddingY", min: 0,    max: 100,  val: currentLogoSettings.paddingY,           unit: "px", warn: edgeInfo?.edges.includes("top") || edgeInfo?.edges.includes("bottom") },
-                                        { label: "Opacity",   key: "opacity",  min: 0,    max: 1,    val: currentLogoSettings.opacity ?? 1,       unit: "%",  display: Math.round((currentLogoSettings.opacity ?? 1) * 100), step: 0.01 },
-                                        { label: "Rotation",  key: "rotation", min: -180, max: 180,  val: currentLogoSettings.rotation ?? 0,      unit: "°" },
+                                        { label: "Width", key: "width", min: 10, max: 1000, val: currentLogoSettings.width, unit: "px" },
+                                        { label: "Height", key: "height", min: 10, max: 1000, val: currentLogoSettings.height, unit: "px" },
+                                        { label: "Padding X", key: "paddingX", min: 0, max: 100, val: currentLogoSettings.paddingX, unit: "px", warn: edgeInfo?.edges.includes("left") || edgeInfo?.edges.includes("right") },
+                                        { label: "Padding Y", key: "paddingY", min: 0, max: 100, val: currentLogoSettings.paddingY, unit: "px", warn: edgeInfo?.edges.includes("top") || edgeInfo?.edges.includes("bottom") },
+                                        { label: "Opacity", key: "opacity", min: 0, max: 1, val: currentLogoSettings.opacity ?? 1, unit: "%", display: Math.round((currentLogoSettings.opacity ?? 1) * 100), step: 0.01 },
+                                        { label: "Rotation", key: "rotation", min: -180, max: 180, val: currentLogoSettings.rotation ?? 0, unit: "°" },
                                     ].map(({ label, key, min, max, val, unit, warn, display, step }) => (
                                         <div key={key} className="space-y-1">
                                             <div className="flex items-center justify-between">
@@ -489,46 +608,153 @@ export default function ImageControls() {
                             </div>
 
                             {/* Footer controls */}
-                            {selectedFooterId && currentFooterSettings && (
-                                <div className="space-y-3 pt-2 border-t border-gray-100 dark:border-gray-800">
-                                    {[
-                                        { label: "Opacity",  key: "opacity",  min: 0,     max: 1,    val: currentFooterSettings.opacity ?? 1,  unit: "%", display: Math.round((currentFooterSettings.opacity ?? 1) * 100), step: 0.01 },
-                                        { label: "Scale",    key: "scale",    min: 0.1,   max: 5,    val: currentFooterSettings.scale ?? 1,    unit: "×", display: ((currentFooterSettings.scale ?? 1)).toFixed(2), step: 0.01 },
-                                        { label: "Offset X", key: "offsetX",  min: -1500, max: 1500, val: currentFooterSettings.offsetX ?? 0,  unit: "px" },
-                                        { label: "Offset Y", key: "offsetY",  min: -1500, max: 1500, val: currentFooterSettings.offsetY ?? 0,  unit: "px" },
-                                        { label: "Rotation", key: "rotation", min: -180,  max: 180,  val: currentFooterSettings.rotation ?? 0, unit: "°" },
-                                    ].map(({ label, key, min, max, val, unit, display, step }) => (
-                                        <div key={key} className="space-y-1">
-                                            <div className="flex items-center justify-between">
-                                                <span className="text-xs font-medium text-gray-600 dark:text-gray-400">
-                                                    {label}
-                                                </span>
-                                                <span className="text-xs font-bold text-green-600 dark:text-green-400 tabular-nums">
-                                                    {display ?? val}{unit}
-                                                </span>
+                            {selectedFooterId && currentFooterSettings && (() => {
+                                const autoFit: boolean = (currentFooterSettings as any).autoFit ?? true;
+                                const fitVal: number = (currentFooterSettings as any).fitScale ?? 25;
+
+                                const sliders = [
+                                    {
+                                        label: "Opacity", key: "opacity",
+                                        min: 0, max: 1, step: 0.01,
+                                        val: currentFooterSettings.opacity ?? 1,
+                                        unit: "%",
+                                        display: String(Math.round((currentFooterSettings.opacity ?? 1) * 100)),
+                                        always: true,
+                                    },
+                                    {
+                                        label: "Offset X", key: "offsetX",
+                                        min: -500, max: 500, step: 1,
+                                        val: currentFooterSettings.offsetX ?? 0,
+                                        unit: "px",
+                                        always: false,
+                                    },
+                                    {
+                                        label: "Offset Y", key: "offsetY",
+                                        min: -500, max: 500, step: 1,
+                                        val: currentFooterSettings.offsetY ?? 0,
+                                        unit: "px",
+                                        always: false,
+                                    },
+                                    {
+                                        label: "Scale", key: "scale",
+                                        min: 0.1, max: 5, step: 0.01,
+                                        val: currentFooterSettings.scale ?? 1,
+                                        unit: "×",
+                                        display: (currentFooterSettings.scale ?? 1).toFixed(2),
+                                        always: false,
+                                    },
+                                    {
+                                        label: "Rotation", key: "rotation",
+                                        min: -180, max: 180, step: 1,
+                                        val: currentFooterSettings.rotation ?? 0,
+                                        unit: "°",
+                                        always: true,
+                                    },
+                                ].filter(({ always, key }) => {
+                                    if (always) return true;
+                                    // In auto-fit mode: keep offsetX/Y as nudge controls, hide manual scale
+                                    if (autoFit) return key === "offsetX" || key === "offsetY";
+                                    return true;
+                                });
+
+                                return (
+                                    <div className="space-y-3 pt-2 border-t border-gray-100 dark:border-gray-800">
+
+                                        {/* ── Auto Fit toggle ──────────────────────────────────── */}
+                                        <div className="flex items-center justify-between py-2 px-3 rounded-lg bg-green-50 dark:bg-green-900/10 border border-green-200 dark:border-green-800/40">
+                                            <div>
+                                                <p className="text-xs font-semibold text-green-800 dark:text-green-300">
+                                                    Auto Fit
+                                                </p>
+                                                <p className="text-[10px] text-green-600 dark:text-green-400 leading-snug mt-0.5">
+                                                    Bottom-center · auto-scaled to canvas
+                                                </p>
                                             </div>
-                                            <input
-                                                type="range"
-                                                min={min}
-                                                max={max}
-                                                step={step ?? 1}
-                                                value={val}
-                                                onChange={(e) => updateFooterSettings({
-                                                    [key]: step ? parseFloat(e.target.value) : parseInt(e.target.value)
-                                                })}
-                                                className="w-full h-1.5 rounded-full appearance-none cursor-pointer"
-                                                style={{
-                                                    background: `linear-gradient(to right,
-                                                        rgb(34,197,94) 0%,
-                                                        rgb(34,197,94) ${((val - min) / (max - min)) * 100}%,
-                                                        rgb(229,231,235) ${((val - min) / (max - min)) * 100}%,
-                                                        rgb(229,231,235) 100%)`
-                                                }}
-                                            />
+                                            <button
+                                                onClick={() => updateFooterSettings({ autoFit: !autoFit })}
+                                                className={`relative w-11 h-6 rounded-full transition-colors duration-200 focus:outline-none flex-shrink-0
+                        ${autoFit ? 'bg-green-500' : 'bg-gray-300 dark:bg-gray-600'}`}
+                                            >
+                                                <div className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform duration-200
+                        ${autoFit ? 'translate-x-5' : 'translate-x-0'}`}
+                                                />
+                                            </button>
                                         </div>
-                                    ))}
-                                </div>
-                            )}
+
+                                        {/* ── Fit Size slider — only visible when Auto Fit is ON ── */}
+                                        {autoFit && (
+                                            <div className="space-y-1">
+                                                <div className="flex items-center justify-between">
+                                                    <span className="text-xs font-medium text-gray-600 dark:text-gray-400">
+                                                        Fit Size
+                                                    </span>
+                                                    <span className="text-xs font-bold text-green-600 dark:text-green-400 tabular-nums">
+                                                        {fitVal}%
+                                                    </span>
+                                                </div>
+                                                <input
+                                                    type="range"
+                                                    min={5}
+                                                    max={100}
+                                                    step={1}
+                                                    value={fitVal}
+                                                    onChange={(e) => updateFooterSettings({ fitScale: parseInt(e.target.value) })}
+                                                    className="w-full h-1.5 rounded-full appearance-none cursor-pointer"
+                                                    style={{
+                                                        background: `linear-gradient(to right,
+                                rgb(34,197,94) 0%,
+                                rgb(34,197,94) ${((fitVal - 5) / 95) * 100}%,
+                                rgb(229,231,235) ${((fitVal - 5) / 95) * 100}%,
+                                rgb(229,231,235) 100%)`
+                                                    }}
+                                                />
+                                                <div className="flex justify-between mt-0.5">
+                                                    <span className="text-[10px] text-gray-400">5% · tiny</span>
+                                                    <span className="text-[10px] text-gray-400">100% · full width</span>
+                                                </div>
+                                            </div>
+                                        )}
+
+                                        {/* ── Opacity / Offsets / Scale / Rotation ────────────── */}
+                                        {sliders.map(({ label, key, min, max, step, val, unit, display }) => (
+                                            <div key={key} className="space-y-1">
+                                                <div className="flex items-center justify-between">
+                                                    <span className="text-xs font-medium text-gray-600 dark:text-gray-400">
+                                                        {label}
+                                                        {autoFit && (key === "offsetX" || key === "offsetY") && (
+                                                            <span className="ml-1 text-[9px] text-green-500 font-semibold">
+                                                                nudge
+                                                            </span>
+                                                        )}
+                                                    </span>
+                                                    <span className="text-xs font-bold text-green-600 dark:text-green-400 tabular-nums">
+                                                        {display ?? val}{unit}
+                                                    </span>
+                                                </div>
+                                                <input
+                                                    type="range"
+                                                    min={min}
+                                                    max={max}
+                                                    step={step}
+                                                    value={val}
+                                                    onChange={(e) => updateFooterSettings({
+                                                        [key]: step < 1 ? parseFloat(e.target.value) : parseInt(e.target.value)
+                                                    })}
+                                                    className="w-full h-1.5 rounded-full appearance-none cursor-pointer"
+                                                    style={{
+                                                        background: `linear-gradient(to right,
+                                rgb(34,197,94) 0%,
+                                rgb(34,197,94) ${((val - min) / (max - min)) * 100}%,
+                                rgb(229,231,235) ${((val - min) / (max - min)) * 100}%,
+                                rgb(229,231,235) 100%)`
+                                                    }}
+                                                />
+                                            </div>
+                                        ))}
+
+                                    </div>
+                                );
+                            })()}
                         </div>
                     )}
                 </div>
@@ -548,3 +774,4 @@ export default function ImageControls() {
         </div>
     );
 }
+

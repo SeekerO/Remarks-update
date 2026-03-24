@@ -2,7 +2,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
 import { useEffect, useState, useRef, useCallback } from "react";
-import { useAuth } from "./AuthContext"; // Authentication context
+import { useAuth } from "../../lib/auth/AuthContext"; // Authentication context
 import { useChatMessages } from "./hooks/useChatMessages"; // Custom hook for messages
 import { sendMessage } from "../../lib/firebase/firebase.actions/sendMessage"; // Function to send messages
 import { editMessage } from "./components/messageActions"; // Function to edit messages

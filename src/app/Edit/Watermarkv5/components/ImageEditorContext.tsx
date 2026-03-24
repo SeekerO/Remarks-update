@@ -34,6 +34,8 @@ interface FooterSettings {
     offsetX: number;
     offsetY: number;
     rotation?: number;
+    autoFit: boolean;
+    fitScale: number;
 }
 
 interface ShadowSettings {
@@ -200,6 +202,8 @@ const defaultFooterSettings: FooterSettings = {
     offsetX: 0,
     offsetY: 0,
     rotation: 0,
+    autoFit: false,
+    fitScale: 25,
 };
 
 const defaultShadowSettings: ShadowSettings = {

@@ -56,13 +56,13 @@ export interface PermissionsModalProps {
 import { Search, Settings } from "lucide-react";
 import { GoFileDirectoryFill } from "react-icons/go";
 import { IoLogoBuffer, IoIosColorWand, IoIosPin } from "react-icons/io";
-import { FaRegFileImage, FaFileAlt, FaYoutube } from "react-icons/fa";
+import { FaRegFileImage, FaFileAlt } from "react-icons/fa";
 import { FaRegNoteSticky, FaFilePen, FaWandMagicSparkles } from "react-icons/fa6";
 import { GiCardExchange } from "react-icons/gi";
 import { IoWater, IoDocumentTextOutline } from "react-icons/io5";
 import { RiAdminFill } from "react-icons/ri";
-import { SiYoutubestudio } from "react-icons/si";
 import { MdOutlineAdminPanelSettings, MdOpacity } from "react-icons/md";
+import { LayoutDashboard } from "lucide-react"
 
 export type UserRole = "admin" | "standard";
 
@@ -77,6 +77,14 @@ export interface NavItem {
 }
 
 export const navItems: NavItem[] = [
+  {
+    name: "Dashboard",
+    href: "/dashboard",
+    icon: LayoutDashboard,
+    active: true,
+    pagePermissionId: "dashboard",
+    sublinks: [],
+  },
   {
     name: "Edit",
     href: "",
@@ -216,6 +224,14 @@ export const navItems: NavItem[] = [
       {
         name: "Time Log",
         href: "/admin/timelog",
+        icon: RiAdminFill,
+        active: true,
+        requiredRole: "admin",
+        sublinks: [],
+      },
+      {
+        name: "Test Page",
+        href: "/admin/test",
         icon: RiAdminFill,
         active: true,
         requiredRole: "admin",

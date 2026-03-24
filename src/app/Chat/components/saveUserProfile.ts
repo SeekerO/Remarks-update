@@ -2,12 +2,12 @@
 
 import { ref, get, update, set } from "firebase/database";
 import { db } from "@/lib/firebase/firebase";
-import { useRef } from "react";
+
 
 export const saveUserProfile = async (user: any) => {
   const userRef = ref(db, `users/${user.uid}`);
   const snapshot = await get(userRef);
-  console.log(useRef);
+
 
   const userData = {
     email: user.email,

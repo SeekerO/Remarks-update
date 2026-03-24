@@ -36,13 +36,52 @@ const calculatePosition = (
     }
 };
 
-// Check if any logo is dangerously close to an edge
 const checkEdgeWarnings = (logos: any[]): boolean => {
     return logos.some(logo => {
         const { paddingX = 20, paddingY = 20 } = logo.settings || {};
         return paddingX <= 10 || paddingY <= 10;
     });
 };
+
+// ── Image cache ───────────────────────────────────────────────────────────────
+const imageCache = new Map<string, HTMLImageElement>();
+
+function loadImageCached(src: string): Promise<HTMLImageElement> {
+    if (imageCache.has(src)) return Promise.resolve(imageCache.get(src)!);
+    return new Promise((resolve, reject) => {
+        const img = new Image();
+        img.onload = () => { imageCache.set(src, img); resolve(img); };
+        img.onerror = reject;
+        img.src = src;
+    });
+}
+
+// ── Auto-fit footer calculation ───────────────────────────────────────────────
+// Scales the footer so its width = 25% of the canvas width,
+// then centers it horizontally and pins it flush to the bottom edge.
+// The settings' offsetX / offsetY act as fine-tune nudges on top.
+function calcAutoFitFooter(
+    footerNaturalWidth: number,
+    footerNaturalHeight: number,
+    canvasWidth: number,
+    canvasHeight: number,
+    settings: any
+): { x: number; y: number; w: number; h: number } {
+    // fitScale stored as 0–100 (percent), default 25
+    const pct = (settings.fitScale ?? 25) / 100;
+    const TARGET_WIDTH = canvasWidth * pct;
+    const aspectRatio = footerNaturalHeight / footerNaturalWidth;
+    const w = TARGET_WIDTH;
+    const h = TARGET_WIDTH * aspectRatio;
+
+    // Center horizontally, flush to bottom — then apply nudge offsets
+    const offsetX = settings.offsetX ?? 0;
+    const offsetY = settings.offsetY ?? 0;
+    const x = (canvasWidth - w) / 2 + offsetX;
+    const y = canvasHeight - h + offsetY;
+
+    return { x, y, w, h };
+}
 
 export default function SingleImageEditor({
     image,
@@ -52,6 +91,11 @@ export default function SingleImageEditor({
 }: SingleImageEditorProps) {
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const [isRendering, setIsRendering] = useState(false);
+
+    const renderLockRef = useRef(false);
+    const pendingRedrawRef = useRef(false);
+    const debounceRef = useRef<NodeJS.Timeout | null>(null);
+    const drawAbortRef = useRef<AbortController | null>(null);
 
     const {
         globalShadowSettings,
@@ -96,79 +140,86 @@ export default function SingleImageEditor({
 
     // ── Draw helpers ──────────────────────────────────────────────────────────
 
-    const drawLogo = useCallback((
+    const drawLogo = useCallback(async (
         ctx: CanvasRenderingContext2D,
         logoUrl: string,
         imgWidth: number,
         imgHeight: number,
-        settings: any
+        settings: any,
+        signal: AbortSignal
     ) => {
-        const logoImg = new Image();
-        logoImg.src = logoUrl;
-        return new Promise<void>(resolve => {
-            logoImg.onload = () => {
-                const { position, width, height, paddingX, paddingY, opacity = 1, rotation = 0 } = settings;
-                const [x, y] = calculatePosition(position, imgWidth, imgHeight, width, height, paddingX, paddingY);
-                const centerX = x + width / 2;
-                const centerY = y + height / 2;
-
-                ctx.save();
-                ctx.globalAlpha = opacity;
-                if (rotation !== 0) {
-                    ctx.translate(centerX, centerY);
-                    ctx.rotate(rotation * Math.PI / 180);
-                    ctx.translate(-centerX, -centerY);
-                }
-                ctx.drawImage(logoImg, x, y, width, height);
-                ctx.restore();
-                resolve();
-            };
-            logoImg.onerror = () => resolve();
-        });
+        const logoImg = await loadImageCached(logoUrl);
+        if (signal.aborted) return;
+        const { position, width, height, paddingX, paddingY, opacity = 1, rotation = 0 } = settings;
+        const [x, y] = calculatePosition(position, imgWidth, imgHeight, width, height, paddingX, paddingY);
+        const centerX = x + width / 2;
+        const centerY = y + height / 2;
+        ctx.save();
+        ctx.globalAlpha = opacity;
+        if (rotation !== 0) {
+            ctx.translate(centerX, centerY);
+            ctx.rotate(rotation * Math.PI / 180);
+            ctx.translate(-centerX, -centerY);
+        }
+        ctx.drawImage(logoImg, x, y, width, height);
+        ctx.restore();
     }, []);
 
-    const drawFooter = useCallback((
+    const drawFooter = useCallback(async (
         ctx: CanvasRenderingContext2D,
         footerUrl: string,
         imgWidth: number,
         imgHeight: number,
         settings: any,
         shadowSettings: typeof globalShadowSettings | undefined,
-        shadowTarget: "none" | "footer" | "whole-image"
+        shadowTarget: "none" | "footer" | "whole-image",
+        signal: AbortSignal
     ) => {
-        const footerImg = new Image();
-        footerImg.src = footerUrl;
-        return new Promise<void>(resolve => {
-            footerImg.onload = () => {
-                const { opacity = 1, scale = 1, offsetX = 0, offsetY = 0, rotation = 0 } = settings;
-                const scaledWidth = footerImg.width * scale;
-                const scaledHeight = footerImg.height * scale;
-                const x = (imgWidth - scaledWidth) / 2 + offsetX;
-                const y = imgHeight - scaledHeight + offsetY;
-                const centerX = x + scaledWidth / 2;
-                const centerY = y + scaledHeight / 2;
+        const footerImg = await loadImageCached(footerUrl);
+        if (signal.aborted) return;
 
-                ctx.save();
-                ctx.globalAlpha = opacity;
-                if (rotation !== 0) {
-                    ctx.translate(centerX, centerY);
-                    ctx.rotate(rotation * Math.PI / 180);
-                    ctx.translate(-centerX, -centerY);
-                }
-                if (shadowTarget === "footer" && shadowSettings) {
-                    ctx.shadowColor = shadowSettings.color;
-                    ctx.shadowBlur = shadowSettings.blur;
-                    ctx.shadowOffsetX = shadowSettings.offsetX;
-                    ctx.shadowOffsetY = shadowSettings.offsetY;
-                }
-                if (scaledWidth > 0 && scaledHeight > 0) {
-                    ctx.drawImage(footerImg, x, y, scaledWidth, scaledHeight);
-                }
-                ctx.restore();
-                resolve();
-            };
-            footerImg.onerror = () => resolve();
-        });
+        const { opacity = 1, rotation = 0, autoFit = true } = settings;
+
+        let x: number, y: number, w: number, h: number;
+
+        if (autoFit) {
+            // ── Auto-fit: 25% canvas width, centered, bottom-pinned ──────────
+            ({ x, y, w, h } = calcAutoFitFooter(
+                footerImg.naturalWidth || footerImg.width,
+                footerImg.naturalHeight || footerImg.height,
+                imgWidth,
+                imgHeight,
+                settings
+            ));
+        } else {
+            // ── Manual mode: legacy scale / offsetX / offsetY behaviour ──────
+            const { scale = 1, offsetX = 0, offsetY = 0 } = settings;
+            w = footerImg.width * scale;
+            h = footerImg.height * scale;
+            x = (imgWidth - w) / 2 + offsetX;
+            y = imgHeight - h + offsetY;
+        }
+
+        if (w <= 0 || h <= 0) return;
+
+        const centerX = x + w / 2;
+        const centerY = y + h / 2;
+
+        ctx.save();
+        ctx.globalAlpha = opacity;
+        if (rotation !== 0) {
+            ctx.translate(centerX, centerY);
+            ctx.rotate(rotation * Math.PI / 180);
+            ctx.translate(-centerX, -centerY);
+        }
+        if (shadowTarget === "footer" && shadowSettings) {
+            ctx.shadowColor = shadowSettings.color;
+            ctx.shadowBlur = shadowSettings.blur;
+            ctx.shadowOffsetX = shadowSettings.offsetX;
+            ctx.shadowOffsetY = shadowSettings.offsetY;
+        }
+        ctx.drawImage(footerImg, x, y, w, h);
+        ctx.restore();
     }, []);
 
     const drawShadow = useCallback((
@@ -188,67 +239,104 @@ export default function SingleImageEditor({
         ctx.restore();
     }, []);
 
-    // ── Main render effect ────────────────────────────────────────────────────
+    // ── Core draw (abortable) ─────────────────────────────────────────────────
 
-    useEffect(() => {
+    const executeDraw = useCallback(async (signal: AbortSignal) => {
         const canvas = canvasRef.current;
         if (!canvas) return;
         const ctx = canvas.getContext("2d");
         if (!ctx) return;
 
-        const baseImg = new Image();
-        baseImg.src = image.url;
+        const baseImg = await loadImageCached(image.url).catch(() => null);
+        if (!baseImg || signal.aborted) return;
 
-        const draw = async () => {
-            setIsRendering(true);
+        canvas.width = baseImg.width;
+        canvas.height = baseImg.height;
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-            await new Promise<void>(resolve => {
-                baseImg.onload = () => {
-                    canvas.width = baseImg.width;
-                    canvas.height = baseImg.height;
-                    ctx.clearRect(0, 0, canvas.width, canvas.height);
-                    if (shadowTargetToUse === "whole-image" && shadowSettingsToUse) {
-                        drawShadow(ctx, canvas.width, canvas.height, shadowSettingsToUse);
-                    }
-                    ctx.drawImage(baseImg, 0, 0);
-                    resolve();
-                };
-                baseImg.onerror = () => { setIsRendering(false); resolve(); };
-            });
+        if (shadowTargetToUse === "whole-image" && shadowSettingsToUse) {
+            drawShadow(ctx, canvas.width, canvas.height, shadowSettingsToUse);
+        }
+        ctx.drawImage(baseImg, 0, 0);
+        if (signal.aborted) return;
 
-            if (baseImg.complete && baseImg.naturalWidth > 0) {
-                const imgWidth = baseImg.width;
-                const imgHeight = baseImg.height;
+        const imgWidth = baseImg.width;
+        const imgHeight = baseImg.height;
 
-                await Promise.all(
-                    logosToRender.map((l: any) =>
-                        drawLogo(ctx, l.url, imgWidth, imgHeight, l.settings)
-                    )
-                );
-                await Promise.all(
-                    footersToRender.map((f: any) =>
-                        drawFooter(ctx, f.url, imgWidth, imgHeight, f.settings, shadowSettingsToUse, shadowTargetToUse)
-                    )
-                );
+        for (const l of logosToRender) {
+            if (signal.aborted) return;
+            await drawLogo(ctx, l.url, imgWidth, imgHeight, l.settings, signal);
+        }
 
-                applyPhotoAdjustments(canvas, photoAdjustmentsToUse);
-            }
+        for (const f of footersToRender) {
+            if (signal.aborted) return;
+            await drawFooter(ctx, f.url, imgWidth, imgHeight, f.settings, shadowSettingsToUse, shadowTargetToUse, signal);
+        }
 
-            onCanvasReady(
-                index,
-                async () => new Promise(resolve => canvas.toBlob(resolve, 'image/png')),
-                canvas
-            );
+        if (signal.aborted) return;
+        applyPhotoAdjustments(canvas, photoAdjustmentsToUse);
 
-            setTimeout(() => setIsRendering(false), 300);
-        };
-
-        draw();
+        if (signal.aborted) return;
+        onCanvasReady(
+            index,
+            async () => new Promise(resolve => canvas.toBlob(resolve, 'image/png')),
+            canvas
+        );
     }, [
-        image.url, index, logosToRender, footersToRender,
-        shadowSettingsToUse, shadowTargetToUse, photoAdjustmentsToUse,
+        image.url, index,
+        logosToRender, footersToRender,
+        shadowSettingsToUse, shadowTargetToUse,
+        photoAdjustmentsToUse,
         onCanvasReady, drawLogo, drawFooter, drawShadow,
     ]);
+
+    // ── Render scheduler: debounce → lock → draw ──────────────────────────────
+
+    const scheduleDraw = useCallback(() => {
+        if (debounceRef.current) clearTimeout(debounceRef.current);
+
+        debounceRef.current = setTimeout(async () => {
+            if (renderLockRef.current) {
+                pendingRedrawRef.current = true;
+                return;
+            }
+
+            const runDraw = async () => {
+                drawAbortRef.current?.abort();
+                const abortCtrl = new AbortController();
+                drawAbortRef.current = abortCtrl;
+
+                renderLockRef.current = true;
+                setIsRendering(true);
+
+                try {
+                    await executeDraw(abortCtrl.signal);
+                } finally {
+                    renderLockRef.current = false;
+                    if (pendingRedrawRef.current) {
+                        pendingRedrawRef.current = false;
+                        await runDraw();
+                    } else {
+                        setTimeout(() => setIsRendering(false), 120);
+                    }
+                }
+            };
+
+            await runDraw();
+        }, 40);
+    }, [executeDraw]);
+
+    useEffect(() => {
+        scheduleDraw();
+        return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
+    }, [scheduleDraw]);
+
+    useEffect(() => {
+        return () => {
+            drawAbortRef.current?.abort();
+            if (debounceRef.current) clearTimeout(debounceRef.current);
+        };
+    }, []);
 
     if (!currentImage) return null;
 
@@ -285,73 +373,58 @@ export default function SingleImageEditor({
                 : "ring-1 ring-gray-200 dark:ring-gray-700 hover:ring-indigo-300 dark:hover:ring-indigo-700 shadow-md hover:shadow-lg"
             }`}
         >
-
             {/* Canvas */}
-            <canvas
-                ref={canvasRef}
-                className="w-full h-auto block"
-            />
+            <canvas ref={canvasRef} className="w-full h-auto block" />
 
-            {/* Rendering spinner */}
-            {isRendering && (
-                <div className="absolute inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-10 rounded-xl">
-                    <div className="w-8 h-8 border-3 border-white border-t-transparent rounded-full animate-spin" />
-                </div>
-            )}
+            {/* Blur overlay during re-render */}
+            <div
+                className="absolute inset-0 z-10 rounded-xl pointer-events-none transition-all duration-150"
+                style={{
+                    backdropFilter: isRendering ? "blur(6px)" : "blur(0px)",
+                    WebkitBackdropFilter: isRendering ? "blur(6px)" : "blur(0px)",
+                    opacity: isRendering ? 1 : 0,
+                }}
+            />
 
             {isSelected && (
                 <div className="absolute bottom-2 left-2 z-20 pointer-events-none">
                     <div className="flex items-center gap-1">
-                        <kbd className="flex items-center justify-center w-5 h-5 rounded bg-black/50 backdrop-blur-sm border border-white/20 text-white text-[9px] font-bold">
-                            ←
-                        </kbd>
-                        <kbd className="flex items-center justify-center w-5 h-5 rounded bg-black/50 backdrop-blur-sm border border-white/20 text-white text-[9px] font-bold">
-                            →
-                        </kbd>
-                        <span className="text-[9px] text-white/60 ml-0.5 font-medium">
-                            navigate
-                        </span>
+                        <kbd className="flex items-center justify-center w-5 h-5 rounded bg-black/50 backdrop-blur-sm border border-white/20 text-white text-[9px] font-bold">←</kbd>
+                        <kbd className="flex items-center justify-center w-5 h-5 rounded bg-black/50 backdrop-blur-sm border border-white/20 text-white text-[9px] font-bold">→</kbd>
+                        <span className="text-[9px] text-white/60 ml-0.5 font-medium">navigate</span>
                     </div>
                 </div>
             )}
 
-            {/* ── Top-left status badges ── */}
+            {/* Top-left status badges */}
             <div className="absolute top-2 left-2 flex flex-col gap-1 z-20 pointer-events-none">
-                {/* Selected indicator */}
-
-
-
                 {isSelected && (
                     <span className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-indigo-600 text-white shadow-md">
                         <CheckCircle2 className="w-3 h-3" />
-                        Selected   {index + 1}
+                        Selected {index + 1}
                     </span>
                 )}
-
-                {/* Individual mode indicator */}
                 {isIndividualMode && (
                     <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-purple-600 text-white shadow-md">
                         Individual
                     </span>
                 )}
-
-                {/* Logo count */}
                 {logosToRender.length > 0 && (
                     <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-white/90 dark:bg-gray-800/90 text-gray-700 dark:text-gray-200 shadow-sm backdrop-blur-sm">
                         {logosToRender.length} Logo{logosToRender.length !== 1 ? 's' : ''}
                     </span>
                 )}
-
-                {/* Footer count */}
                 {footersToRender.length > 0 && (
                     <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-white/90 dark:bg-gray-800/90 text-gray-700 dark:text-gray-200 shadow-sm backdrop-blur-sm">
                         {footersToRender.length} Footer{footersToRender.length !== 1 ? 's' : ''}
+                        {footersToRender.some((f: any) => f.settings?.autoFit !== false) && (
+                            <span className="ml-1 opacity-60">· auto</span>
+                        )}
                     </span>
                 )}
-
             </div>
 
-            {/* ── Edge warning badge — top right, always visible ── */}
+            {/* Edge warning */}
             {hasEdgeWarning && (
                 <div className="absolute top-2 right-2 z-20 pointer-events-none">
                     <span className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500 text-white shadow-md">
@@ -361,7 +434,7 @@ export default function SingleImageEditor({
                 </div>
             )}
 
-            {/* ── Action buttons — fade in on hover ── */}
+            {/* Action buttons */}
             <div className={`absolute bottom-2 right-2 flex gap-1.5 z-10 transition-all duration-200
                 ${isSelected ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}
             >
@@ -386,10 +459,9 @@ export default function SingleImageEditor({
                 >
                     <FiMaximize2 className="w-3.5 h-3.5" />
                 </button>
-
             </div>
 
-            {/* ── Selected footer strip ── */}
+            {/* Selected footer strip */}
             {isSelected && (
                 <div className="absolute bottom-0 inset-x-0 h-0.5 bg-gradient-to-r from-indigo-400 via-indigo-600 to-purple-500 z-20" />
             )}

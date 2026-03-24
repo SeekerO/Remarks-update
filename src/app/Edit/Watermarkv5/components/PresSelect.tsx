@@ -2,24 +2,24 @@ import React, { useState, useMemo, useCallback } from "react";
 import { useImageEditor } from "./ImageEditorContext";
 import { X, ImageIcon, Layers, CheckCircle2 } from "lucide-react";
 
-import BlackShadow from "../../images/00-BLACK-SHADOW-FOOTER.png";
-import WhiteShadow from "../../images/01-WHITE-SHADOW-FOOTER.png";
-import WhiteLogoEID from "../../images/WHITE-EID.png";
-import BlackLogoEID from "../../images/BLACK-EID.png";
-import BlackLogoEIDandCOMELEC from "../../images/BLACK-EID-W-COMELEC.png";
-import WHITELogoEIDandCOMELEC from "../../images/WHITE-EID-W-COMELEC.png";
-import COMELEClogo from "../../images/COMELEC.png";
-import KKKlogo from "../../images/KKK.png";
+import BlackShadow from "../images/00-BLACK-SHADOW-FOOTER.png";
+import WhiteShadow from "../images/01-WHITE-SHADOW-FOOTER.png";
+import WhiteLogoEID from "../images/WHITE-EID.png";
+import BlackLogoEID from "../images/BLACK-EID.png";
+import BlackLogoEIDandCOMELEC from "../images/BLACK-EID-W-COMELEC.png";
+import WHITELogoEIDandCOMELEC from "../images/WHITE-EID-W-COMELEC.png";
+import COMELEClogo from "../images/COMELEC.png";
+import KKKlogo from "../images/KKK.png";
 
 const PRESET_IMAGES = [
-    { id: 1, url: WhiteLogoEID.src,           name: "White EID Logo",          type: "logo"   },
-    { id: 2, url: BlackLogoEID.src,           name: "Black EID Logo",          type: "logo"   },
-    { id: 3, url: WHITELogoEIDandCOMELEC.src, name: "White EID & COMELEC",     type: "logo"   },
-    { id: 4, url: BlackLogoEIDandCOMELEC.src, name: "Black EID & COMELEC",     type: "logo"   },
-    { id: 5, url: COMELEClogo.src,            name: "COMELEC Logo",            type: "logo"   },
-    { id: 6, url: KKKlogo.src,                name: "KKK Logo",                type: "logo"   },
-    { id: 7, url: BlackShadow.src,            name: "Black Shadow Footer",     type: "footer" },
-    { id: 8, url: WhiteShadow.src,            name: "White Shadow Footer",     type: "footer" },
+    { id: 1, url: WhiteLogoEID.src, name: "White EID Logo", type: "logo" },
+    { id: 2, url: BlackLogoEID.src, name: "Black EID Logo", type: "logo" },
+    { id: 3, url: WHITELogoEIDandCOMELEC.src, name: "White EID & COMELEC", type: "logo" },
+    { id: 4, url: BlackLogoEIDandCOMELEC.src, name: "Black EID & COMELEC", type: "logo" },
+    { id: 5, url: COMELEClogo.src, name: "COMELEC Logo", type: "logo" },
+    { id: 6, url: KKKlogo.src, name: "KKK Logo", type: "logo" },
+    { id: 7, url: BlackShadow.src, name: "Black Shadow Footer", type: "footer" },
+    { id: 8, url: WhiteShadow.src, name: "White Shadow Footer", type: "footer" },
 ];
 
 // Shared card used in both sections
@@ -113,7 +113,7 @@ const PresSelect = () => {
         closeModal();
     }, [selectedPreset, isIndividual, selectedImageIndex, addIndividualFooter, addGlobalFooter, closeModal]);
 
-    const logos   = PRESET_IMAGES.filter(i => i.type === "logo");
+    const logos = PRESET_IMAGES.filter(i => i.type === "logo");
     const footers = PRESET_IMAGES.filter(i => i.type === "footer");
 
     return (

@@ -2,7 +2,7 @@
 "use client";
 
 import { createContext, useContext, useEffect, useState, useRef } from "react";
-import { auth, db } from "../../lib/firebase/firebase";
+import { auth, db } from "../firebase/firebase";
 import {
     GoogleAuthProvider,
     onAuthStateChanged,
@@ -11,7 +11,7 @@ import {
     User,
 } from "firebase/auth";
 import { ref, set, onDisconnect, serverTimestamp, get, onValue } from "firebase/database";
-import { saveUserProfile } from "./components/saveUserProfile";
+import { saveUserProfile } from "../../app/Chat/components/saveUserProfile";
 
 interface CustomUser extends User {
     isAdmin?: boolean;

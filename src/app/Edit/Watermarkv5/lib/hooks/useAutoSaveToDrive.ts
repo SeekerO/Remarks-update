@@ -6,7 +6,7 @@
 "use client";
 
 import { useCallback, useRef } from "react";
-import { useAuth } from "@/app/Chat/AuthContext";
+import { useAuth } from "@/lib/auth/AuthContext";
 
 interface AutoSaveOptions {
     /** Override the user name used as the Drive folder name */

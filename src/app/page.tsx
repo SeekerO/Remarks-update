@@ -1,102 +1,99 @@
-"use client"
+"use client";
 
-import { useState } from 'react';
-import Head from 'next/head';
-import Image from 'next/image';
-import Link from 'next/link';
-import { motion } from 'framer-motion';
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { useAuth } from "../lib/auth/AuthContext";
+import { Loader2 } from "lucide-react";
+import { LogOut } from "lucide-react";
 
-import { FcGoogle } from "react-icons/fc";
-import { CiLogout } from "react-icons/ci";
-import { ImSpinner9 } from "react-icons/im";
+export default function RootPage() {
+  const { user, isLoading, logout } = useAuth();
+  const router = useRouter();
 
-import { useAuth } from './Chat/AuthContext';
-import kkk from '../lib/image/KKK.png';
-import DarkModeToggle from '@/lib/components/dark-button';
-
-export default function Home() {
-  const { user, isLoading, loginWithGoogle, logout } = useAuth();
-  const [loading, setLoading] = useState<boolean>(false);
-
-  const handleLoginClick = async () => {
-    try {
-      await loginWithGoogle();
-    } catch (error) {
-      console.error("Google login failed:", error);
+  useEffect(() => {
+    if (isLoading) return;
+    if (!user) {
+      router.replace("/login");
+      return;
     }
-  };
+    // Authenticated — send to dashboard or deny
+    if (user.canChat === false) return; // withAuth will handle the denial UI
+    router.replace("/dashboard");
+  }, [user, isLoading, router]);
 
-  // ✅ Still loading — AuthGuard handles redirect, just show spinner
-  if (isLoading) {
+  /* Show spinner while auth resolves */
+  if (isLoading || (user && user.canChat !== false)) {
     return (
-      <div className='flex w-screen h-screen items-center justify-center'>
-        <ImSpinner9 className='animate-spin text-blue-500' size={40} />
+      <div className="flex h-screen w-screen items-center justify-center bg-[var(--nexus-sidebar-bg)]">
+        <div className="flex flex-col items-center gap-3">
+          {/* Logo mark */}
+          <div
+            className="relative flex items-center justify-center rounded-xl mb-2"
+            style={{
+              width: 40, height: 40,
+              background: "rgba(99,102,241,0.15)",
+              border: "0.5px solid rgba(99,102,241,0.3)",
+            }}
+          >
+            <div
+              className="rounded-full"
+              style={{ width: 16, height: 16, border: "1.5px solid #818cf8" }}
+            />
+            <div
+              className="absolute rounded-full bg-[#a5b4fc]"
+              style={{ width: 5, height: 5, top: 17, left: 17 }}
+            />
+          </div>
+
+          <Loader2 className="w-4 h-4 text-indigo-400 animate-spin" />
+          <p className="text-xs text-white/25 font-mono tracking-wide">
+            Verifying access…
+          </p>
+        </div>
       </div>
     );
   }
 
-  // ✅ No user — AuthGuard will redirect to /login, show nothing
-  if (!user) return null;
+  /* No access */
+  if (user && user.canChat === false) {
+    return (
+      <div className="flex h-screen w-screen items-center justify-center bg-[var(--nexus-sidebar-bg)]">
+        <div
+          className="flex flex-col items-center gap-4 p-8 rounded-2xl max-w-sm text-center"
+          style={{
+            background: "rgba(255,255,255,0.04)",
+            border: "0.5px solid rgba(255,255,255,0.08)",
+          }}
+        >
+          {/* Lock icon */}
+          <div className="w-12 h-12 rounded-2xl bg-red-500/10 border border-red-500/20 flex items-center justify-center">
+            <svg className="w-5 h-5 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z" />
+            </svg>
+          </div>
 
-  // ✅ User confirmed — render page
-  return (
-    <>
-      <Head>
-        <title>KKK Tool - SeekerDev</title>
-      </Head>
-      <main className="flex flex-col items-center justify-center h-screen w-screen bg-gray-50 dark:bg-gray-900 font-sans text-gray-800 dark:text-white overflow-hidden p-4 relative">
-        <div className='py-2'>
-          <DarkModeToggle />
-        </div>
-        <div className="absolute top-5 left-5">
+          <div>
+            <p className="text-sm font-medium text-white/70">Access restricted</p>
+            <p className="text-xs text-white/30 mt-1 leading-relaxed">
+              Your account doesn't have permission to access Nexus yet.
+              Contact your administrator to request access.
+            </p>
+          </div>
+
           <button
-            onClick={logout}
-            className='flex items-center gap-1 font-semibold text-red-500 hover:underline duration-300 hover:text-blue-500'
+            onClick={async () => {
+              await logout();
+              router.replace("/login");
+            }}
+            className="flex items-center gap-1.5 text-xs text-indigo-400 hover:text-indigo-300 transition-colors"
           >
-            <CiLogout size={25} /> Logout
+            <LogOut className="w-3 h-3" />
+            Sign in with a different account
           </button>
         </div>
+      </div>
+    );
+  }
 
-        <motion.div
-          initial="hidden"
-          animate="visible"
-          className="flex flex-col justify-center items-center p-8 md:p-14 rounded-3xl shadow-2xl bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 max-w-xl w-full text-center relative overflow-hidden"
-        >
-          <div className="absolute inset-0 bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-700 dark:to-gray-900 opacity-50 rounded-3xl -z-10 animate-pulse-subtle" />
-
-          <div className="mb-10 animate-bounce-subtle">
-            <Image src={kkk} alt="Application Logo" width={400} height={80} priority />
-          </div>
-
-          {user.canChat !== false ? (
-            <div className="flex items-center justify-center h-full gap-3 w-full">
-              <motion.div onClick={() => setLoading(true)}>
-                <Link
-                  href="/dashboard"
-                  className="flex items-center justify-center px-8 py-4 bg-gradient-to-r from-blue-600 to-blue-700 text-white font-bold rounded-full shadow-lg hover:shadow-xl transition-all duration-300 ease-in-out transform hover:-translate-y-1 hover:scale-105 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 uppercase tracking-wide"
-                >
-                  Dashboard
-                </Link>
-              </motion.div>
-            </div>
-          ) : (
-            <div className='flex flex-col gap-1'>
-              <label className='text-lg text-red-500 font-semibold'>
-                It seems you {`don't`} have permission to access this site
-              </label>
-              <label className='italic text-gray-500'>
-                Kindly contact the admin to grant you access.
-              </label>
-            </div>
-          )}
-        </motion.div>
-
-        {loading && (
-          <div className='fixed inset-0 z-50 h-screen w-screen bg-black/40 flex items-center justify-center'>
-            <ImSpinner9 className='animate-spin text-red-500' size={50} />
-          </div>
-        )}
-      </main>
-    </>
-  );
+  return null;
 }
