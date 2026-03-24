@@ -11,7 +11,7 @@ import {
     User,
 } from "firebase/auth";
 import { ref, set, onDisconnect, serverTimestamp, get, onValue } from "firebase/database";
-import { saveUserProfile } from "../../app/Chat/components/saveUserProfile";
+import { saveUserProfile } from "./saveUserProfile";
 
 interface CustomUser extends User {
     isAdmin?: boolean;

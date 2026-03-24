@@ -561,7 +561,8 @@ const FAQ = () => {
               <div className="w-8 h-8 rounded-lg bg-indigo-600/20 border border-indigo-500/30 flex items-center justify-center">
                 <FaFileAlt className="w-4 h-4 text-indigo-400" />
               </div>
-              <h1 className="text-2xl font-extrabold text-white tracking-tight">FAQ</h1>
+              <h1 className="font-syne text-2xl font-extrabold tracking-tight text-slate-800 dark:text-transparent dark:bg-clip-text"
+                style={{ backgroundImage: 'linear-gradient(90deg,#f9fafb,#9ca3af)' }}>FAQ</h1>
               {activeTimers > 0 && (
                 <span className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold
                   bg-indigo-500/20 border border-indigo-500/30 text-indigo-300">

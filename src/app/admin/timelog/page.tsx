@@ -139,12 +139,15 @@ const lsSession = () => `dtr-session-${todayKey()}`;
 const loadProfile = () => {
     try { const s = localStorage.getItem(LS_PROFILE); return s ? JSON.parse(s) : {}; } catch { return {}; }
 };
+
 const saveProfile = (data: Record<string, string>) => {
     localStorage.setItem(LS_PROFILE, JSON.stringify({ ...loadProfile(), ...data }));
 };
+
 const loadSession = () => {
     try { const s = localStorage.getItem(lsSession()); return s ? JSON.parse(s) : {}; } catch { return {}; }
 };
+
 const saveSession = (data: object) => {
     localStorage.setItem(lsSession(), JSON.stringify({ ...loadSession(), ...data }));
 };
@@ -318,7 +321,7 @@ const TimeLoggerPanel: React.FC = () => {
 
     return (
         <>
-            <div className="flex flex-col gap-6">
+            <div className="flex flex-col gap-6 ">
 
                 {/* ── Hero clock card ── */}
                 <div className="rounded-2xl border border-slate-200 dark:border-white/[0.08] bg-white dark:bg-white/[0.02] px-4 sm:px-6 py-6 sm:py-8 flex flex-col items-center gap-4 sm:gap-5">
@@ -580,7 +583,7 @@ const HowToUseGuide: React.FC = () => {
     ];
 
     return (
-        <div className="rounded-2xl border border-slate-200 dark:border-white/[0.08] overflow-hidden">
+        <div className="rounded-2xl border  border-slate-200 dark:border-white/[0.08] overflow-hidden">
             <button
                 onClick={() => setOpen(p => !p)}
                 className="w-full px-5 py-3 flex items-center justify-between transition-colors hover:bg-slate-50 dark:hover:bg-white/[0.03]"
@@ -712,7 +715,7 @@ const TimeLogPanel: React.FC = () => {
         r.amIn || r.amOut || r.pmIn || r.pmOut || r.otIn || r.otOut;
 
     return (
-        <div className="flex flex-col gap-4">
+        <div className="flex flex-col gap-4 bg-gray-50 dark:bg-[#0f0e17]">
 
             {/* ── How it works callout ── */}
             <HowToUseGuide />
@@ -883,17 +886,22 @@ const TimeLogPanel: React.FC = () => {
 const DTRPage: React.FC = () => {
     const [tab, setTab] = useState<'logger' | 'timelog'>('logger');
     return (
-        <div className="font-syne min-h-screen w-full overflow-y-auto text-slate-800 dark:text-slate-100 transition-colors duration-300">
+        <div className="bg-gray-50 dark:bg-[#0f0e17] font-syne min-h-screen w-full overflow-y-auto text-slate-800 dark:text-slate-100 transition-colors duration-300">
             <div className="max-w-3xl mx-auto px-3 sm:px-6 py-4 sm:py-8 pb-16 sm:pb-24">
 
                 {/* Header */}
                 <div className="mb-6">
-                    <div className="flex items-center gap-3 mb-1">
-                        <div className="w-9 h-9 rounded-xl flex items-center justify-center text-lg shrink-0" style={{ background: 'linear-gradient(135deg,#6366f1,#14b8a6)' }}>⏱</div>
-                        <h1 className="font-syne text-2xl font-extrabold tracking-tight text-slate-800 dark:text-transparent dark:bg-clip-text"
-                            style={{ backgroundImage: 'linear-gradient(90deg,#f9fafb,#9ca3af)' }}>DTR Logger</h1>
+                    <div className="flex items-center gap-2.5">
+                        <div className="w-8 h-8 rounded-lg bg-indigo-600/20 border border-indigo-500/30 flex items-center justify-center">
+                            <span className=" text-indigo-400">⏱</span>
+                        </div>
+                        <div>
+                            <h1 className="font-syne text-2xl font-extrabold tracking-tight text-slate-800 dark:text-transparent dark:bg-clip-text"
+                                style={{ backgroundImage: 'linear-gradient(90deg,#f9fafb,#9ca3af)' }}>DTR Logger</h1>
+                            <p className="font-dm-mono text-xs text-slate-400 dark:text-slate-500">Manual punch · live clock · Google Sheets sync</p>
+                        </div>
                     </div>
-                    <p className="font-dm-mono text-xs text-slate-400 dark:text-slate-500 pl-12">Manual punch · live clock · Google Sheets sync</p>
+
                 </div>
 
                 {/* Tab nav */}

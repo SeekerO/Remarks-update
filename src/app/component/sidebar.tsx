@@ -351,7 +351,7 @@ const SidebarContent = ({
                             <div className="flex-1 text-left min-w-0">
                                 <p className="text-xs font-medium text-white/85 truncate">{user?.displayName}</p>
                                 <p className="text-[10px] text-white/30 capitalize">
-                                    {user?.isAdmin ? "Administrator" : "Staff"}
+                                    {user?.isAdmin ? "Administrator" : "User"}
                                 </p>
                             </div>
                             {/* Online dot */}

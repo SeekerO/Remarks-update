@@ -1,7 +1,7 @@
 "use client"
 
 import React, { useState, useRef, useCallback, useEffect } from 'react';
-
+import { FileCog } from "lucide-react"
 // ─── Types ────────────────────────────────────────────────────────────────────
 interface DtrRow { day: number; morningIn: string; lunchOut: string; afternoonOut: string; }
 interface Employee {
@@ -276,25 +276,28 @@ Rules:
         <>
 
 
-            <div className="font-syne min-h-screen w-full  text-slate-800 dark:text-slate-100 relative overflow-x-hidden transition-colors duration-300">
+            <div className="font-syne min-h-screen w-full  text-slate-800 dark:text-slate-100 relative overflow-x-hidden transition-colors duration-300 bg-gray-50 dark:bg-[#0f0e17] ">
 
                 <div className="relative z-10 max-w-6xl mx-auto px-4 sm:px-6 py-8 pb-24">
 
                     {/* ── Header ── */}
                     <div className="mb-8">
                         <div className="flex items-center gap-3 mb-1">
-                            <div className="w-9 h-9 rounded-xl flex items-center justify-center text-lg shrink-0"
-                                style={{ background: 'linear-gradient(135deg,#6366f1,#14b8a6)' }}>
-                                ⏱
+                            <div className="w-8 h-8 rounded-lg bg-indigo-600/20 border border-indigo-500/30 flex items-center justify-center">
+                                <FileCog className="w-4 h-4 text-indigo-400" />
                             </div>
-                            <h1 className="font-syne text-2xl font-extrabold tracking-tight text-slate-800 dark:text-transparent dark:bg-clip-text"
-                                style={{ backgroundImage: 'linear-gradient(90deg,#f9fafb,#9ca3af)' }}>
-                                DTR Extractor
-                            </h1>
+
+                            <div>
+                                <h1 className="font-syne text-2xl font-extrabold tracking-tight text-slate-800 dark:text-transparent dark:bg-clip-text"
+                                    style={{ backgroundImage: 'linear-gradient(90deg,#f9fafb,#9ca3af)' }}>
+                                    DTR Extractor
+                                </h1>
+                                <p className="font-dm-mono text-xs text-slate-400 dark:text-slate-500">
+                                    AI-powered · batch upload · editable · exportable
+                                </p>
+                            </div>
                         </div>
-                        <p className="font-dm-mono text-xs text-slate-400 dark:text-slate-500 pl-12">
-                            AI-powered · batch upload · editable · exportable
-                        </p>
+
                     </div>
 
                     {/* ── Drag & Drop Zone ── */}

@@ -6,9 +6,10 @@ import { Lock, Unlock } from 'lucide-react';
 
 const PermissionsModal: React.FC<PermissionsModalProps> = ({ user, onClose, onSave }) => {
     // If allowedPages is undefined (never configured), default to ALL pages
-    const initialPages = user.allowedPages !== undefined
+    const initialPages = Array.isArray(user.allowedPages)
         ? user.allowedPages
-        : AVAILABLE_PAGES.map(p => p.id); // Default to all pages if not configured
+        : [];
+
 
     const [selectedPages, setSelectedPages] = useState<PageId[]>(initialPages);
     const [isSaving, setIsSaving] = useState(false);
@@ -62,11 +63,11 @@ const PermissionsModal: React.FC<PermissionsModalProps> = ({ user, onClose, onSa
                         Page Access Control
                     </h2>
                     <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                        Managing permissions for: <span className="font-semibold text-gray-700 dark:text-gray-300">{user.name}</span>
+                        Managing permissions for: <span className="font-semibold text-gray-700 dark:text-gray-300">{user.displayName}</span>
                     </p>
-                    {user.allowedPages === undefined && (
-                        <p className="text-xs text-blue-600 dark:text-blue-400 mt-2 bg-blue-50 dark:bg-blue-900/20 p-2 rounded">
-                            {`       ℹ️ This user's permissions were never configured. Defaulting to all pages.`}
+                    {!Array.isArray(user.allowedPages) && (
+                        <p className="text-xs text-amber-600 dark:text-amber-400 mt-2 bg-amber-50 dark:bg-amber-900/20 p-2 rounded">
+                            {` ℹ️ Permissions have not been set for this user yet. All access is currently disabled.`}
                         </p>
                     )}
                 </div>

@@ -33,8 +33,8 @@ export default function AdminPanel() {
             if (usersData) {
                 const usersList = Object.keys(usersData).map((uid) => ({
                     uid,
-                    name: usersData[uid].name || usersData[uid].email || "Unnamed User",
-                    profilePic: usersData[uid].profilePic || null,
+                    photoURL: usersData[uid].photoURL || null,
+                    displayName: usersData[uid].displayName || "Unmaed user",
                     email: usersData[uid].email || "No Email",
                     isAdmin: usersData[uid].isAdmin || false,
                     canChat: usersData[uid].canChat !== undefined ? usersData[uid].canChat : true,
@@ -83,7 +83,7 @@ export default function AdminPanel() {
 
     const filteredUsers = allUsers.filter((u) => {
         const isOnline = onlineUsers[u.uid] === true;
-        const matchesSearch = u.name.toLowerCase().includes(searchTerm.toLowerCase()) || u.email.toLowerCase().includes(searchTerm.toLowerCase());
+        const matchesSearch = u.displayName.toLowerCase().includes(searchTerm.toLowerCase()) || u.email.toLowerCase().includes(searchTerm.toLowerCase());
         const matchesOnline = showOnlineOnly ? isOnline : true;
         const matchesChat = showCanChatOnly ? u.canChat === true : true;
         return matchesSearch && matchesOnline && matchesChat;
@@ -104,7 +104,7 @@ export default function AdminPanel() {
                 formatLastOnline={formatLastOnline}
             />
 
-            <div className="p-6 md:p-10 min-h-screen w-full  font-sans overflow-y-auto">
+            <div className="p-6 md:p-10 min-h-screen w-full bg-gray-50 dark:bg-[#0f0e17]   font-sans overflow-y-auto">
                 <header className="mb-8 border-b border-gray-200 dark:border-gray-700 pb-4 flex justify-between items-end">
                     <div>
                         <h1 className="text-3xl font-extrabold text-gray-900 dark:text-white flex items-center">

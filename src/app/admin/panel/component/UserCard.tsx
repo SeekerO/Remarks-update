@@ -23,29 +23,29 @@ const UserCard: React.FC<UserCardProps> = React.memo(({
             scale: 1.02,
             transition: { duration: 0.2, ease: "easeOut" }
         }}
-        className="bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded-2xl p-6 shadow-sm hover:shadow-xl transition-shadow duration-300 h-full flex flex-col cursor-pointer select-none"
+        className="bg-white dark:bg-white/[0.03] border border-black/[0.07] dark:border-white/[0.07] rounded-xl p-4"
     >
         {/* User Avatar and Info */}
         <div className="flex items-center space-x-4 mb-4">
-   
 
-             <UserAvatar
+
+            <UserAvatar
                 user={user}
                 isOnline={isOnline}
                 lastOnlineTimestamp={lastOnlineTimestamp}
                 formatLastOnline={formatLastOnline}
             />
 
-             <div className="flex-grow min-w-0">
+            <div className="flex-grow min-w-0">
                 <motion.h3
                     layout="position" // Ensures text doesn't jitter during card resize
                     className="font-bold text-lg text-gray-900 dark:text-white truncate"
                 >
-                    {user.name}
+                    {user.displayName}
                 </motion.h3>
                 <motion.p
                     layout="position"
-                    className="text-sm text-gray-500 dark:text-gray-400 truncate"
+                    className="text-sm italic text-gray-500 dark:text-gray-500 truncate"
                 >
                     {user.email}
                 </motion.p>

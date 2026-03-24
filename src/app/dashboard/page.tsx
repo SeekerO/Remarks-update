@@ -1,14 +1,10 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useAuth } from "@/lib/auth/AuthContext";
 import { navItems, NavItem, UserRole } from "@/lib/types/adminTypes";
 import {
-    ArrowRight,
-    Clock,
-    Users,
-    FileImage,
     Layers,
     ChevronRight,
 } from "lucide-react";
@@ -99,7 +95,6 @@ const TOOL_META: Record<string, { description: string; accent: string }> = {
     "Remarks": { description: "Prepare and export document remarks", accent: "bg-teal-500/10" },
     "PDF": { description: "Convert and process PDF documents", accent: "bg-cyan-500/10" },
     "Matcher": { description: "Fuzzy-match voter names across Excel files", accent: "bg-amber-500/10" },
-    "Evaluation": { description: "Google Sheets data viewer and editor", accent: "bg-orange-500/10" },
     "CSC Reveiwer": { description: "Civil service exam reviewer", accent: "bg-rose-500/10" },
     "Directory": { description: "Staff directory and 3D map", accent: "bg-pink-500/10" },
     "Admin Panel": { description: "Manage users, roles and permissions", accent: "bg-red-500/10" },
@@ -155,11 +150,12 @@ export default function DashboardPage() {
         }
     });
 
+
     /* Group by category */
     const editTools = allTools.filter((t) => ["Watermark V5", "BG Remover", "Logo Maker", "Resolution Adjuster"].includes(t.name));
     const docTools = allTools.filter((t) => ["FAQ", "Remarks", "PDF"].includes(t.name));
-    const mainTools = allTools.filter((t) => ["Matcher", "Evaluation", "CSC Reveiwer", "Directory"].includes(t.name));
-    const adminTools = allTools.filter((t) => ["Admin Panel", "DTR Extractor", "Time Log"].includes(t.name));
+    const mainTools = allTools.filter((t) => ["Matcher", "CSC Reveiwer", "Directory", "DTR Extractor"].includes(t.name));
+    const adminTools = allTools.filter((t) => ["Admin Panel", "Time Log"].includes(t.name));
     1
     const firstName = user?.displayName?.split(" ")[0] ?? "there";
 
@@ -193,18 +189,19 @@ export default function DashboardPage() {
                         <div className="flex items-center gap-1.5 mt-1">
                             <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
                             <p className="text-[11px] text-white/30">
-                                {user?.isAdmin ? "Administrator · Master" : "Staff"}
+                                {user?.isAdmin ? "Administrator · Master" : "User"}
                             </p>
                         </div>
                     </div>
                 </div>
             </div>
 
+
             <div className="max-w-5xl mx-auto px-6 py-8 space-y-10">
 
                 {/* ── Stat row ── */}
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                    <StatCard label="Your role" value={user?.isAdmin ? "Admin" : "Staff"} sub="access level" color="text-indigo-500 dark:text-indigo-400" />
+                    <StatCard label="Your role" value={user?.isAdmin ? "Admin" : "User"} sub="access level" color="text-indigo-500 dark:text-indigo-400" />
                     <StatCard label="Tools" value={String(allTools.length)} sub="accessible" color="text-gray-800 dark:text-white/80" />
                     <StatCard label="Edit tools" value={String(editTools.length)} sub="image & design" color="text-gray-800 dark:text-white/80" />
                     <StatCard label="Doc tools" value={String(docTools.length)} sub="documents & data" color="text-gray-800 dark:text-white/80" />

@@ -8,12 +8,11 @@ export const saveUserProfile = async (user: any) => {
   const userRef = ref(db, `users/${user.uid}`);
   const snapshot = await get(userRef);
 
-  console.log(user)
   const userData = {
     displayName: user.displayName,
     email: user.email,
     lastLogin: new Date().toISOString(),
-    photoUrl: user.photoURL ?? null
+    photoURL: user.photoURL ?? null,
   };
 
   if (snapshot.exists()) {

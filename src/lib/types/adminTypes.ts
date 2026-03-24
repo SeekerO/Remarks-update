@@ -1,6 +1,5 @@
 // --- Type Definitions ---\r\n
 export const AVAILABLE_PAGES = [
-  { id: "watermarkv4", name: "Watermark V4", category: "Edit" },
   { id: "watermarkv5", name: "Watermark V5", category: "Edit" },
   { id: "bgremover", name: "BG Remover", category: "Edit" },
   { id: "logomaker", name: "Logo Maker", category: "Edit" },
@@ -8,9 +7,8 @@ export const AVAILABLE_PAGES = [
   { id: "remarks", name: "Remarks", category: "Document" },
   { id: "pdf", name: "PDF", category: "Document" },
   { id: "matcher", name: "Matcher", category: "Main" },
-  { id: "evaluation", name: "Evaluation", category: "Main" },
-  { id: "csc", name: "CSC Reveiwer", category: "Main" },
-  { id: "directory", name: "Directory", category: "Directory" },
+  { id: "directory", name: "2D Planet", category: "Directory" },
+  { id: "csc", name: "CSC Reveiwer", category: "Other Tool" },
 ] as const;
 
 // Export the types as well for external consumption
@@ -20,12 +18,11 @@ export type PageId = (typeof AVAILABLE_PAGES)[number]["id"];
 
 export interface UserProfile {
   uid: string;
-  name: string;
-  profilePic: string | null;
   email: string;
   isAdmin: boolean;
   canChat: boolean;
-  // allowedPages can be an empty array or undefined (if never configured)
+  photoURL: string;
+  displayName: string;
   allowedPages: PageId[] | undefined;
 }
 
@@ -62,7 +59,7 @@ import { GiCardExchange } from "react-icons/gi";
 import { IoWater, IoDocumentTextOutline } from "react-icons/io5";
 import { RiAdminFill } from "react-icons/ri";
 import { MdOutlineAdminPanelSettings, MdOpacity } from "react-icons/md";
-import { LayoutDashboard } from "lucide-react"
+import { LayoutDashboard, FileCog } from "lucide-react"
 
 export type UserRole = "admin" | "standard";
 
@@ -166,22 +163,6 @@ export const navItems: NavItem[] = [
     sublinks: [],
   },
   {
-    name: "Evaluation",
-    href: "/Evaluation",
-    icon: IoDocumentTextOutline,
-    active: true,
-    pagePermissionId: "evaluation",
-    sublinks: [],
-  },
-  {
-    name: "CSC Reveiwer",
-    href: "/csc",
-    icon: Settings,
-    active: true,
-    pagePermissionId: "csc",
-    sublinks: [],
-  },
-  {
     name: "Directory",
     href: "/Directory",
     icon: GoFileDirectoryFill,
@@ -189,13 +170,37 @@ export const navItems: NavItem[] = [
     pagePermissionId: "directory",
     sublinks: [
       {
-        name: "3D World",
-        href: "/directory/3dplanet",
+        name: "2D World",
+        href: "/directory/2dplanet",
         icon: IoIosPin,
         active: true,
         pagePermissionId: "directory",
         sublinks: [],
       }
+    ],
+  },
+  {
+    name: "Other Tools",
+    href: "",
+    icon: FaRegFileImage,
+    active: false,
+    sublinks: [
+      {
+        name: "CSC Reveiwer",
+        href: "/csc",
+        icon: Settings,
+        active: true,
+        pagePermissionId: "csc",
+        sublinks: [],
+      },
+      {
+        name: "DTR Extractor",
+        href: "/dtrextractor",
+        icon: FileCog,
+        active: true,
+        requiredRole: "admin",
+        sublinks: [],
+      },
     ],
   },
   {
@@ -208,14 +213,6 @@ export const navItems: NavItem[] = [
       {
         name: "Admin Panel",
         href: "/admin/panel",
-        icon: RiAdminFill,
-        active: true,
-        requiredRole: "admin",
-        sublinks: [],
-      },
-      {
-        name: "DTR Extractor",
-        href: "/admin/dtrextractor",
         icon: RiAdminFill,
         active: true,
         requiredRole: "admin",

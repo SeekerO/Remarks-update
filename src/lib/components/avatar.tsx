@@ -9,7 +9,7 @@ import { UserProfile } from '../types/adminTypes'; // Assuming path to your type
  * Props for the UserAvatar component.
  */
 interface UserAvatarProps {
-    user: Pick<UserProfile, 'name' | 'profilePic'>;
+    user: Pick<UserProfile, 'displayName' | 'photoURL'>;
     isOnline: boolean;
     lastOnlineTimestamp: number | null;
     formatLastOnline: (timestamp: number) => string;
@@ -36,13 +36,13 @@ const UserAvatar: React.FC<UserAvatarProps> = React.memo(({
 
     return (
         <div className="relative shrink-0">
-            {user.profilePic ? (
+            {user.photoURL ? (
                 // Use Next/Image for optimized image display
                 <Image
                     width={64}
                     height={64}
-                    src={user.profilePic}
-                    alt={`${user.name}'s profile`}
+                    src={user.photoURL}
+                    alt={`${user.displayName}'s profile`}
                     // Consistent size and border styling
                     className="w-16 h-16 rounded-full object-cover border-4 border-blue-500/50 dark:border-blue-400/50"
                 // Add a loading placeholder or skeleton if needed

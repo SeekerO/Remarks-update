@@ -216,7 +216,6 @@ const PDFConverter: React.FC = () => {
             </div>
 
             <div className="relative z-10 max-w-4xl mx-auto px-6 py-8 pb-16">
-
                 {/* Header */}
                 <div className="text-center mb-10">
                     <div className="flex items-center justify-center gap-2.5 mb-3">
@@ -224,7 +223,8 @@ const PDFConverter: React.FC = () => {
                             <GiCardExchange className="w-4 h-4 text-indigo-400" />
                         </div>
 
-                        <h1 className="text-2xl font-extrabold text-white tracking-tight">File Converter</h1>
+                        <h1 className="font-syne text-2xl font-extrabold tracking-tight text-slate-800 dark:text-transparent dark:bg-clip-text"
+                            style={{ backgroundImage: 'linear-gradient(90deg,#f9fafb,#9ca3af)' }}>File Converter</h1>
                     </div>
                     <p className="text-sm text-white/30">Convert documents securely in your browser</p>
 

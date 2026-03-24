@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Search, Shield, MessageSquare, Ban, UserPlus, Key, User, CheckCircle } from 'lucide-react';
+import { Search, Shield, MessageSquare, Ban, UserPlus, Key, CheckCircle } from 'lucide-react';
 import { UserProfile } from "@/lib/types/adminTypes";
 
 interface PaletteProps {
@@ -30,6 +30,7 @@ export default function AdminCommandPalette({
     const [search, setSearch] = useState("");
     const [selectedUser, setSelectedUser] = useState<UserProfile | null>(null);
     const [mode, setMode] = useState<'search' | 'actions'>('search');
+
 
     // Notify parent component when open state changes
     useEffect(() => {
@@ -70,7 +71,7 @@ export default function AdminCommandPalette({
         if (!search) return allUsers;
         const searchLower = search.toLowerCase();
         return allUsers.filter(user =>
-            user.name.toLowerCase().includes(searchLower) ||
+            user.displayName.toLowerCase().includes(searchLower) ||
             user.email.toLowerCase().includes(searchLower) ||
             user.uid.toLowerCase().includes(searchLower)
         );
@@ -205,7 +206,7 @@ export default function AdminCommandPalette({
                             ) : (
                                 <div className="flex items-center justify-between w-full">
                                     <span className="text-sm text-gray-500 dark:text-gray-400">
-                                        Actions for: <span className="font-semibold text-gray-900 dark:text-white">{selectedUser?.name}</span>
+                                        Actions for: <span className="font-semibold text-gray-900 dark:text-white">{selectedUser?.displayName}</span>
                                     </span>
                                     <button
                                         onClick={handleBack}
@@ -246,16 +247,16 @@ export default function AdminCommandPalette({
                                                             <div className="flex items-center gap-3 flex-1 min-w-0">
                                                                 {/* Avatar */}
                                                                 <div className="relative flex-shrink-0">
-                                                                    {user.profilePic ? (
+                                                                    {user.photoURL ? (
                                                                         <img
-                                                                            src={user.profilePic}
-                                                                            alt={user.name}
+                                                                            src={user.photoURL}
+                                                                            alt={user.displayName}
                                                                             className="w-10 h-10 rounded-full object-cover"
                                                                         />
                                                                     ) : (
                                                                         <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-400 to-purple-500 flex items-center justify-center">
                                                                             <span className="text-white font-semibold text-sm">
-                                                                                {user.name.charAt(0).toUpperCase()}
+                                                                                {user.displayName.charAt(0).toUpperCase()}
                                                                             </span>
                                                                         </div>
                                                                     )}
@@ -269,7 +270,7 @@ export default function AdminCommandPalette({
                                                                 <div className="flex-1 min-w-0 text-left">
                                                                     <div className="flex items-center gap-2">
                                                                         <p className="font-semibold text-sm text-gray-900 dark:text-white truncate">
-                                                                            {user.name}
+                                                                            {user.displayName}
                                                                         </p>
                                                                         {user.isAdmin && (
                                                                             <span className="text-[10px] px-1.5 py-0.5 bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded font-semibold">
@@ -323,22 +324,22 @@ export default function AdminCommandPalette({
                                     {selectedUser && (
                                         <div className="mb-4 p-4 bg-gray-50 dark:bg-gray-800/50 rounded-xl">
                                             <div className="flex items-center gap-3">
-                                                {selectedUser.profilePic ? (
+                                                {selectedUser.photoURL ? (
                                                     <img
-                                                        src={selectedUser.profilePic}
-                                                        alt={selectedUser.name}
+                                                        src={selectedUser.photoURL}
+                                                        alt={selectedUser.displayName}
                                                         className="w-12 h-12 rounded-full object-cover"
                                                     />
                                                 ) : (
                                                     <div className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-400 to-purple-500 flex items-center justify-center">
                                                         <span className="text-white font-semibold">
-                                                            {selectedUser.name.charAt(0).toUpperCase()}
+                                                            {selectedUser.displayName.charAt(0).toUpperCase()}
                                                         </span>
                                                     </div>
                                                 )}
                                                 <div className="flex-1 min-w-0">
                                                     <p className="font-semibold text-gray-900 dark:text-white">
-                                                        {selectedUser.name}
+                                                        {selectedUser.displayName}
                                                     </p>
                                                     <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
                                                         {selectedUser.email}

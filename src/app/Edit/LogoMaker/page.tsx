@@ -366,7 +366,8 @@ export default function LogoMaker() {
                         <div className="w-8 h-8 rounded-lg bg-indigo-600/20 border border-indigo-500/30 flex items-center justify-center">
                             <IoLogoBuffer className="w-4 h-4 text-indigo-400" />
                         </div>
-                        Logo Maker
+                        <h1 className="font-syne text-lg font-extrabold tracking-tight text-slate-800 dark:text-transparent dark:bg-clip-text"
+                            style={{ backgroundImage: 'linear-gradient(90deg,#f9fafb,#9ca3af)' }}>Logo Maker</h1>
                     </div>
 
                     <div className="w-px h-4 bg-black/10 dark:bg-white/10" />

@@ -38,7 +38,7 @@ const ThemeWrapper: React.FC<WrapperProps> = ({ children }) => {
       */}
             <div
                 className={[
-                    "flex w-screen overflow-y-auto",
+                    "flex w-full overflow-y-auto",
                     showSidebar ? "pb-16 lg:pb-0" : "",
                 ].join(" ")}
             >

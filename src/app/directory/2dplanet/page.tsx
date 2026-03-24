@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect, useCallback, useMemo, type ReactNode } from "react";
 import { Building2, Globe, MapPin } from "lucide-react";
-import directoryData from "../fieldoffice/directory.json";
+import directoryData from "./directory.json";
 import test from "node:test";
 
 // ─── TYPES ────────────────────────────────────────────────────────────────────

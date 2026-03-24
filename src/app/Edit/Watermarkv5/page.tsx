@@ -343,8 +343,8 @@ function WatermarkPageContent() {
 
     if (user && (user as any)?.canChat === true)
         return (
-            <div className="min-h-screen overflow-y-auto font-sans w-full bg-gray-50 dark:bg-gray-950">
 
+            <div className="min-h-full overflow-y-auto font-sans w-full bg-gray-50 dark:bg-gray-950">
                 {/* ── DESKTOP layout (lg+) ─────────────────────────────────────────── */}
                 <div className="hidden lg:flex h-screen overflow-hidden w-full">
 
@@ -365,7 +365,8 @@ function WatermarkPageContent() {
                                         <Droplets className="w-4 h-4 text-indigo-400" />
                                     </div>
                                     <div>
-                                        <h1 className="text-base font-bold text-white leading-tight">Watermark</h1>
+                                        <h1 className="font-syne text-lg font-extrabold tracking-tight text-slate-800 dark:text-transparent dark:bg-clip-text"
+                                            style={{ backgroundImage: 'linear-gradient(90deg,#f9fafb,#9ca3af)' }}>Watermark</h1>
                                         <p className="text-[10px] text-white/30 tracking-wider uppercase">Editor</p>
                                     </div>
                                 </div>
@@ -457,7 +458,7 @@ function WatermarkPageContent() {
                 </div>
 
                 {/* ── MOBILE layout (< lg) ─────────────────────────────────────────── */}
-                <div className="lg:hidden flex flex-col min-h-screen bg-gray-50 dark:bg-[#0a0a12]">
+                <div className="lg:hidden flex flex-col min-h-screen bg-gray-50 dark:bg-[#0a0a12] w-full">
 
                     {/* Mobile top bar */}
                     <div className="sticky top-0 z-30 flex items-center justify-between px-4 py-3
@@ -545,6 +546,7 @@ function WatermarkPageContent() {
                         />
                     </div>
                 </div>
+
             </div>
         );
 }

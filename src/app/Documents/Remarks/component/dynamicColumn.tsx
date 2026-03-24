@@ -197,10 +197,9 @@ export default function DynamicColumn() {
                   <div className="w-8 h-8 rounded-lg bg-indigo-600/20 border border-indigo-500/30 flex items-center justify-center">
                     <FaFilePen className="w-4 h-4 text-indigo-400" />
                   </div>
-                  <h1 className={`font-bold text-base tracking-tight
-                    ${editColumn.length === 1 ? "text-indigo-300" : "text-white"}`}>
-                    {editColumn.length === 0 ? "Column Manager" : "Editing Column"}
-                  </h1>
+                  <h1 className={` text-lg font-extrabold tracking-tight  ${editColumn.length === 1 ? "text-indigo-300 dark:text-transparent dark:bg-clip-text" : "text-white  dark:text-transparent dark:bg-clip-text"}`}
+                    style={{ backgroundImage: 'linear-gradient(90deg,#f9fafb,#9ca3af)' }}>      {editColumn.length === 0 ? "Column Manager" : "Editing Column"}</h1>
+
                   {editColumn.length === 1 && (
                     <span className="w-1.5 h-1.5 rounded-full bg-indigo-400 animate-pulse" />
                   )}
