@@ -265,20 +265,38 @@ export default function CSEQuizApp() {
     };
 
     const choiceBg = (idx: number): string => {
-        if (!showResult) return "bg-slate-800/50 border-slate-700 hover:border-slate-500 hover:bg-slate-700/50 text-slate-200 cursor-pointer";
-        if (idx === current?.answer) return "bg-emerald-950 border-emerald-500 text-emerald-100 cursor-default";
-        if (idx === selectedAnswer) return "bg-rose-950 border-rose-500 text-rose-100 cursor-default";
-        return "bg-slate-900/50 border-slate-800 text-slate-600 cursor-default";
+        // Shared transition and cursor styles
+        const base = "transition-all duration-150 border ";
+
+        if (!showResult) {
+            return base + "bg-white dark:bg-slate-800/50 border-slate-200 dark:border-slate-700 hover:border-violet-400 dark:hover:border-slate-500 hover:bg-slate-50 dark:hover:bg-slate-700/50 text-slate-700 dark:text-slate-200 cursor-pointer";
+        }
+
+        if (idx === current?.answer) {
+            return base + "bg-emerald-50 dark:bg-emerald-950 border-emerald-500 text-emerald-700 dark:text-emerald-100 cursor-default";
+        }
+
+        if (idx === selectedAnswer) {
+            return base + "bg-rose-50 dark:bg-rose-950 border-rose-500 text-rose-700 dark:text-rose-100 cursor-default";
+        }
+
+        return base + "bg-slate-50 dark:bg-slate-900/50 border-slate-100 dark:border-slate-800 text-slate-400 dark:text-slate-600 cursor-default";
     };
 
     const choiceLabel = (idx: number): string => {
-        const base = "min-w-[1.75rem] h-7 rounded-md flex items-center justify-center text-xs font-bold shrink-0 font-mono";
-        if (!showResult) return `${base} bg-slate-700 text-slate-400`;
-        if (idx === current?.answer) return `${base} bg-emerald-500 text-white`;
-        if (idx === selectedAnswer) return `${base} bg-rose-500 text-white`;
-        return `${base} bg-slate-800 text-slate-600`;
-    };
+        const base = "min-w-[1.75rem] h-7 rounded-md flex items-center justify-center text-xs font-bold shrink-0 font-mono transition-colors";
 
+        if (!showResult) {
+            return `${base} bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400`;
+        }
+        if (idx === current?.answer) {
+            return `${base} bg-emerald-500 text-white`;
+        }
+        if (idx === selectedAnswer) {
+            return `${base} bg-rose-500 text-white`;
+        }
+        return `${base} bg-slate-200 dark:bg-slate-800 text-slate-400 dark:text-slate-600`;
+    };
     const resultMsg = (): string => {
         const r = score / filtered.length;
         if (r >= 0.8) return "🌟 Excellent! You're ready for the CSE!";
@@ -287,7 +305,7 @@ export default function CSEQuizApp() {
     };
 
     return (
-        <div className="min-h-screen w-screen flex flex-col items-center justify-center  text-slate-100">
+        <div className="min-h-screen w-screen flex flex-col items-center justify-center  text-slate-100 bg-gray-50 dark:bg-[#0f0e17]">
             {/* Rainbow top bar */}
             <div className="fixed top-0 inset-x-0 h-[3px] bg-gradient-to-r from-blue-500 via-violet-500 to-pink-500 z-50" />
 
@@ -295,10 +313,10 @@ export default function CSEQuizApp() {
 
                 {/* ── Header ── */}
                 <header className="text-center mb-8">
-                    <span className="text-[11px] tracking-[0.25em] text-slate-200 uppercase font-mono block mb-2">
+                    <span className="text-[11px] tracking-[0.25em] text-black dark:text-slate-200 uppercase font-mono block mb-2">
                         Philippine Civil Service Exam · Reviewer
                     </span>
-                    <h1 className="text-3xl font-black tracking-tight text-white">
+                    <h1 className="text-3xl font-black tracking-tight text-black dark:text-slate-200">
                         CSE Quiz{" "}
                         <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 via-violet-400 to-pink-400">
                             150 Items
@@ -306,8 +324,8 @@ export default function CSEQuizApp() {
                     </h1>
                     {/* Live stats */}
                     <div className="flex justify-center gap-5 mt-3 text-sm font-mono">
-                        <span className="text-slate-200">📋 {filtered.length}</span>
-                        <span className="text-slate-200">✅ {score}/{answered.length}</span>
+                        <span className="text-black dark:text-slate-200">📋 {filtered.length}</span>
+                        <span className="text-black dark:text-slate-200">✅ {score}/{answered.length}</span>
                         <span className={pct >= 80 ? "text-emerald-400" : pct >= 60 ? "text-amber-400" : "text-slate-200"}>
                             {pct}%
                         </span>
@@ -322,7 +340,7 @@ export default function CSEQuizApp() {
                             onClick={() => handleFilter(cat)}
                             className={`px-3 py-1 rounded-lg text-[11px] font-mono font-semibold tracking-wide border transition-all ${filter === cat
                                 ? "bg-violet-600 border-violet-500 text-white shadow-md shadow-violet-900/50"
-                                : "bg-slate-800 border-slate-700 text-slate-200 hover:border-slate-500 hover:text-slate-300"
+                                : "bg-slate-200 dark:bg-slate-800 border-slate-700 text-black dark:text-slate-200 hover:border-slate-500 hover:text-slate-600 dark:hover:text-slate-300"
                                 }`}
                         >
                             {cat}
@@ -331,7 +349,7 @@ export default function CSEQuizApp() {
                 </div>
 
                 {/* ── Progress Bar ── */}
-                <div className="h-1 bg-slate-800 rounded-full mb-6 overflow-hidden">
+                <div className="h-1 bg-slate-300 dark:bg-slate-800 rounded-full mb-6 overflow-hidden">
                     <div
                         className="h-full bg-gradient-to-r from-blue-500 to-violet-500 rounded-full transition-[width] duration-500"
                         style={{ width: `${progress}%` }}
@@ -376,8 +394,7 @@ export default function CSEQuizApp() {
                     <p className="text-center text-slate-500 py-20 font-mono text-sm">No questions for this category.</p>
                 ) : (
                     /* ── QUESTION CARD ── */
-                    <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-2xl">
-
+                    <div className="bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden shadow-2xl">
                         {/* Card Top Bar */}
                         <div className="px-5 pt-5 pb-4 border-b border-slate-800/80">
                             <div className="flex flex-wrap items-center gap-2 mb-3">
@@ -385,21 +402,24 @@ export default function CSEQuizApp() {
                                 <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg border text-[11px] font-semibold font-mono ${catBadge[current.category]}`}>
                                     {current.icon} {current.category}
                                 </span>
+
                                 {/* Difficulty badge */}
                                 <span className={`inline-flex items-center gap-1.5 text-[11px] font-mono font-medium ${diffBadge[current.difficulty]}`}>
                                     <span className={`w-1.5 h-1.5 rounded-full ${diffDot[current.difficulty]}`} />
                                     {current.difficulty}
                                 </span>
+
                                 {current.subcategory && (
                                     <span className="text-[11px] text-slate-300 font-mono">[{current.subcategory}]</span>
                                 )}
+
                                 <span className="ml-auto text-[11px] text-slate-200 font-mono tabular-nums">
                                     {currentIndex + 1} / {filtered.length}
                                 </span>
                             </div>
 
                             {/* Question text */}
-                            <p className="text-[15px] font-semibold text-slate-100 leading-relaxed whitespace-pre-wrap">
+                            <p className="text-[15px] font-semibold text-slate-700 dark:text-slate-100 leading-relaxed whitespace-pre-wrap">
                                 {current.question}
                             </p>
                         </div>
@@ -430,11 +450,11 @@ export default function CSEQuizApp() {
                         {/* Explanation */}
                         {showResult && (
                             <div className="px-5 pb-5 space-y-3">
-                                <div className="bg-slate-800/60 border border-slate-700/80 rounded-xl p-4">
+                                <div className="bg-slate-200 dark:bg-slate-800/60 border border-slate-700/80 rounded-xl p-4">
                                     <p className="text-[10px] font-mono text-violet-400 uppercase tracking-[0.15em] mb-1.5">
                                         💡 Explanation
                                     </p>
-                                    <p className="text-[13px] text-slate-300 leading-relaxed">{current.explanation}</p>
+                                    <p className="text-[13px] text-black dark:text-slate-300 leading-relaxed">{current.explanation}</p>
                                 </div>
                                 <div className="flex justify-end">
                                     <button
@@ -446,6 +466,7 @@ export default function CSEQuizApp() {
                                 </div>
                             </div>
                         )}
+
                     </div>
                 )}
 

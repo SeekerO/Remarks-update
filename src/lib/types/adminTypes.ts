@@ -20,7 +20,7 @@ export interface UserProfile {
   uid: string;
   email: string;
   isAdmin: boolean;
-  canChat: boolean;
+  isPermitted: boolean;
   photoURL: string;
   displayName: string;
   allowedPages: PageId[] | undefined;
@@ -54,12 +54,12 @@ import { Search, Settings } from "lucide-react";
 import { GoFileDirectoryFill } from "react-icons/go";
 import { IoLogoBuffer, IoIosColorWand, IoIosPin } from "react-icons/io";
 import { FaRegFileImage, FaFileAlt } from "react-icons/fa";
-import { FaRegNoteSticky, FaFilePen, FaWandMagicSparkles } from "react-icons/fa6";
+import { FaRegNoteSticky, FaFilePen } from "react-icons/fa6";
 import { GiCardExchange } from "react-icons/gi";
-import { IoWater, IoDocumentTextOutline } from "react-icons/io5";
+import { IoWater } from "react-icons/io5";
 import { RiAdminFill } from "react-icons/ri";
 import { MdOutlineAdminPanelSettings, MdOpacity } from "react-icons/md";
-import { LayoutDashboard, FileCog } from "lucide-react"
+import { LayoutDashboard, FileCog, FolderClock, TestTube } from "lucide-react"
 
 export type UserRole = "admin" | "standard";
 
@@ -221,7 +221,7 @@ export const navItems: NavItem[] = [
       {
         name: "Time Log",
         href: "/admin/timelog",
-        icon: RiAdminFill,
+        icon: FolderClock,
         active: true,
         requiredRole: "admin",
         sublinks: [],
@@ -229,7 +229,7 @@ export const navItems: NavItem[] = [
       {
         name: "Test Page",
         href: "/admin/test",
-        icon: RiAdminFill,
+        icon: TestTube,
         active: true,
         requiredRole: "admin",
         sublinks: [],

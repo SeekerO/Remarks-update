@@ -1,102 +1,127 @@
 "use client";
 
-import React from 'react';
-import { Shield, Globe } from 'lucide-react';
-import { motion } from 'framer-motion'; // 1. Import motion
-import { UserCardProps } from '@/lib/types/adminTypes';
-import UserAvatar from '@/lib/components/avatar';
+import React from "react"
+import { Shield, Globe, MessageSquare, Ban, Key, UserPlus, CheckCircle2, X, } from "lucide-react";
+import { motion } from "framer-motion";
 
-const UserCard: React.FC<UserCardProps> = React.memo(({
-    user,
-    isOnline,
-    lastOnlineTimestamp,
-    currentUserId,
-    formatLastOnline,
-}) => (
-    <motion.div
-        layout // 2. Enable liquid layout animations
-        initial={{ opacity: 0, scale: 0.9 }}
-        animate={{ opacity: 1, scale: 1 }}
-        exit={{ opacity: 0, scale: 0.9, transition: { duration: 0.2 } }}
-        whileHover={{
-            y: -5,
-            scale: 1.02,
-            transition: { duration: 0.2, ease: "easeOut" }
-        }}
-        className="bg-white dark:bg-white/[0.03] border border-black/[0.07] dark:border-white/[0.07] rounded-xl p-4"
-    >
-        {/* User Avatar and Info */}
-        <div className="flex items-center space-x-4 mb-4">
+import { UserProfile, } from "@/lib/types/adminTypes";
+import UserAvatar from "./avatarUI"
 
-
-            <UserAvatar
-                user={user}
-                isOnline={isOnline}
-                lastOnlineTimestamp={lastOnlineTimestamp}
-                formatLastOnline={formatLastOnline}
-            />
-
-            <div className="flex-grow min-w-0">
-                <motion.h3
-                    layout="position" // Ensures text doesn't jitter during card resize
-                    className="font-bold text-lg text-gray-900 dark:text-white truncate"
-                >
-                    {user.displayName}
-                </motion.h3>
-                <motion.p
-                    layout="position"
-                    className="text-sm italic text-gray-500 dark:text-gray-500 truncate"
-                >
-                    {user.email}
-                </motion.p>
+// ─── USER CARD ────────────────────────────────────────────────────────────────
+const UserCard = React.memo(({
+    user, isOnline, lastOnlineTimestamp, currentUserId,
+    handleToggleCanChat, handleToggleAdmin, handleOpenPermissions, formatLastOnline,
+}: {
+    user: UserProfile; isOnline: boolean; lastOnlineTimestamp: number | null;
+    currentUserId: string; handleToggleCanChat: (uid: string, canChat: boolean) => void;
+    handleToggleAdmin: (uid: string, isAdmin: boolean) => void;
+    handleOpenPermissions: (user: UserProfile) => void;
+    formatLastOnline: (ts: number) => string;
+}) => {
+    const isSelf = user.uid === currentUserId;
+    console.log(user)
+    return (
+        <motion.div
+            layout
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.95 }}
+            className="group bg-white dark:bg-white/[0.03] border border-black/[0.07] dark:border-white/[0.07]
+        rounded-xl p-4 flex flex-col gap-3 hover:border-indigo-300 dark:hover:border-indigo-500/30
+        hover:shadow-sm transition-all duration-150"
+        >
+            {/* Top row */}
+            <div className="flex items-start gap-3">
+                <UserAvatar user={user} isOnline={isOnline} />
+                <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                        <p className="text-sm font-medium text-gray-800 dark:text-white/85 truncate">
+                            {user.displayName}
+                        </p>
+                        {user.isAdmin && (
+                            <span className="flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[10px] font-medium
+                bg-indigo-100 dark:bg-indigo-500/20 text-indigo-600 dark:text-indigo-400
+                border border-indigo-200 dark:border-indigo-500/20">
+                                <Shield className="w-2.5 h-2.5" /> Admin
+                            </span>
+                        )}
+                        {isSelf && (
+                            <span className="px-1.5 py-0.5 rounded-full text-[10px] font-medium
+                bg-violet-100 dark:bg-violet-500/10 text-violet-600 dark:text-violet-400
+                border border-violet-200 dark:border-violet-500/20">
+                                You
+                            </span>
+                        )}
+                    </div>
+                    <p className="text-[11px] text-gray-400 dark:text-white/30 truncate mt-0.5">{user.email}</p>
+                </div>
             </div>
-        </div>
 
-        {/* Role Badge */}
-        <div className="text-xs text-gray-500 dark:text-gray-400 mb-4 border-b border-gray-100 dark:border-gray-700 pb-3 flex items-center justify-center w-full">
-            {user.isAdmin ? (
-                <div className={`${user.uid === currentUserId ? "text-purple-600 dark:text-purple-400" : "text-blue-600 dark:text-blue-400"} flex items-center gap-2 font-semibold`} >
-                    <Shield className="w-4 h-4 " />
-                    <span className="text-xs tracking-wider uppercase">
-                        Admin
+            {/* Status row */}
+            <div className="flex items-center justify-between text-[11px]">
+                <div className="flex items-center gap-1.5">
+                    <Globe className="w-3 h-3 text-gray-400 dark:text-white/25" />
+                    <span className={isOnline ? "text-emerald-600 dark:text-emerald-400" : "text-gray-400 dark:text-white/30"}>
+                        {isOnline ? "Online" : lastOnlineTimestamp ? formatLastOnline(lastOnlineTimestamp) : "Offline"}
                     </span>
                 </div>
-            ) : (
-                <span className="text-xs font-semibold text-gray-400 dark:text-gray-500 tracking-wider uppercase">
-                    User
-                </span>
-            )}
-        </div>
+                <span className={`flex items-center gap-1 font-medium
+          ${user.isPermitted ? "text-emerald-600 dark:text-emerald-400" : "text-red-500 dark:text-red-400"}`}>
+                    {user.isPermitted ? <CheckCircle2 className="w-3 h-3" /> : <X className="w-3 h-3" />}
+                    {user.isPermitted ? "Pemission on" : "Permission off"}
 
-        {/* Details Section */}
-        <div className="space-y-3 flex-grow flex flex-col justify-end">
-            <div className="flex justify-between items-center">
-                <span className="text-sm font-medium text-gray-500 dark:text-gray-400 flex items-center">
-                    <Globe className="w-4 h-4 mr-2 text-blue-500" />
-                    Status
-                </span>
-                <span className={`text-[10px] font-bold px-2 py-1 rounded-full uppercase tracking-tight ${isOnline
-                    ? 'bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400'
-                    : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400'
-                    }`}>
-                    {isOnline
-                        ? 'Online'
-                        : lastOnlineTimestamp
-                            ? formatLastOnline(lastOnlineTimestamp)
-                            : 'Offline'
-                    }
+
                 </span>
             </div>
-        </div>
-    </motion.div>
-), (prevProps, nextProps) => {
-    return (
-        prevProps.user === nextProps.user &&
-        prevProps.isOnline === nextProps.isOnline &&
-        prevProps.lastOnlineTimestamp === nextProps.lastOnlineTimestamp
+
+            {/* Divider */}
+            <div className="h-px bg-black/[0.05] dark:bg-white/[0.05]" />
+
+            {/* Action buttons */}
+            <div className="flex gap-2">
+                <button
+                    onClick={() => handleToggleCanChat(user.uid, user.isPermitted)}
+                    disabled={isSelf}
+                    title={user.isPermitted ? "Revoke chat" : "Grant chat"}
+                    className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-[11px] font-medium
+            border transition-all disabled:opacity-30 disabled:cursor-not-allowed
+            ${user.isPermitted
+                            ? "bg-red-50 dark:bg-red-500/10 border-red-200 dark:border-red-500/20 text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-500/15"
+                            : "bg-emerald-50 dark:bg-emerald-500/10 border-emerald-200 dark:border-emerald-500/20 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-100 dark:hover:bg-emerald-500/15"
+                        }`}
+                >
+                    {user.isPermitted ? <Ban className="w-3 h-3" /> : <MessageSquare className="w-3 h-3" />}
+                    {user.isPermitted ? "Revoke" : "Grant"}
+                </button>
+                <button
+                    onClick={() => handleToggleAdmin(user.uid, user.isAdmin)}
+                    disabled={isSelf}
+                    title={user.isAdmin ? "Remove admin" : "Promote to admin"}
+                    className="flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-[11px] font-medium
+            border border-amber-200 dark:border-amber-500/20
+            bg-amber-50 dark:bg-amber-500/10 text-amber-600 dark:text-amber-400
+            hover:bg-amber-100 dark:hover:bg-amber-500/15
+            transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+                >
+                    {user.isAdmin ? <UserPlus className="w-3 h-3" /> : <Shield className="w-3 h-3" />}
+                    {user.isAdmin ? "Demote" : "Promote"}
+                </button>
+                <button
+                    onClick={() => handleOpenPermissions(user)}
+                    title="Edit page permissions"
+                    className="w-8 h-8 flex items-center justify-center rounded-lg text-[11px]
+            border border-black/[0.07] dark:border-white/[0.07]
+            bg-white dark:bg-white/[0.03] text-gray-400 dark:text-white/30
+            hover:border-indigo-300 dark:hover:border-indigo-500/40
+            hover:text-indigo-500 dark:hover:text-indigo-400
+            transition-all"
+                >
+                    <Key className="w-3.5 h-3.5" />
+                </button>
+            </div>
+        </motion.div>
     );
 });
+UserCard.displayName = "UserCard";
 
-UserCard.displayName = 'UserCard';
-
-export default UserCard;
+export default UserCard

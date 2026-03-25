@@ -49,11 +49,11 @@ const ToolCard = ({
         <Link
             href={item.href}
             className="group flex items-start gap-3 p-4 rounded-xl
-        bg-white dark:bg-white/[0.03]
-        border border-black/[0.07] dark:border-white/[0.07]
-        hover:border-indigo-300 dark:hover:border-indigo-500/40
-        hover:shadow-md dark:hover:shadow-indigo-500/5
-        transition-all duration-150 no-underline"
+                bg-white dark:bg-white/[0.03]
+                border border-black/[0.07] dark:border-white/[0.07]
+                hover:border-indigo-300 dark:hover:border-indigo-500/40
+                hover:shadow-md dark:hover:shadow-indigo-500/5
+                transition-all duration-150 no-underline"
         >
             <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${item.accent ?? "bg-indigo-500/10"}`}>
                 <Icon className="w-4 h-4 text-indigo-500 dark:text-indigo-400" />
@@ -109,7 +109,8 @@ export default function DashboardPage() {
     const { user } = useAuth();
     const [time, setTime] = useState("");
     const [date, setDate] = useState("");
-    console.log(user)
+    console.log(user);
+
     /* Live clock */
     useEffect(() => {
         const tick = () => {
@@ -150,45 +151,51 @@ export default function DashboardPage() {
         }
     });
 
-
     /* Group by category */
     const editTools = allTools.filter((t) => ["Watermark V5", "BG Remover", "Logo Maker", "Resolution Adjuster"].includes(t.name));
     const docTools = allTools.filter((t) => ["FAQ", "Remarks", "PDF"].includes(t.name));
     const mainTools = allTools.filter((t) => ["Matcher", "CSC Reveiwer", "Directory", "DTR Extractor"].includes(t.name));
     const adminTools = allTools.filter((t) => ["Admin Panel", "Time Log"].includes(t.name));
-    1
+
     const firstName = user?.displayName?.split(" ")[0] ?? "there";
 
     return (
         <div className="min-h-full w-screen bg-gray-50 dark:bg-[#0f0e17] overflow-y-auto">
 
             {/* ── Top hero strip ── */}
-            <div className="relative overflow-hidden bg-[#0d0d1a] border-b border-white/[0.06]">
-                {/* Subtle glow */}
+            <div className="relative overflow-hidden
+                bg-white border-b border-gray-200
+                dark:bg-[#0d0d1a] dark:border-white/[0.06]">
+
+                {/* Subtle glow — visible in dark only */}
                 <div className="absolute inset-0 pointer-events-none">
-                    <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[200px] rounded-full bg-indigo-600/10 blur-3xl" />
+                    <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[200px] rounded-full
+                        bg-indigo-400/5 dark:bg-indigo-600/10 blur-3xl" />
                 </div>
 
                 <div className="relative max-w-5xl mx-auto px-6 py-8 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                     {/* Greeting */}
                     <div>
-                        <p className="text-md font-medium tracking-[0.07em] uppercase text-indigo-400/70 mb-1">
+                        <p className="text-md font-medium tracking-[0.07em] uppercase
+                            text-indigo-500/60 dark:text-indigo-400/70 mb-1">
                             {getGreeting()}
                         </p>
-                        <h1 className="text-4xl font-semibold tracking-tight text-white/90">
-                            {firstName}<span className="text-indigo-400">.</span>
+                        <h1 className="text-4xl font-semibold tracking-tight
+                            text-gray-900 dark:text-white/90">
+                            {firstName}<span className="text-indigo-500 dark:text-indigo-400">.</span>
                         </h1>
-                        <p className="text-sm text-white/35 mt-0.5">{date}</p>
+                        <p className="text-sm text-gray-400 dark:text-white/35 mt-0.5">{date}</p>
                     </div>
 
                     {/* Live clock */}
                     <div className="flex flex-col items-start sm:items-end">
-                        <p className="text-3xl font-semibold tracking-tight text-white/80 font-mono tabular-nums">
+                        <p className="text-3xl font-semibold tracking-tight font-mono tabular-nums
+                            text-gray-800 dark:text-white/80">
                             {time}
                         </p>
                         <div className="flex items-center gap-1.5 mt-1">
                             <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                            <p className="text-[11px] text-white/30">
+                            <p className="text-[11px] text-gray-400 dark:text-white/30">
                                 {user?.isAdmin ? "Administrator · Master" : "User"}
                             </p>
                         </div>
@@ -196,12 +203,16 @@ export default function DashboardPage() {
                 </div>
             </div>
 
-
             <div className="max-w-5xl mx-auto px-6 py-8 space-y-10">
 
                 {/* ── Stat row ── */}
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                    <StatCard label="Your role" value={user?.isAdmin ? "Admin" : "User"} sub="access level" color="text-indigo-500 dark:text-indigo-400" />
+                    <StatCard
+                        label="Your role"
+                        value={user?.isAdmin ? "Admin" : "User"}
+                        sub="access level"
+                        color="text-indigo-600 dark:text-indigo-400"
+                    />
                     <StatCard label="Tools" value={String(allTools.length)} sub="accessible" color="text-gray-800 dark:text-white/80" />
                     <StatCard label="Edit tools" value={String(editTools.length)} sub="image & design" color="text-gray-800 dark:text-white/80" />
                     <StatCard label="Doc tools" value={String(docTools.length)} sub="documents & data" color="text-gray-800 dark:text-white/80" />
@@ -250,8 +261,9 @@ export default function DashboardPage() {
                                 </p>
                             </div>
                             <span className="text-[10px] font-medium px-2 py-0.5 rounded-full
-                bg-red-100 text-red-600 dark:bg-red-500/10 dark:text-red-400
-                border border-red-200 dark:border-red-500/20">
+                                bg-red-100 text-red-600
+                                dark:bg-red-500/10 dark:text-red-400
+                                border border-red-200 dark:border-red-500/20">
                                 Admin only
                             </span>
                         </div>
@@ -265,7 +277,7 @@ export default function DashboardPage() {
                 {allTools.length === 0 && (
                     <div className="flex flex-col items-center justify-center py-24 text-center">
                         <div className="w-14 h-14 rounded-2xl bg-indigo-500/10 flex items-center justify-center mb-4">
-                            <Layers className="w-6 h-6 text-indigo-400" />
+                            <Layers className="w-6 h-6 text-indigo-500 dark:text-indigo-400" />
                         </div>
                         <p className="text-sm font-medium text-gray-600 dark:text-white/50">No tools available</p>
                         <p className="text-xs text-gray-400 dark:text-white/25 mt-1 max-w-xs">

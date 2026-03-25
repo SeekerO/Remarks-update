@@ -16,7 +16,6 @@ import { useInView } from "../lib/hooks/useInView";
 
 type GridSize = 1 | 2 | 3;
 
-// ── LazyImageCard ─────────────────────────────────────────────────────────────
 interface LazyImageCardProps {
     image: any;
     index: number;
@@ -58,7 +57,7 @@ const LazyImageCard = React.memo(({
             onClick={onClick}
             className={`relative rounded-xl overflow-hidden transition-all duration-200 cursor-grab active:cursor-grabbing h-fit
                 ${isSelected
-                    ? "ring-2 ring-indigo-500 ring-offset-2 dark:ring-offset-gray-900 shadow-xl"
+                    ? "ring-2 ring-indigo-500 ring-offset-2 ring-offset-white dark:ring-offset-gray-900 shadow-xl"
                     : "ring-1 ring-gray-200 dark:ring-gray-700 hover:ring-indigo-300 dark:hover:ring-indigo-700 shadow-md hover:shadow-lg"
                 }
                 ${isDragOver ? "ring-2 ring-dashed ring-indigo-400 scale-[1.02] bg-indigo-50 dark:bg-indigo-900/20" : ""}
@@ -96,8 +95,6 @@ const LazyImageCard = React.memo(({
 
 LazyImageCard.displayName = 'LazyImageCard';
 
-// ── PreviewArea ───────────────────────────────────────────────────────────────
-
 const gridCols: Record<GridSize, string> = {
     1: "grid-cols-1",
     2: "grid-cols-1 sm:grid-cols-2",
@@ -105,13 +102,7 @@ const gridCols: Record<GridSize, string> = {
 };
 
 export default function PreviewArea() {
-    const {
-        images,
-        selectedImageIndex,
-        setSelectedImageIndex,
-        reorderImages,
-        selectedImages
-    } = useImageEditor();
+    const { images, selectedImageIndex, setSelectedImageIndex, reorderImages, selectedImages } = useImageEditor();
 
     const [processing, setProcessing] = useState(false);
     const [downloadProgress, setDownloadProgress] = useState(0);
@@ -134,7 +125,6 @@ export default function PreviewArea() {
 
     const { saveTemplate } = useTemplateActions();
 
-    // ── Estimated ZIP size ────────────────────────────────────────────────────
     const formatBytes = (bytes: number): string => {
         if (bytes < 1024) return `${bytes} B`;
         if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
@@ -146,12 +136,10 @@ export default function PreviewArea() {
         const timer = setTimeout(() => {
             const canvases = imageCanvases.current;
             if (canvases.size === 0) {
-                // No canvases mounted yet — estimate from image file sizes
                 const totalBytes = images.reduce((sum, img) => sum + (img.file.size ?? 0), 0);
                 setEstimatedSize(`${formatBytes(totalBytes)}`);
                 return;
             }
-            // Estimate from canvas pixel count × per-format bytes-per-pixel factor
             const qualityFactor = exportOptions.format === 'png' ? 3.5
                 : exportOptions.format === 'webp' ? (exportOptions.quality / 100) * 0.5
                     : (exportOptions.quality / 100) * 1.2;
@@ -160,7 +148,6 @@ export default function PreviewArea() {
                 const pixels = canvas.width * canvas.height * exportOptions.scale * exportOptions.scale;
                 totalEstimate += pixels * qualityFactor;
             });
-            // For unloaded images, average from what we have
             if (canvases.size < images.length) {
                 const avg = totalEstimate / canvases.size;
                 totalEstimate += avg * (images.length - canvases.size);
@@ -170,8 +157,6 @@ export default function PreviewArea() {
         return () => clearTimeout(timer);
     }, [images.length, exportOptions.format, exportOptions.quality, exportOptions.scale]);
 
-
-    // ── Scroll to selected ────────────────────────────────────────────────────
     useEffect(() => {
         if (selectedImageIndex === null) return;
         const card = cardRefs.current.get(selectedImageIndex);
@@ -179,17 +164,11 @@ export default function PreviewArea() {
         card.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "nearest" });
     }, [selectedImageIndex]);
 
-    // ── Canvas ready ──────────────────────────────────────────────────────────
-    const handleCanvasReady = useCallback((
-        index: number,
-        getBlobFunc: () => Promise<Blob | null>,
-        canvas: HTMLCanvasElement
-    ) => {
+    const handleCanvasReady = useCallback((index: number, getBlobFunc: () => Promise<Blob | null>, canvas: HTMLCanvasElement) => {
         imageBlobGetters.current.set(index, getBlobFunc);
         imageCanvases.current.set(index, canvas);
     }, []);
 
-    // ── Drag handlers ─────────────────────────────────────────────────────────
     const handleDragStart = useCallback((e: React.DragEvent, index: number) => {
         dragFromIndex.current = index;
         e.dataTransfer.effectAllowed = "move";
@@ -217,7 +196,6 @@ export default function PreviewArea() {
         setDragOverIndex(null);
     }, []);
 
-    // ── Click to select (double-click to deselect) ────────────────────────────
     const clickTimerRef = useRef<NodeJS.Timeout | null>(null);
     const lastClickedIndexRef = useRef<number | null>(null);
 
@@ -243,7 +221,6 @@ export default function PreviewArea() {
         return () => { if (clickTimerRef.current) clearTimeout(clickTimerRef.current); };
     }, []);
 
-    // ── Cleanup removed images ────────────────────────────────────────────────
     useEffect(() => {
         const current = new Set(images.map((_, i) => i));
         Array.from(imageBlobGetters.current.keys()).forEach(i => {
@@ -255,7 +232,6 @@ export default function PreviewArea() {
         });
     }, [images.length]);
 
-    // ── Per-card memoized handlers ────────────────────────────────────────────
     const cardHandlers = useRef<Map<number, {
         onDragStart: (e: React.DragEvent) => void;
         onDragOver: (e: React.DragEvent) => void;
@@ -275,12 +251,7 @@ export default function PreviewArea() {
         return cardHandlers.current.get(index)!;
     }, [handleDragStart, handleDragOver, handleDrop, handleSelectImage]);
 
-    // ── Wait for all canvases to register after forceLoadAll ──────────────────
-    const waitForAllCanvases = useCallback((
-        total: number,
-        signal: AbortSignal,
-        onTick: (ready: number) => void
-    ): Promise<void> => {
+    const waitForAllCanvases = useCallback((total: number, signal: AbortSignal, onTick: (ready: number) => void): Promise<void> => {
         return new Promise((resolve, reject) => {
             const check = () => {
                 if (signal.aborted) return reject(new Error('aborted'));
@@ -293,45 +264,23 @@ export default function PreviewArea() {
         });
     }, []);
 
-    // ── Download all ──────────────────────────────────────────────────────────
     const downloadAll = async () => {
         saveTemplate();
         if (images.length === 0) return;
-
         setProcessing(true);
         setDownloadProgress(0);
         abortControllerRef.current = new AbortController();
         const signal = abortControllerRef.current.signal;
-
         try {
-            // Phase 1: if any cards are still lazy (not in viewport), force-render them
-            // so SingleImageEditor mounts and calls onCanvasReady for every image.
             if (imageBlobGetters.current.size < images.length) {
                 setForceLoadAll(true);
                 await Promise.race([
-                    waitForAllCanvases(
-                        images.length,
-                        signal,
-                        (ready) => setDownloadProgress(Math.round((ready / images.length) * 40))
-                    ),
-                    new Promise<never>((_, rej) =>
-                        setTimeout(() => rej(new Error('Timeout waiting for canvases')), 30_000)
-                    ),
+                    waitForAllCanvases(images.length, signal, (ready) => setDownloadProgress(Math.round((ready / images.length) * 40))),
+                    new Promise<never>((_, rej) => setTimeout(() => rej(new Error('Timeout')), 30_000)),
                 ]);
             }
-
             if (signal.aborted) return;
-
-            // Phase 2: zip and save (progress mapped to 40–100%)
-            await exportAsZip(
-                imageBlobGetters.current,
-                images.map(img => img.file.name),
-                fileName.replace(/\./g, ' ') || 'watermarked_images',
-                exportOptions,
-                imageCanvases.current,
-                (percent) => setDownloadProgress(40 + Math.round(percent * 0.6)),
-                signal
-            );
+            await exportAsZip(imageBlobGetters.current, images.map(img => img.file.name), fileName.replace(/\./g, ' ') || 'watermarked_images', exportOptions, imageCanvases.current, (percent) => setDownloadProgress(40 + Math.round(percent * 0.6)), signal);
         } catch (err: any) {
             if (err?.message !== 'aborted') console.error("Export error:", err);
         } finally {
@@ -342,32 +291,23 @@ export default function PreviewArea() {
         }
     };
 
-    // ── Download selected ─────────────────────────────────────────────────────
     const downloadSelected = async () => {
         if (selectedImages.length === 0) return;
-
         if (selectedImages.length === 1) {
             const index = selectedImages[0];
             const canvas = imageCanvases.current.get(index);
             const image = images[index];
             if (!canvas || !image) return;
-
             const mimeType = `image/${exportOptions.format}`;
             const quality = exportOptions.format === 'png' ? 1 : exportOptions.quality / 100;
-
             let exportCanvas = canvas;
             if (exportOptions.scale !== 1) {
                 exportCanvas = document.createElement('canvas');
                 exportCanvas.width = Math.round(canvas.width * exportOptions.scale);
                 exportCanvas.height = Math.round(canvas.height * exportOptions.scale);
                 const ctx = exportCanvas.getContext('2d');
-                if (ctx) {
-                    ctx.imageSmoothingEnabled = true;
-                    ctx.imageSmoothingQuality = 'high';
-                    ctx.drawImage(canvas, 0, 0, exportCanvas.width, exportCanvas.height);
-                }
+                if (ctx) { ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'high'; ctx.drawImage(canvas, 0, 0, exportCanvas.width, exportCanvas.height); }
             }
-
             exportCanvas.toBlob((blob) => {
                 if (!blob) return;
                 const baseName = image.file.name.replace(/\.[^/.]+$/, '');
@@ -379,12 +319,10 @@ export default function PreviewArea() {
             }, mimeType, quality);
             return;
         }
-
         setProcessing(true);
         setDownloadProgress(0);
         abortControllerRef.current = new AbortController();
         const signal = abortControllerRef.current.signal;
-
         try {
             const selectedBlobGetters = new Map<number, () => Promise<Blob | null>>();
             const selectedCanvases = new Map<number, HTMLCanvasElement>();
@@ -394,16 +332,7 @@ export default function PreviewArea() {
                 if (getter) selectedBlobGetters.set(index, getter);
                 if (canvas) selectedCanvases.set(index, canvas);
             });
-
-            await exportAsZip(
-                selectedBlobGetters,
-                images.map(img => img.file.name),
-                `${fileName || 'watermarked_images'}_selected`,
-                exportOptions,
-                selectedCanvases,
-                (percent) => setDownloadProgress(percent),
-                signal,
-            );
+            await exportAsZip(selectedBlobGetters, images.map(img => img.file.name), `${fileName || 'watermarked_images'}_selected`, exportOptions, selectedCanvases, (percent) => setDownloadProgress(percent), signal);
         } catch (err) {
             console.error('Selected export error:', err);
         } finally {
@@ -420,7 +349,6 @@ export default function PreviewArea() {
         setDownloadProgress(0);
     };
 
-    // ── Render ────────────────────────────────────────────────────────────────
     return (
         <div className="space-y-4 p-3 sm:p-6 w-full min-h-screen">
             {/* Page header */}
@@ -428,7 +356,8 @@ export default function PreviewArea() {
                 <h2 className="text-lg sm:text-2xl font-extrabold text-gray-900 dark:text-white flex items-center gap-3">
                     Image Previews
                     {images.length > 0 && (
-                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-sm font-semibold bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
+                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-sm font-semibold
+                            bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
                             <IoImage size={16} />
                             {selectedImageIndex !== null
                                 ? <>{selectedImageIndex + 1} <span className="opacity-50">/</span> {images.length}</>
@@ -439,7 +368,8 @@ export default function PreviewArea() {
                 </h2>
 
                 {images.length > 0 && (
-                    <div className="hidden lg:flex items-center gap-1 p-1 bg-gray-100 dark:bg-gray-800 rounded-lg">
+                    <div className="hidden lg:flex items-center gap-1 p-1
+                        bg-gray-100 dark:bg-gray-800 rounded-lg">
                         {([1, 2, 3] as GridSize[]).map(size => {
                             const Icon = size === 1 ? Rows3 : size === 2 ? Grid2x2 : LayoutGrid;
                             return (
@@ -460,8 +390,12 @@ export default function PreviewArea() {
                 )}
             </div>
 
+            {/* Sticky toolbar */}
             {images.length > 0 && (
-                <div className="sticky lg:top-4 top-[70px] z-30 bg-white/90 dark:bg-gray-900/90 backdrop-blur border border-gray-200 dark:border-gray-700 rounded-xl shadow-md py-3 px-3 sm:py-4 sm:px-4 space-y-3">
+                <div className="sticky lg:top-4 top-[70px] z-30
+                    bg-white/90 dark:bg-gray-900/90 backdrop-blur
+                    border border-gray-200 dark:border-gray-700
+                    rounded-xl shadow-md py-3 px-3 sm:py-4 sm:px-4 space-y-3">
                     <div className="flex flex-wrap items-center gap-2 sm:gap-3">
                         <div className="relative flex-1 min-w-[110px] sm:min-w-[160px]">
                             <input
@@ -470,19 +404,28 @@ export default function PreviewArea() {
                                 value={fileName}
                                 maxLength={256}
                                 onChange={(e) => setFileName(e.target.value)}
-                                className="w-full px-3 pl-10 sm:pl-12 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                                className="w-full px-3 pl-10 sm:pl-12 py-2 text-sm
+                                    border border-gray-300 dark:border-gray-600 rounded-lg
+                                    bg-white dark:bg-gray-800
+                                    text-gray-900 dark:text-white
+                                    placeholder-gray-400 dark:placeholder-gray-500
+                                    focus:outline-none focus:ring-2 focus:ring-indigo-500"
                             />
-                            <span className="absolute left-2 top-1/2 -translate-y-1/2 text-[10px] italic text-gray-400 border-r border-gray-300 pr-1.5">
+                            <span className="absolute left-2 top-1/2 -translate-y-1/2 text-[10px] italic text-gray-400 border-r border-gray-300 dark:border-gray-600 pr-1.5">
                                 {fileName.length}/256
                             </span>
                         </div>
 
                         <div className="flex items-center gap-1.5">
-                            <span className="text-xs font-bold px-2 py-1 rounded bg-indigo-100 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300 uppercase">
+                            <span className="text-xs font-bold px-2 py-1 rounded
+                                bg-indigo-100 text-indigo-700
+                                dark:bg-indigo-900/40 dark:text-indigo-300 uppercase">
                                 .{exportOptions.format}
                             </span>
                             {exportOptions.scale !== 1 && (
-                                <span className="text-xs font-bold px-2 py-1 rounded bg-purple-100 dark:bg-purple-900/40 text-purple-700 dark:text-purple-300">
+                                <span className="text-xs font-bold px-2 py-1 rounded
+                                    bg-purple-100 text-purple-700
+                                    dark:bg-purple-900/40 dark:text-purple-300">
                                     {exportOptions.scale}×
                                 </span>
                             )}
@@ -490,7 +433,9 @@ export default function PreviewArea() {
 
                         <button
                             onClick={() => setShowExportPanel(v => !v)}
-                            className="flex items-center gap-1.5 px-2.5 sm:px-3 py-2 text-sm font-medium border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-200 transition-colors"
+                            className="flex items-center gap-1.5 px-2.5 sm:px-3 py-2 text-sm font-medium rounded-lg transition-colors
+                                bg-white border border-gray-300 hover:bg-gray-50 text-gray-700
+                                dark:bg-gray-800 dark:border-gray-600 dark:hover:bg-gray-700 dark:text-gray-200"
                         >
                             <Settings2 className="w-4 h-4" />
                             <span className="hidden sm:inline">Export</span>
@@ -519,12 +464,14 @@ export default function PreviewArea() {
                     )}
                 </div>
             )}
-            {/* Batch actions */}
+
             <BatchActions onDownloadSelected={downloadSelected} />
 
-            {/* Image grid */}
+            {/* Image grid / empty state */}
             {images.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-24 text-center bg-white dark:bg-gray-800 rounded-2xl border-2 border-dashed border-gray-200 dark:border-gray-700">
+                <div className="flex flex-col items-center justify-center py-24 text-center
+                    bg-white dark:bg-gray-800
+                    rounded-2xl border-2 border-dashed border-gray-200 dark:border-gray-700">
                     <IoImage className="text-5xl text-gray-300 dark:text-gray-600 mb-4" />
                     <p className="text-lg font-semibold text-gray-500 dark:text-gray-400">No images yet</p>
                     <p className="text-sm text-gray-400 dark:text-gray-500 mt-1">Upload images using the panel on the left</p>

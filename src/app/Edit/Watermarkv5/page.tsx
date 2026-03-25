@@ -24,7 +24,7 @@ type TabId = "upload" | "watermark" | "adjust";
 function DragHandle() {
     return (
         <div className="flex justify-center pt-2 pb-1">
-            <div className="w-10 h-1 rounded-full bg-white/20" />
+            <div className="w-10 h-1 rounded-full bg-gray-300 dark:bg-white/20" />
         </div>
     );
 }
@@ -95,14 +95,15 @@ function BottomSheet({ open, onClose, children, snapPoints = [45, 100] }: Bottom
         <>
             {/* Backdrop */}
             <div
-                className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm"
+                className="fixed inset-0 z-40 bg-black/40 dark:bg-black/60 backdrop-blur-sm"
                 onClick={onClose}
             />
             {/* Sheet */}
             <div
                 ref={sheetRef}
                 className="fixed bottom-0 left-0 right-0 z-50 flex flex-col rounded-t-2xl shadow-2xl
-                    bg-[#0d0d1a] border-t border-indigo-500/20"
+                    bg-white dark:bg-[#0d0d1a]
+                    border-t border-indigo-200 dark:border-indigo-500/20"
                 style={{
                     height: `${currentHeight}%`,
                     transition: dragging ? "none" : "height 0.3s cubic-bezier(0.32, 0.72, 0, 1)",
@@ -117,7 +118,7 @@ function BottomSheet({ open, onClose, children, snapPoints = [45, 100] }: Bottom
                 <div className="flex items-center justify-between px-4 pb-3 flex-shrink-0">
                     <div className="flex items-center gap-2">
                         <div className="w-1.5 h-1.5 rounded-full bg-indigo-400 animate-pulse" />
-                        <span className="text-xs font-semibold text-white/60 uppercase tracking-wider">
+                        <span className="text-xs font-semibold text-gray-400 dark:text-white/60 uppercase tracking-wider">
                             Editor Panel
                         </span>
                     </div>
@@ -128,13 +129,19 @@ function BottomSheet({ open, onClose, children, snapPoints = [45, 100] }: Bottom
                                 setSnapIndex(next);
                                 if (sheetRef.current) sheetRef.current.style.height = `${snapPoints[next]}%`;
                             }}
-                            className="p-1.5 rounded-lg bg-white/5 border border-white/10 text-white/50 hover:text-white/80 transition-colors"
+                            className="p-1.5 rounded-lg
+                                bg-gray-100 border border-gray-200 text-gray-400 hover:text-gray-700
+                                dark:bg-white/5 dark:border-white/10 dark:text-white/50 dark:hover:text-white/80
+                                transition-colors"
                         >
                             <ChevronDown className={`w-4 h-4 transition-transform ${snapIndex === snapPoints.length - 1 ? '' : 'rotate-180'}`} />
                         </button>
                         <button
                             onClick={onClose}
-                            className="p-1.5 rounded-lg bg-white/5 border border-white/10 text-white/50 hover:text-red-400 transition-colors"
+                            className="p-1.5 rounded-lg
+                                bg-gray-100 border border-gray-200 text-gray-400 hover:text-red-500
+                                dark:bg-white/5 dark:border-white/10 dark:text-white/50 dark:hover:text-red-400
+                                transition-colors"
                         >
                             <X className="w-4 h-4" />
                         </button>
@@ -161,7 +168,9 @@ interface MobileTabBarProps {
 
 function MobileTabBar({ tabs, activeTab, onTabChange, onOpen, panelOpen }: MobileTabBarProps) {
     return (
-        <div className="fixed bottom-14 w-full right-0 z-30 bg-[#0d0d1a]/95 backdrop-blur-md border-t border-indigo-500/20 safe-area-bottom">
+        <div className="fixed bottom-14 w-full right-0 z-30
+            bg-white/95 dark:bg-[#0d0d1a]/95 backdrop-blur-md
+            border-t border-indigo-100 dark:border-indigo-500/20 safe-area-bottom">
             <div className="flex items-center h-16">
                 {tabs.map(({ id, label, icon: Icon, count, countColor }) => {
                     const isActive = activeTab === id && panelOpen;
@@ -170,7 +179,10 @@ function MobileTabBar({ tabs, activeTab, onTabChange, onOpen, panelOpen }: Mobil
                             key={id}
                             onClick={() => { onTabChange(id); onOpen(); }}
                             className={`flex-1 flex flex-col items-center justify-center h-full gap-0.5 transition-colors relative
-                                ${isActive ? "text-indigo-400" : "text-white/40 hover:text-white/70"}`}
+                                ${isActive
+                                    ? "text-indigo-500 dark:text-indigo-400"
+                                    : "text-gray-400 hover:text-gray-700 dark:text-white/40 dark:hover:text-white/70"
+                                }`}
                         >
                             {isActive && (
                                 <span className="absolute top-0 left-1/4 right-1/4 h-0.5 rounded-b-full bg-indigo-500" />
@@ -204,8 +216,8 @@ function DesktopTab({
             onClick={onClick}
             className={`relative flex-1 flex flex-col items-center justify-center py-2.5 px-1 rounded-xl text-xs font-semibold transition-all duration-200
                 ${active
-                    ? "bg-indigo-600/20 text-indigo-300 border border-indigo-500/30 shadow-[0_0_12px_rgba(99,102,241,0.15)]"
-                    : "text-white/40 hover:text-white/70 border border-transparent hover:bg-white/5"
+                    ? "bg-indigo-600/20 text-indigo-600 dark:text-indigo-300 border border-indigo-300 dark:border-indigo-500/30 shadow-[0_0_12px_rgba(99,102,241,0.1)] dark:shadow-[0_0_12px_rgba(99,102,241,0.15)]"
+                    : "text-gray-500 dark:text-white/40 hover:text-gray-800 dark:hover:text-white/70 border border-transparent hover:bg-gray-100 dark:hover:bg-white/5"
                 }`}
         >
             <div className="relative mb-1">
@@ -218,7 +230,7 @@ function DesktopTab({
             </div>
             {label}
             {active && (
-                <span className="absolute bottom-0 left-1/2 -translate-x-1/2 w-6 h-0.5 rounded-full bg-indigo-400" />
+                <span className="absolute bottom-0 left-1/2 -translate-x-1/2 w-6 h-0.5 rounded-full bg-indigo-500 dark:bg-indigo-400" />
             )}
         </button>
     );
@@ -227,10 +239,12 @@ function DesktopTab({
 // ── Privacy Badge ─────────────────────────────────────────────────────────────
 function PrivacyBadge() {
     return (
-        <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-indigo-500/10 border border-indigo-500/20">
-            <Shield className="w-3.5 h-3.5 text-indigo-400 flex-shrink-0" />
-            <p className="text-[11px] text-indigo-300/80 leading-snug">
-                <span className="font-semibold text-indigo-300">100% client-side.</span>{" "}
+        <div className="flex items-center gap-2 px-3 py-2 rounded-lg
+            bg-indigo-50 border border-indigo-200
+            dark:bg-indigo-500/10 dark:border-indigo-500/20">
+            <Shield className="w-3.5 h-3.5 text-indigo-500 dark:text-indigo-400 flex-shrink-0" />
+            <p className="text-[11px] text-indigo-700 dark:text-indigo-300/80 leading-snug">
+                <span className="font-semibold text-indigo-600 dark:text-indigo-300">100% client-side.</span>{" "}
                 Your images never leave your device.
             </p>
         </div>
@@ -290,8 +304,8 @@ function WatermarkPageContent() {
                             <div className="w-14 h-14 rounded-2xl bg-violet-500/10 border border-violet-500/20 flex items-center justify-center mb-4">
                                 <Layers className="w-7 h-7 text-violet-400" />
                             </div>
-                            <p className="text-sm font-semibold text-white/70">No watermarks yet</p>
-                            <p className="text-xs text-white/30 mt-1 max-w-[200px]">
+                            <p className="text-sm font-semibold text-gray-600 dark:text-white/70">No watermarks yet</p>
+                            <p className="text-xs text-gray-400 dark:text-white/30 mt-1 max-w-[200px]">
                                 Upload images first, then add logos and footers here.
                             </p>
                             <button
@@ -303,8 +317,8 @@ function WatermarkPageContent() {
                         </div>
                     ) : watermarkCount === 0 && images.length > 0 ? (
                         <div className="space-y-4">
-                            <div className="p-3 bg-violet-500/10 border border-violet-500/20 rounded-lg">
-                                <p className="text-xs text-violet-300">
+                            <div className="p-3 bg-violet-50 dark:bg-violet-500/10 border border-violet-200 dark:border-violet-500/20 rounded-lg">
+                                <p className="text-xs text-violet-700 dark:text-violet-300">
                                     💡 Switch to <strong>Upload</strong> to add logos and footers, then control them here.
                                 </p>
                             </div>
@@ -322,8 +336,8 @@ function WatermarkPageContent() {
                             <div className="w-14 h-14 rounded-2xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center mb-4">
                                 <SlidersHorizontal className="w-7 h-7 text-amber-400" />
                             </div>
-                            <p className="text-sm font-semibold text-white/70">No images to adjust</p>
-                            <p className="text-xs text-white/30 mt-1 max-w-[200px]">
+                            <p className="text-sm font-semibold text-gray-600 dark:text-white/70">No images to adjust</p>
+                            <p className="text-xs text-gray-400 dark:text-white/30 mt-1 max-w-[200px]">
                                 Upload images first to use photo adjustments.
                             </p>
                             <button
@@ -343,38 +357,45 @@ function WatermarkPageContent() {
 
     if (user && (user as any)?.canChat === true)
         return (
-
             <div className="min-h-full overflow-y-auto font-sans w-full bg-gray-50 dark:bg-gray-950">
+
                 {/* ── DESKTOP layout (lg+) ─────────────────────────────────────────── */}
                 <div className="hidden lg:flex h-screen overflow-hidden w-full">
 
-                    {/* ── Nexus Sidebar ── */}
-                    <div className="w-[320px] flex-shrink-0 h-screen flex flex-col bg-[#0d0d1a] border-r border-l border-white/[0.06] shadow-2xl relative overflow-hidden">
+                    {/* ── Editor Sidebar ── */}
+                    <div className="w-[320px] flex-shrink-0 h-screen flex flex-col
+                        bg-white dark:bg-[#0d0d1a]
+                        border-r border-gray-200 dark:border-l dark:border-white/[0.06]
+                        shadow-xl relative overflow-hidden">
 
-                        {/* Radial glow */}
-                        <div className="pointer-events-none absolute top-0 right-0 w-64 h-64 rounded-full opacity-30"
+                        {/* Radial glow — dark only */}
+                        <div className="pointer-events-none absolute top-0 right-0 w-64 h-64 rounded-full opacity-0 dark:opacity-30"
                             style={{ background: "radial-gradient(circle at 100% 0%, rgba(99,102,241,0.4) 0%, transparent 60%)" }} />
-                        <div className="pointer-events-none absolute bottom-0 left-0 w-48 h-48 rounded-full opacity-20"
+                        <div className="pointer-events-none absolute bottom-0 left-0 w-48 h-48 rounded-full opacity-0 dark:opacity-20"
                             style={{ background: "radial-gradient(circle at 0% 100%, rgba(99,102,241,0.3) 0%, transparent 60%)" }} />
 
                         {/* Header */}
-                        <div className="px-5 pt-5 pb-4 border-b border-white/[0.06] relative z-10 flex-shrink-0">
+                        <div className="px-5 pt-5 pb-4 border-b border-gray-200 dark:border-white/[0.06] relative z-10 flex-shrink-0">
                             <div className="flex items-center justify-between mt-4">
                                 <div className="flex items-center gap-2.5">
-                                    <div className="w-8 h-8 rounded-lg bg-indigo-600/20 border border-indigo-500/30 flex items-center justify-center">
-                                        <Droplets className="w-4 h-4 text-indigo-400" />
+                                    <div className="w-8 h-8 rounded-lg bg-indigo-100 dark:bg-indigo-600/20 border border-indigo-200 dark:border-indigo-500/30 flex items-center justify-center">
+                                        <Droplets className="w-4 h-4 text-indigo-500 dark:text-indigo-400" />
                                     </div>
                                     <div>
-                                        <h1 className="font-syne text-lg font-extrabold tracking-tight text-slate-800 dark:text-transparent dark:bg-clip-text"
-                                            style={{ backgroundImage: 'linear-gradient(90deg,#f9fafb,#9ca3af)' }}>Watermark</h1>
-                                        <p className="text-[10px] text-white/30 tracking-wider uppercase">Editor</p>
+                                        <h1 className="font-syne text-lg font-extrabold tracking-tight text-gray-900 dark:text-transparent dark:bg-clip-text">
+                                            Watermark
+                                        </h1>
+                                        <p className="text-[10px] text-gray-400 dark:text-white/30 tracking-wider uppercase">Editor</p>
                                     </div>
                                 </div>
                                 {images.length > 0 && (
                                     <button
                                         onClick={removeAllImages}
                                         title="Remove all images"
-                                        className="flex items-center justify-center w-7 h-7 rounded-lg bg-red-500/10 border border-red-500/20 hover:bg-red-500/20 text-red-400 hover:text-red-300 transition-all"
+                                        className="flex items-center justify-center w-7 h-7 rounded-lg
+                                            bg-red-50 border border-red-200 hover:bg-red-100 text-red-500 hover:text-red-600
+                                            dark:bg-red-500/10 dark:border-red-500/20 dark:hover:bg-red-500/20 dark:text-red-400 dark:hover:text-red-300
+                                            transition-all"
                                     >
                                         <MdDelete className="text-sm" />
                                     </button>
@@ -388,7 +409,10 @@ function WatermarkPageContent() {
                         </div>
 
                         {/* Desktop Tab Bar */}
-                        <div className="flex mt-3 mx-4 bg-white/[0.04] border border-white/[0.06] rounded-xl p-1 gap-1 flex-shrink-0 relative z-10">
+                        <div className="flex mt-3 mx-4
+                            bg-gray-100 dark:bg-white/[0.04]
+                            border border-gray-200 dark:border-white/[0.06]
+                            rounded-xl p-1 gap-1 flex-shrink-0 relative z-10">
                             {TABS.map((tab) => (
                                 <DesktopTab
                                     key={tab.id}
@@ -407,21 +431,24 @@ function WatermarkPageContent() {
                         <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4 relative z-10
                             [&::-webkit-scrollbar]:w-1
                             [&::-webkit-scrollbar-track]:bg-transparent
-                            [&::-webkit-scrollbar-thumb]:bg-white/10
+                            [&::-webkit-scrollbar-thumb]:bg-gray-200
+                            dark:[&::-webkit-scrollbar-thumb]:bg-white/10
                             [&::-webkit-scrollbar-thumb]:rounded-full">
                             {renderTabContent()}
                         </div>
 
                         {/* Undo / Redo footer */}
                         {images.length > 0 && (
-                            <div className="px-4 py-3 border-t border-white/[0.06] flex items-center gap-2 flex-shrink-0 relative z-10">
+                            <div className="px-4 py-3 border-t border-gray-200 dark:border-white/[0.06] flex items-center gap-2 flex-shrink-0 relative z-10">
                                 <button
                                     onClick={undo}
                                     disabled={!canUndo}
                                     title="Undo (Ctrl+Z)"
                                     className="flex items-center gap-1.5 flex-1 justify-center py-2 text-xs font-semibold rounded-lg
-                                        bg-white/[0.04] border border-white/[0.06] text-white/50
-                                        hover:bg-white/[0.08] hover:text-white/80
+                                        bg-gray-100 border border-gray-200 text-gray-500
+                                        hover:bg-gray-200 hover:text-gray-800
+                                        dark:bg-white/[0.04] dark:border-white/[0.06] dark:text-white/50
+                                        dark:hover:bg-white/[0.08] dark:hover:text-white/80
                                         disabled:opacity-30 disabled:cursor-not-allowed
                                         transition-all duration-150"
                                 >
@@ -433,8 +460,10 @@ function WatermarkPageContent() {
                                     disabled={!canRedo}
                                     title="Redo (Ctrl+Shift+Z)"
                                     className="flex items-center gap-1.5 flex-1 justify-center py-2 text-xs font-semibold rounded-lg
-                                        bg-white/[0.04] border border-white/[0.06] text-white/50
-                                        hover:bg-white/[0.08] hover:text-white/80
+                                        bg-gray-100 border border-gray-200 text-gray-500
+                                        hover:bg-gray-200 hover:text-gray-800
+                                        dark:bg-white/[0.04] dark:border-white/[0.06] dark:text-white/50
+                                        dark:hover:bg-white/[0.08] dark:hover:text-white/80
                                         disabled:opacity-30 disabled:cursor-not-allowed
                                         transition-all duration-150"
                                 >
@@ -447,7 +476,7 @@ function WatermarkPageContent() {
                         {/* Version */}
                         <div className="px-4 pb-3 flex items-center gap-1.5 relative z-10">
                             <Image src={Logo} alt="Avexi" width={14} />
-                            <span className="text-[10px] text-white/20 tracking-wider">Avexi · Watermark v5</span>
+                            <span className="text-[10px] text-gray-400 dark:text-white/20 tracking-wider">Avexi · Watermark v5</span>
                         </div>
                     </div>
 
@@ -462,18 +491,22 @@ function WatermarkPageContent() {
 
                     {/* Mobile top bar */}
                     <div className="sticky top-0 z-30 flex items-center justify-between px-4 py-3
-                        bg-[#0d0d1a]/95 backdrop-blur-md border-b border-indigo-500/20 shadow-lg">
+                        bg-white/95 dark:bg-[#0d0d1a]/95 backdrop-blur-md
+                        border-b border-indigo-100 dark:border-indigo-500/20 shadow-lg">
                         <div className="flex items-center gap-2.5 min-w-0">
-                            <div className="w-7 h-7 rounded-lg bg-indigo-600/20 border border-indigo-500/30 flex items-center justify-center flex-shrink-0">
-                                <Droplets className="w-3.5 h-3.5 text-indigo-400" />
+                            <div className="w-7 h-7 rounded-lg
+                                bg-indigo-100 border border-indigo-200
+                                dark:bg-indigo-600/20 dark:border-indigo-500/30
+                                flex items-center justify-center flex-shrink-0">
+                                <Droplets className="w-3.5 h-3.5 text-indigo-500 dark:text-indigo-400" />
                             </div>
                             <div className="min-w-0">
-                                <h1 className="text-sm font-bold text-white truncate leading-tight">
+                                <h1 className="text-sm font-bold text-gray-900 dark:text-white truncate leading-tight">
                                     Watermark Editor
                                 </h1>
                                 <div className="flex items-center gap-1">
-                                    <Shield className="w-2.5 h-2.5 text-indigo-400" />
-                                    <p className="text-[10px] text-indigo-400 font-medium">Client-Side</p>
+                                    <Shield className="w-2.5 h-2.5 text-indigo-500 dark:text-indigo-400" />
+                                    <p className="text-[10px] text-indigo-600 dark:text-indigo-400 font-medium">Client-Side</p>
                                 </div>
                             </div>
                         </div>
@@ -484,20 +517,29 @@ function WatermarkPageContent() {
                                     <button
                                         onClick={undo}
                                         disabled={!canUndo}
-                                        className="p-2 rounded-lg bg-white/5 border border-white/10 text-white/50 disabled:opacity-30 hover:text-white/80 transition-colors"
+                                        className="p-2 rounded-lg
+                                            bg-gray-100 border border-gray-200 text-gray-400 disabled:opacity-30
+                                            hover:text-gray-700 dark:bg-white/5 dark:border-white/10
+                                            dark:text-white/50 dark:hover:text-white/80 transition-colors"
                                     >
                                         <Undo2 className="w-4 h-4" />
                                     </button>
                                     <button
                                         onClick={redo}
                                         disabled={!canRedo}
-                                        className="p-2 rounded-lg bg-white/5 border border-white/10 text-white/50 disabled:opacity-30 hover:text-white/80 transition-colors"
+                                        className="p-2 rounded-lg
+                                            bg-gray-100 border border-gray-200 text-gray-400 disabled:opacity-30
+                                            hover:text-gray-700 dark:bg-white/5 dark:border-white/10
+                                            dark:text-white/50 dark:hover:text-white/80 transition-colors"
                                     >
                                         <Redo2 className="w-4 h-4" />
                                     </button>
                                     <button
                                         onClick={removeAllImages}
-                                        className="p-2 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 hover:text-red-300 transition-colors"
+                                        className="p-2 rounded-lg
+                                            bg-red-50 border border-red-200 text-red-500 hover:text-red-600
+                                            dark:bg-red-500/10 dark:border-red-500/20 dark:text-red-400 dark:hover:text-red-300
+                                            transition-colors"
                                     >
                                         <MdDelete className="text-base" />
                                     </button>
@@ -518,7 +560,10 @@ function WatermarkPageContent() {
                         snapPoints={[48, 88]}
                     >
                         {/* Tab switcher inside sheet */}
-                        <div className="flex bg-white/[0.04] border border-white/[0.06] rounded-xl p-1 gap-1 flex-shrink-0">
+                        <div className="flex
+                            bg-gray-100 dark:bg-white/[0.04]
+                            border border-gray-200 dark:border-white/[0.06]
+                            rounded-xl p-1 gap-1 flex-shrink-0">
                             {TABS.map((tab) => (
                                 <DesktopTab
                                     key={tab.id}
@@ -547,7 +592,7 @@ function WatermarkPageContent() {
                     </div>
                 </div>
 
-            </div>
+            </div >
         );
 }
 

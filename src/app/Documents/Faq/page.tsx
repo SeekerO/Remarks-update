@@ -286,41 +286,41 @@ function AddFaqModal({
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
       <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative w-full sm:max-w-lg bg-[#0d0d1a] border border-white/[0.08] rounded-t-2xl sm:rounded-2xl shadow-2xl p-6 z-10">
+      <div className="relative w-full sm:max-w-lg bg-slate-100 dark:bg-[#0d0d1a] border border-white/[0.08] rounded-t-2xl sm:rounded-2xl shadow-2xl p-6 z-10">
         {/* Header */}
         <div className="flex items-center justify-between mb-5">
           <div className="flex items-center gap-2.5">
             <div className="w-8 h-8 rounded-xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center">
               <Plus className="w-4 h-4 text-indigo-400" />
             </div>
-            <h2 className="text-base font-bold text-white">New FAQ Entry</h2>
+            <h2 className="text-base font-bold text-black dark:text-white">New FAQ Entry</h2>
           </div>
-          <button onClick={onClose} className="p-1.5 rounded-lg bg-white/[0.04] border border-white/[0.06] text-white/40 hover:text-white/80 transition-colors">
-            <X className="w-4 h-4" />
+          <button onClick={onClose} className="p-1.5 rounded-lg bg-slate-200 dark:bg-white/[0.04] border border-white/[0.06] text-slate-700 dark:text-white/40 hover:text-red-500 dark:hover:text-white/80 transition-colors">
+            <X className="w-4 h-4 light:text-slate-900" />
           </button>
         </div>
 
         <div className="space-y-4">
           <div>
-            <label className="block text-[10px] font-semibold uppercase tracking-widest text-white/30 mb-1.5">Topic</label>
+            <label className="block text-[10px] font-semibold uppercase tracking-widest text-gray-400 dark:text-white/30 mb-1.5">Topic</label>
             <input
               type="text"
               value={topic}
               onChange={(e) => setTopic(e.target.value)}
               placeholder="e.g. KUNG WALANG VALID ID"
-              className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-4 py-2.5
-                text-sm text-white placeholder-white/20 focus:outline-none focus:border-indigo-500/50 transition-colors"
+              className="w-full bg-slate-200 dark:bg-white/[0.04] border border-white/[0.08] rounded-xl px-4 py-2.5
+                text-sm text-black dark:text-white placeholder-white/20 focus:outline-none focus:border-indigo-500/50 transition-colors"
             />
           </div>
           <div>
-            <label className="block text-[10px] font-semibold uppercase tracking-widest text-white/30 mb-1.5">Details</label>
+            <label className="block text-[10px] font-semibold uppercase tracking-widest text-gray-400 dark:text-white/30 mb-1.5">Details</label>
             <textarea
               value={details}
               onChange={(e) => setDetails(e.target.value)}
               rows={6}
               placeholder="Paste the full response here..."
-              className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-4 py-2.5
-                text-sm text-white/70 font-mono placeholder-white/20 resize-y
+              className="w-full bg-slate-200 dark:bg-white/[0.04] border border-white/[0.08] rounded-xl px-4 py-2.5
+                text-sm text-black dark:text-white/70 font-mono placeholder-white/20 resize-y
                 focus:outline-none focus:border-indigo-500/50 transition-colors"
             />
           </div>
@@ -538,7 +538,7 @@ const FAQ = () => {
   }
 
   return (
-    <div className="h-screen w-full flex flex-col bg-[#070710] overflow-hidden">
+    <div className="h-screen w-full flex flex-col bg-slate-100 dark:bg-[#070710] overflow-hidden">
 
       {/* Radial background glow */}
       <div className="pointer-events-none fixed inset-0 z-0">
@@ -561,8 +561,7 @@ const FAQ = () => {
               <div className="w-8 h-8 rounded-lg bg-indigo-600/20 border border-indigo-500/30 flex items-center justify-center">
                 <FaFileAlt className="w-4 h-4 text-indigo-400" />
               </div>
-              <h1 className="font-syne text-2xl font-extrabold tracking-tight text-slate-800 dark:text-transparent dark:bg-clip-text"
-                style={{ backgroundImage: 'linear-gradient(90deg,#f9fafb,#9ca3af)' }}>FAQ</h1>
+              <h1 className="font-syne text-2xl font-extrabold tracking-tight text-slate-800 dark:text-transparent dark:bg-clip-text">FAQ</h1>
               {activeTimers > 0 && (
                 <span className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold
                   bg-indigo-500/20 border border-indigo-500/30 text-indigo-300">
@@ -571,15 +570,15 @@ const FAQ = () => {
                 </span>
               )}
             </div>
-            <p className="text-xs text-white/30">Click any entry to copy · timer prevents repeat answers</p>
+            <p className="text-xs text-gray-400 dark:text-white/30">Click any entry to copy · timer prevents repeat answers</p>
           </div>
 
           {/* Live clock */}
           <div className="text-right">
-            <p className="text-lg font-bold font-mono text-white tabular-nums">
+            <p className="text-lg font-bold font-mono text-black dark:text-white tabular-nums">
               {new Date(currentTime).toLocaleTimeString()}
             </p>
-            <p className="text-[10px] text-white/30 mt-0.5">
+            <p className="text-[10px] text-gray-400 dark:text-white/30 mt-0.5">
               Timer: {formatTime(globalTimerDuration)}
             </p>
           </div>
@@ -594,8 +593,8 @@ const FAQ = () => {
               placeholder="Search topics..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full bg-white/[0.04] border border-white/[0.06] rounded-xl
-                pl-10 pr-4 py-2.5 text-sm text-white placeholder-white/20
+              className="w-full bg-gray-200 dark:bg-white/[0.04] border border-white/[0.06] rounded-xl
+                pl-10 pr-4 py-2.5 text-sm text-black dark:text-white placeholder-white/20
                 focus:outline-none focus:border-indigo-500/40 transition-colors"
             />
           </div>
@@ -611,8 +610,8 @@ const FAQ = () => {
 
           <button
             onClick={() => setIsTimerModalOpen(true)}
-            className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white/[0.04] border border-white/[0.06]
-              text-white/50 hover:text-white/80 hover:bg-white/[0.08] text-sm transition-all"
+            className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-500 dark:bg-white/[0.04] border border-white/[0.06]
+              text-white/50 hover:text-slate-700 dark:hover:text-white/80 hover:bg-slate-300 dark:hover:bg-white/[0.08] text-sm transition-all"
             title="Set timer duration"
           >
             <Clock className="w-4 h-4" />
@@ -620,9 +619,9 @@ const FAQ = () => {
         </div>
 
         {/* Stats row */}
-        <div className="flex items-center gap-4 mb-5 text-[11px] text-white/30">
+        <div className="flex items-center gap-4 mb-5 text-[11px] text-gray-400 dark:text-white/30">
           <span>
-            <span className="text-white/60 font-semibold">{filteredFaqs.length}</span>
+            <span className="text-gray-400 dark:text-white/60 font-semibold">{filteredFaqs.length}</span>
             {" "}entries{searchQuery && ` matching "${searchQuery}"`}
           </span>
           {activeTimers > 0 && (
@@ -675,11 +674,11 @@ const FAQ = () => {
               );
             }) : (
               <div className="flex flex-col items-center justify-center py-20 text-center">
-                <div className="w-16 h-16 rounded-2xl bg-white/[0.03] border border-white/[0.06] flex items-center justify-center mb-4">
-                  <Search className="w-7 h-7 text-white/20" />
+                <div className="w-16 h-16 rounded-2xl bg-slate-200 dark:bg-white/[0.03] border border-white/[0.06] flex items-center justify-center mb-4">
+                  <Search className="w-7 h-7 text-slate-600 dark:text-white/20" />
                 </div>
-                <p className="text-sm font-semibold text-white/40">No results</p>
-                <p className="text-xs text-white/20 mt-1">Try a different search term</p>
+                <p className="text-sm font-semibold text-gray-400 dark:text-white/40">No results</p>
+                <p className="text-xs text-gray-400 dark:text-white/20 mt-1">Try a different search term</p>
               </div>
             )}
 

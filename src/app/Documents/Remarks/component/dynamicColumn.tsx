@@ -20,13 +20,13 @@ import { SetStateAction, useEffect, useRef, useState } from "react";
 import ColorPicker from "./ColorPicker";
 import { ToastContainer, toast } from "react-toastify";
 
-import { RiDraggable, RiAlignItemRightFill } from "react-icons/ri";
+import { RiDraggable } from "react-icons/ri";
 import { SlOptionsVertical } from "react-icons/sl";
-import { FaLock, FaUnlock, FaEdit, FaRegClipboard } from "react-icons/fa";
+import { FaLock, FaUnlock, FaEdit } from "react-icons/fa";
 import { FaFilePen } from "react-icons/fa6";
 import {
   MdDelete, MdNumbers, MdOutlineTitle,
-  MdOutlineColorLens, MdMenu, MdAdd,
+  MdOutlineColorLens, MdMenu,
 } from "react-icons/md";
 import { IoSearchOutline } from "react-icons/io5";
 import { Plus, Save, X, Layers } from "lucide-react";
@@ -44,56 +44,38 @@ type Column = {
 
 const notify = (text: string) =>
   toast.success(`Copied ` + text, {
-    position: "top-center", autoClose: 500, hideProgressBar: false,
-    closeOnClick: false, pauseOnHover: false, draggable: false,
-    theme: "dark",
+    position: "top-center", autoClose: 500, theme: "dark",
   });
 
 const notify_added_column = () =>
   toast.success("New column added!", {
-    position: "top-center", autoClose: 500, hideProgressBar: false,
-    closeOnClick: false, pauseOnHover: false, draggable: false,
-    theme: "dark",
+    position: "top-center", autoClose: 500, theme: "dark",
   });
 
 const notify_deleted_column = () =>
   toast.error("Deleted column!", {
-    position: "top-center", autoClose: 500, hideProgressBar: false,
-    closeOnClick: false, pauseOnHover: false, draggable: false,
-    theme: "dark",
+    position: "top-center", autoClose: 500, theme: "dark",
   });
 
-// ── Nexus Logo Mark ───────────────────────────────────────────────────────────
-function NexusLogoMark({ size = 16 }: { size?: number }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <circle cx="12" cy="12" r="9" stroke="#6366f1" strokeWidth="1.5" />
-      <circle cx="12" cy="12" r="3.5" fill="#818cf8" />
-      <circle cx="12" cy="12" r="1.5" fill="#0d0d1a" />
-    </svg>
-  );
-}
+// ── Shared UI Components ──────────────────────────────────────────────────────
 
-// ── Section Label ─────────────────────────────────────────────────────────────
 function SectionLabel({ children }: { children: React.ReactNode }) {
   return (
-    <p className="text-[10px] font-semibold uppercase tracking-widest text-white/30 mb-2">
+    <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-500 dark:text-white/30 mb-2">
       {children}
     </p>
   );
 }
 
-// ── Nexus Input ───────────────────────────────────────────────────────────────
 function NexusInput({ label, icon: Icon, ...props }: any) {
   return (
-    <div className="bg-white/[0.04] border border-white/[0.06] rounded-xl p-3 flex items-center gap-2.5">
-      {Icon && <Icon className="text-lg text-white/30 shrink-0" />}
+    <div className="bg-white dark:bg-white/[0.04] border border-slate-200 dark:border-white/[0.06] rounded-xl p-3 flex items-center gap-2.5 shadow-sm dark:shadow-none transition-colors">
+      {Icon && <Icon className="text-lg text-slate-400 dark:text-white/30 shrink-0" />}
       <div className="flex-1 min-w-0">
-        {label && <p className="text-[10px] text-white/30 mb-0.5">{label}</p>}
+        {label && <p className="text-[10px] text-slate-500 dark:text-white/30 mb-0.5">{label}</p>}
         <input
           {...props}
-          className="w-full bg-transparent text-sm text-white placeholder-white/20
-            focus:outline-none border-none"
+          className="w-full bg-transparent text-sm text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-white/20 focus:outline-none border-none"
         />
       </div>
     </div>
@@ -172,133 +154,86 @@ export default function DynamicColumn() {
   );
 
   return (
-    <div className="w-full h-full flex flex-col overflow-hidden select-none">
-      <ToastContainer position="bottom-right" autoClose={3000} hideProgressBar newestOnTop
-        closeOnClick rtl={false} pauseOnFocusLoss draggable pauseOnHover theme="dark" />
+    <div className="w-full h-full flex flex-col overflow-hidden select-none transition-colors duration-300">
+      <ToastContainer position="bottom-right" autoClose={3000} hideProgressBar theme="dark" />
 
       <div className="w-full h-full flex gap-4">
 
-        {/* ── Sidebar / Column Manager ── */}
+        {/* ── Sidebar ── */}
         <div className={`
-          bg-[#0d0d1a] border border-white/[0.06] rounded-2xl flex-shrink-0
+          bg-slate-50 dark:bg-[#0d0d1a] border border-slate-200 dark:border-white/[0.06] rounded-2xl flex-shrink-0
           ${sideMenu ? "w-full md:w-[380px]" : "w-[64px]"}
-          duration-300 h-full flex flex-col overflow-hidden relative
-          ${editColumn.length === 1 ? "border-indigo-500/40 shadow-[0_0_24px_rgba(99,102,241,0.1)]" : ""}
+          duration-300 h-full flex flex-col overflow-hidden relative shadow-lg dark:shadow-none
         `}>
-          {/* Sidebar glow */}
-          <div className="pointer-events-none absolute top-0 right-0 w-40 h-40 rounded-full opacity-30 z-0"
-            style={{ background: "radial-gradient(circle at 100% 0%, rgba(99,102,241,0.4) 0%, transparent 60%)" }} />
-
           {sideMenu ? (
             <div className="relative z-10 flex flex-col h-full overflow-auto">
-              {/* Sidebar header */}
-              <div className="flex items-center justify-between px-5 pt-5 pb-4 border-b border-white/[0.06] flex-shrink-0">
+              <div className="flex items-center justify-between px-5 pt-5 pb-4 border-b border-slate-200 dark:border-white/[0.06] flex-shrink-0">
                 <div className="flex items-center gap-2.5">
-                  <div className="w-8 h-8 rounded-lg bg-indigo-600/20 border border-indigo-500/30 flex items-center justify-center">
-                    <FaFilePen className="w-4 h-4 text-indigo-400" />
+                  <div className="w-8 h-8 rounded-lg bg-indigo-600/10 dark:bg-indigo-600/20 border border-indigo-500/30 flex items-center justify-center">
+                    <FaFilePen className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
                   </div>
-                  <h1 className={` text-lg font-extrabold tracking-tight  ${editColumn.length === 1 ? "text-indigo-300 dark:text-transparent dark:bg-clip-text" : "text-white  dark:text-transparent dark:bg-clip-text"}`}
-                    style={{ backgroundImage: 'linear-gradient(90deg,#f9fafb,#9ca3af)' }}>      {editColumn.length === 0 ? "Column Manager" : "Editing Column"}</h1>
-
-                  {editColumn.length === 1 && (
-                    <span className="w-1.5 h-1.5 rounded-full bg-indigo-400 animate-pulse" />
-                  )}
+                  <h1 className="text-lg font-extrabold tracking-tight text-slate-900 dark:text-white">
+                    {editColumn.length === 0 ? "Column Manager" : "Editing Column"}
+                  </h1>
                 </div>
-                <button
-                  onClick={() => setSideMenu(false)}
-                  className="p-1.5 rounded-lg bg-white/[0.04] border border-white/[0.06] text-white/30
-                    hover:text-white/70 hover:bg-white/[0.08] transition-all"
-                >
+                <button onClick={() => setSideMenu(false)} className="p-1.5 rounded-lg bg-slate-200 dark:bg-white/[0.04] text-slate-600 dark:text-white/30">
                   <MdMenu className="text-base" />
                 </button>
               </div>
 
               {editColumn.length === 0 ? (
-                <form onSubmit={handleAddColumn} className="flex flex-col gap-4 px-5 py-4 flex-1 overflow-auto
-                  [&::-webkit-scrollbar]:w-1 [&::-webkit-scrollbar-track]:bg-transparent
-                  [&::-webkit-scrollbar-thumb]:bg-white/10 [&::-webkit-scrollbar-thumb]:rounded-full">
-
+                <form onSubmit={handleAddColumn} className="flex flex-col gap-4 px-5 py-4 flex-1 overflow-auto">
                   <SectionLabel>Column Details</SectionLabel>
+                  <NexusInput label="Title" icon={MdOutlineTitle} value={title} onChange={(e: any) => setTitle(e.target.value)} required />
+                  <NexusInput label="Index" icon={MdNumbers} disabled value={columns.length + 1} />
 
-                  {/* Title */}
-                  <NexusInput
-                    label="Column Title"
-                    icon={MdOutlineTitle}
-                    type="text"
-                    placeholder="e.g. Greetings"
-                    value={title}
-                    onChange={(e: any) => setTitle(e.target.value)}
-                    required
-                  />
-
-                  {/* Column number */}
-                  <NexusInput
-                    label="Column Number"
-                    icon={MdNumbers}
-                    type="number"
-                    disabled
-                    value={columns.length + 1}
-                  />
-
-                  {/* Color picker */}
-                  <div className="bg-white/[0.04] border border-white/[0.06] rounded-xl p-3">
+                  <div className="bg-white dark:bg-white/[0.04] border border-slate-200 dark:border-white/[0.06] rounded-xl p-3">
                     <div className="flex items-center gap-2.5 mb-2">
-                      <MdOutlineColorLens className="text-lg text-white/30" />
-                      <p className="text-[10px] text-white/30">Accent Color</p>
+                      <MdOutlineColorLens className="text-lg text-slate-400 dark:text-white/30" />
+                      <p className="text-[10px] text-slate-500 dark:text-white/30">Accent Color</p>
                     </div>
+                    {/* Fixed Color Picker Container */}
                     <ColorPicker onChange={() => { }} setColumnColor={setColumnColor} columnColor={columnColor} />
                   </div>
 
-                  {/* Items */}
                   <div>
                     <SectionLabel>Items ({items.length})</SectionLabel>
-                    <div className="bg-white/[0.04] border border-white/[0.06] rounded-xl p-3 space-y-2">
-                      <div className="flex flex-col gap-2 max-h-[280px] overflow-y-auto
-                        [&::-webkit-scrollbar]:w-1 [&::-webkit-scrollbar-track]:bg-transparent
-                        [&::-webkit-scrollbar-thumb]:bg-white/10 [&::-webkit-scrollbar-thumb]:rounded-full">
-                        {items.map((item) => (
-                          <div key={item.id} className="flex items-start gap-2">
-                            <textarea
-                              required
-                              placeholder="Item text..."
-                              value={item.label1}
-                              onChange={(e) => handleItemChange(item.id, e.target.value)}
-                              className="flex-1 bg-white/[0.04] border border-white/[0.06] rounded-lg px-3 py-2
-                                text-sm text-white placeholder-white/20 resize-y min-h-[44px]
-                                focus:outline-none focus:border-indigo-500/40 transition-colors"
-                            />
-                            {items.length >= 2 && (
-                              <button type="button" onClick={() => handleDeleteItem(item.id)}
-                                className="mt-1 p-1.5 rounded-lg bg-red-500/10 border border-red-500/20
-                                  text-red-400 hover:bg-red-500/20 transition-all shrink-0">
-                                <X className="w-3.5 h-3.5" />
-                              </button>
-                            )}
-                          </div>
-                        ))}
-                      </div>
-                      <button type="button" onClick={handleAddItem}
-                        className="w-full flex items-center justify-center gap-1.5 py-2 rounded-lg
-                          bg-white/[0.04] border border-white/[0.06] text-white/40 text-xs
-                          hover:text-white/70 hover:bg-white/[0.08] transition-all">
-                        <Plus className="w-3.5 h-3.5" /> Add Item
+                    <div className="bg-white dark:bg-white/[0.04] border border-slate-200 dark:border-white/[0.06] rounded-xl p-3 space-y-3">
+                      {items.map((item) => (
+                        <div key={item.id} className="flex items-center gap-2">
+                          <textarea
+                            required
+                            value={item.label1}
+                            onChange={(e) => handleItemChange(item.id, e.target.value)}
+                            className="flex-1 bg-slate-50 dark:bg-white/[0.04] border border-slate-200 dark:border-white/[0.06] rounded-lg px-3 py-2 text-sm text-slate-900 dark:text-white focus:outline-none focus:border-indigo-500/40 min-h-[40px] resize-none"
+                          />
+                          {items.length >= 2 && (
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteItem(item.id)}
+                              className="p-2 text-red-500 bg-red-500/10 hover:bg-red-500/20 rounded-lg transition-colors shrink-0"
+                            >
+                              <X className="w-4 h-4" />
+                            </button>
+                          )}
+                        </div>
+                      ))}
+                      <button
+                        type="button"
+                        onClick={handleAddItem}
+                        className="w-full py-2.5 bg-slate-100 dark:bg-white/[0.04] text-slate-600 dark:text-white/40 text-xs font-bold rounded-lg hover:bg-slate-200 dark:hover:bg-white/[0.08] transition-all border border-dashed border-slate-300 dark:border-white/10"
+                      >
+                        <Plus className="w-3.5 h-3.5 inline mr-1" /> Add Item
                       </button>
                     </div>
                   </div>
 
-                  <button type="submit"
-                    className="flex items-center justify-center gap-2 py-3 rounded-xl
-                      bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-bold
-                      transition-all shadow-lg shadow-indigo-500/20 mt-1">
-                    <MdAdd className="text-lg" /> Add Column
+                  <button type="submit" className="py-3 mt-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold shadow-lg shadow-indigo-500/20 transition-all active:scale-95">
+                    Add Column
                   </button>
                 </form>
               ) : (
-                <EditLayout
-                  col={editColumn}
-                  handleColorChange={() => { }}
-                  clearEditColumn={clearEditColumn}
-                />
+                <EditLayout col={editColumn} clearEditColumn={clearEditColumn} />
               )}
             </div>
           ) : (
@@ -307,63 +242,30 @@ export default function DynamicColumn() {
         </div>
 
         {/* ── Main Grid ── */}
-        <div className="w-full overflow-hidden h-full flex flex-col flex-grow
-          bg-[#0d0d1a] border border-white/[0.06] rounded-2xl">
-
-          {/* Grid header */}
-          <div className="flex items-center gap-3 px-5 py-4 border-b border-white/[0.06] flex-shrink-0">
-            <div className="flex items-center gap-2">
-              <Layers className="w-4 h-4 text-white/30" />
-              <h2 className="font-bold text-sm text-white">
-                Columns
-                <span className="ml-2 text-xs font-normal text-white/30">({columns.length})</span>
-              </h2>
-            </div>
-
-            {/* Search */}
-            <div className="relative ml-2 flex-1 max-w-xs">
-              <IoSearchOutline className="absolute left-3 top-1/2 -translate-y-1/2 text-white/30 text-base" />
+        <div className="w-full overflow-hidden h-full flex flex-col flex-grow bg-white dark:bg-[#0d0d1a] border border-slate-200 dark:border-white/[0.06] rounded-2xl shadow-inner transition-colors">
+          <div className="flex items-center gap-3 px-5 py-4 border-b border-slate-200 dark:border-white/[0.06]">
+            <Layers className="w-4 h-4 text-slate-400 dark:text-white/30" />
+            <h2 className="font-bold text-sm text-slate-900 dark:text-white">
+              Columns <span className="ml-1 text-slate-400 dark:text-white/30">({columns.length})</span>
+            </h2>
+            <div className="relative ml-auto w-full max-w-xs">
+              <IoSearchOutline className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-white/30" />
               <input
                 type="search"
-                placeholder="Search columns..."
+                placeholder="Search..."
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full bg-white/[0.04] border border-white/[0.06] rounded-xl
-                  pl-9 pr-4 py-2 text-sm text-white placeholder-white/20
-                  focus:outline-none focus:border-indigo-500/40 transition-colors"
+                className="w-full bg-slate-100 dark:bg-white/[0.04] border border-slate-200 dark:border-white/[0.06] rounded-xl pl-9 pr-4 py-2 text-sm text-slate-900 dark:text-white focus:outline-none focus:border-indigo-500/40"
               />
             </div>
           </div>
 
-          {/* Sortable columns */}
-          <div className="w-full overflow-x-auto h-full pb-4 px-4 pt-4
-            [&::-webkit-scrollbar]:h-1 [&::-webkit-scrollbar-track]:bg-transparent
-            [&::-webkit-scrollbar-thumb]:bg-white/10 [&::-webkit-scrollbar-thumb]:rounded-full">
+          <div className="w-full overflow-x-auto h-full p-4">
             <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
               <SortableContext items={filteredData1.map((col) => col.id)} strategy={rectSortingStrategy}>
-                <div className="flex flex-wrap gap-4 min-w-full">
+                <div className="flex flex-wrap gap-4 items-start">
                   {filteredData1.map((col) => (
-                    <SortableColumn
-                      key={col.id}
-                      col={col}
-                      toggleLock={() => toggleLock(col.id)}
-                      deleteCol={() => deleteColumn(col.id)}
-                      setEditColumn={setEditColumn}
-                    />
+                    <SortableColumn key={col.id} col={col} toggleLock={() => toggleLock(col.id)} deleteCol={() => deleteColumn(col.id)} setEditColumn={setEditColumn} />
                   ))}
-                  {filteredData1.length === 0 && (
-                    <div className="w-full flex flex-col items-center justify-center py-20 text-center">
-                      <div className="w-16 h-16 rounded-2xl bg-white/[0.03] border border-white/[0.06]
-                        flex items-center justify-center mb-4">
-                        <Layers className="w-7 h-7 text-white/20" />
-                      </div>
-                      <p className="text-sm font-semibold text-white/30">
-                        {columns.length === 0 ? "No columns yet" : "No results"}
-                      </p>
-                      <p className="text-xs text-white/20 mt-1">
-                        {columns.length === 0 ? "Add your first column using the panel" : "Try a different search"}
-                      </p>
-                    </div>
-                  )}
                 </div>
               </SortableContext>
             </DndContext>
@@ -374,139 +276,69 @@ export default function DynamicColumn() {
   );
 }
 
-// ── Sortable Column Card ──────────────────────────────────────────────────────
-function SortableColumn({
-  col, toggleLock, deleteCol, setEditColumn,
-}: {
-  col: Column;
-  toggleLock: () => void;
-  deleteCol: () => void;
-  setEditColumn: React.Dispatch<SetStateAction<Column[]>>;
-}) {
+// ── Sortable Column Card Component ─────────────────────────────────────────────
+function SortableColumn({ col, toggleLock, deleteCol, setEditColumn }: any) {
   const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ id: col.id });
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
 
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
-    resize: (col.locked ? "none" : "both") as "none" | "both",
-    overflow: "auto",
     minWidth: "280px",
-    maxWidth: "680px",
-    borderColor: `${col.column_color}30`,
+    borderColor: `${col.column_color}40`,
   };
 
-  const [open, setOpen] = useState<boolean>(false);
-  const ref = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (ref.current && !ref.current.contains(event.target as Node)) setOpen(false);
-    };
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
-
   const copyToClipboard = (text: string) => {
-    navigator.clipboard.writeText(text).catch(console.error);
-    notify(`in Column ${col.column + 1}`);
+    navigator.clipboard.writeText(text);
+    notify(`in ${col.title}`);
   };
 
   return (
-    <div
-      ref={setNodeRef}
-      style={style}
-      className="group bg-[#0d0d1a] border rounded-2xl shadow-lg min-h-[240px] relative flex flex-col
-        transition-all duration-300 hover:shadow-xl"
-    >
-      {/* Color accent top bar */}
-      <div className="absolute top-0 inset-x-0 h-0.5 rounded-t-2xl opacity-60"
-        style={{ background: col.column_color }} />
+    <div ref={setNodeRef} style={style} className="group bg-slate-50 dark:bg-[#0d0d1a] border rounded-2xl shadow-md flex flex-col transition-all overflow-hidden">
+      <div className="h-1.5 opacity-80" style={{ background: col.column_color }} />
 
-      {/* Drag handle */}
       {!col.locked && (
-        <div
-          {...attributes}
-          {...listeners}
-          className="opacity-0 group-hover:opacity-100 transition-opacity cursor-grab active:cursor-grabbing
-            mx-3 mt-3 mb-0 rounded-xl flex justify-center items-center py-2
-            bg-white/[0.04] border border-white/[0.06] hover:bg-white/[0.08]"
-          aria-label="Drag handle"
-        >
-          <RiDraggable className="text-xl text-white/30 rotate-90" />
+        <div {...attributes} {...listeners} className="mx-3 mt-2 py-1 flex justify-center bg-slate-200/50 dark:bg-white/[0.04] rounded-lg cursor-grab active:cursor-grabbing hover:bg-slate-300/50 dark:hover:bg-white/[0.08] transition-colors">
+          <RiDraggable className="text-slate-400 dark:text-white/20 rotate-90" />
         </div>
       )}
 
-      {/* Column header */}
-      <div className="flex items-center justify-between px-4 pt-4 pb-3 relative">
-        <button
-          onClick={() => copyToClipboard(col.title)}
-          className="text-2xl font-extrabold truncate text-left flex-1 transition-colors hover:opacity-80"
-          style={{ color: col.column_color }}
-          title="Click to copy title"
-        >
+      <div className="flex items-center justify-between px-4 pt-3 pb-1 gap-2">
+        <button onClick={() => copyToClipboard(col.title)} className="text-base font-extrabold truncate text-left flex-1" style={{ color: col.column_color }}>
           {col.title}
         </button>
-
         <div className="relative" ref={ref}>
-          <button
-            onClick={() => setOpen(!open)}
-            className={`p-1.5 rounded-lg transition-all ${open
-              ? "bg-indigo-500/20 border border-indigo-500/30 text-indigo-300"
-              : "text-white/30 hover:text-white/60 hover:bg-white/[0.06] border border-transparent"
-              }`}
-          >
-            <SlOptionsVertical className="text-base" />
+          <button onClick={() => setOpen(!open)} className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 dark:text-white/30 dark:hover:text-white/60 hover:bg-slate-200 dark:hover:bg-white/[0.04]">
+            <SlOptionsVertical className="text-xs" />
           </button>
-
           {open && (
-            <div className="absolute right-0 top-8 z-20 w-44 bg-[#0d0d1a] border border-white/[0.08]
-              rounded-xl shadow-2xl p-1.5 flex flex-col gap-0.5 animate-in fade-in slide-in-from-top-2 duration-150">
-              <button onClick={toggleLock}
-                className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-medium transition-all
-                  ${col.locked
-                    ? "text-red-400 hover:bg-red-500/10"
-                    : "text-green-400 hover:bg-green-500/10"
-                  }`}>
-                {col.locked ? <><FaUnlock className="text-sm" /> Unlock</> : <><FaLock className="text-sm" /> Lock</>}
+            <div className="absolute right-0 top-9 z-20 w-40 bg-white dark:bg-[#161625] border border-slate-200 dark:border-white/[0.1] rounded-xl shadow-2xl p-1.5 flex flex-col">
+              <button onClick={() => { toggleLock(); setOpen(false); }} className={`flex items-center gap-2 px-3 py-2 text-xs font-bold rounded-lg transition-colors ${col.locked ? "text-emerald-500 hover:bg-emerald-500/10" : "text-amber-500 hover:bg-amber-500/10"}`}>
+                {col.locked ? <FaUnlock /> : <FaLock />} {col.locked ? "Unlock" : "Lock"}
               </button>
-              <button onClick={deleteCol}
-                className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-medium
-                  text-white/40 hover:text-white/70 hover:bg-white/[0.06] transition-all">
-                <MdDelete className="text-base" /> Delete
+              <button onClick={() => { setEditColumn([col]); setOpen(false); }} className="flex items-center gap-2 px-3 py-2 text-xs font-bold text-indigo-500 hover:bg-indigo-500/10 rounded-lg transition-colors">
+                <FaEdit /> Edit
               </button>
-              <button onClick={() => { setEditColumn([col]); setOpen(false); }}
-                className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-medium
-                  text-indigo-400 hover:bg-indigo-500/10 transition-all">
-                <FaEdit className="text-sm" /> Edit
+              <div className="my-1 border-t border-slate-100 dark:border-white/[0.05]" />
+              <button onClick={() => { deleteCol(); setOpen(false); }} className="flex items-center gap-2 px-3 py-2 text-xs font-bold text-red-500 hover:bg-red-500/10 rounded-lg transition-colors">
+                <MdDelete className="text-sm" /> Delete
               </button>
             </div>
           )}
         </div>
       </div>
 
-      {/* Meta */}
-      <p className="text-[10px] text-white/20 px-4 pb-2 font-mono">
-        Col #{col.column + 1} · {col.items.length} items{col.locked ? " · 🔒" : ""}
-      </p>
+      <p className="text-[10px] font-bold text-slate-400 dark:text-white/20 px-4 pb-3">#{col.column + 1} • {col.items.length} ITEMS</p>
 
-      {/* Items */}
-      <div className="flex flex-col gap-2 flex-grow overflow-y-auto px-3 pb-3
-        [&::-webkit-scrollbar]:w-1 [&::-webkit-scrollbar-track]:bg-transparent
-        [&::-webkit-scrollbar-thumb]:bg-white/10 [&::-webkit-scrollbar-thumb]:rounded-full">
-        {col.items.map((item) => (
+      <div className="flex flex-col gap-2 px-3 pb-4 overflow-y-auto max-h-[400px]">
+        {col.items.map((item: any) => (
           <div
             key={item.id}
-            className="p-3 rounded-xl flex items-start gap-3 cursor-pointer group/item
-              border border-white/[0.04] hover:border-white/[0.10] transition-all"
-            style={{ backgroundColor: `${col.column_color}18` }}
             onClick={() => copyToClipboard(item.label1)}
-            title="Click to copy"
+            className="p-3 rounded-xl border border-slate-200 dark:border-white/[0.04] bg-white dark:bg-white/[0.02] hover:border-indigo-400/40 dark:hover:border-white/[0.1] cursor-pointer transition-all group/item shadow-sm dark:shadow-none"
           >
-            <FaRegClipboard className="text-sm shrink-0 mt-0.5 opacity-30 group-hover/item:opacity-70 transition-opacity"
-              style={{ color: col.column_color }} />
-            <p className="text-sm font-medium text-white/80 group-hover/item:text-white
-              active:cursor-copy break-words whitespace-pre-wrap transition-colors"
-              style={{ color: undefined }}>
+            <p className="text-sm font-medium text-slate-700 dark:text-white/80 group-hover/item:text-indigo-600 dark:group-hover/item:text-white">
               {item.label1}
             </p>
           </div>
@@ -516,149 +348,82 @@ function SortableColumn({
   );
 }
 
-// ── Edit Layout ───────────────────────────────────────────────────────────────
-function EditLayout({ col, handleColorChange, clearEditColumn }: {
-  col: Column[];
-  clearEditColumn: () => void;
-  handleColorChange: (color: string) => void;
-}) {
-  const [title, setTitle] = useState("");
-  const [columnColor, setColumnColor] = useState<string>("");
-  const [items, setItems] = useState<Item[]>([]);
-  const STORAGE_KEY = "customColumns";
+// ── Edit Layout Component ─────────────────────────────────────────────────────
+function EditLayout({ col, clearEditColumn }: { col: Column[]; clearEditColumn: () => void }) {
+  const [title, setTitle] = useState(col[0]?.title || "");
+  const [columnColor, setColumnColor] = useState(col[0]?.column_color || "");
+  const [items, setItems] = useState<Item[]>(col[0]?.items || []);
 
-  useEffect(() => {
-    setTitle(col[0]?.title);
-    setColumnColor(col[0]?.column_color);
-    setItems(col[0]?.items);
-  }, [col]);
-
-  const handleSaveColumn = (e: React.FormEvent<HTMLFormElement>) => {
+  const handleSave = (e: React.FormEvent) => {
     e.preventDefault();
-    const updatedColumn: Column = { ...col[0], title, column_color: columnColor, items };
-    const savedCols = JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]");
-    const newCols = savedCols.map((c: Column) => c.id === updatedColumn.id ? updatedColumn : c);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(newCols));
+    const saved = JSON.parse(localStorage.getItem("customColumns") || "[]");
+    const updated = saved.map((c: Column) => c.id === col[0].id ? { ...c, title, column_color: columnColor, items } : c);
+    localStorage.setItem("customColumns", JSON.stringify(updated));
     clearEditColumn();
   };
 
-  const handleItemChange = (id: string, value: string) =>
-    setItems(items.map(item => item.id === id ? { ...item, label1: value } : item));
-
-  const handleDeleteItem = (idToDelete: string) =>
-    setItems(items.filter(item => item.id !== idToDelete));
-
-  const handleAddItem = () =>
-    setItems([...items, { id: crypto.randomUUID(), label1: "" }]);
-
   return (
-    <form onSubmit={handleSaveColumn}
-      className="flex flex-col gap-4 px-5 py-4 flex-1 overflow-auto
-        [&::-webkit-scrollbar]:w-1 [&::-webkit-scrollbar-track]:bg-transparent
-        [&::-webkit-scrollbar-thumb]:bg-white/10 [&::-webkit-scrollbar-thumb]:rounded-full">
+    <form onSubmit={handleSave} className="flex flex-col gap-4 px-5 py-4 flex-1 overflow-auto">
+      <SectionLabel>Edit Mode</SectionLabel>
+      <NexusInput label="Title" icon={MdOutlineTitle} value={title} onChange={(e: any) => setTitle(e.target.value)} />
 
-      <SectionLabel>Edit Column</SectionLabel>
-
-      <NexusInput
-        label="Column Title"
-        icon={MdOutlineTitle}
-        type="text"
-        placeholder="Column Title"
-        value={title}
-        onChange={(e: any) => setTitle(e.target.value)}
-        required
-      />
-
-      <NexusInput
-        label="Column Number"
-        icon={MdNumbers}
-        type="number"
-        disabled
-        value={col[0]?.column}
-      />
-
-      <div className="bg-white/[0.04] border border-white/[0.06] rounded-xl p-3">
+      <div className="bg-white dark:bg-white/[0.04] border border-slate-200 dark:border-white/[0.06] rounded-xl p-3">
         <div className="flex items-center gap-2.5 mb-2">
-          <MdOutlineColorLens className="text-lg text-white/30" />
-          <p className="text-[10px] text-white/30">Accent Color</p>
+          <MdOutlineColorLens className="text-lg text-slate-400 dark:text-white/30" />
+          <p className="text-[10px] text-slate-500 dark:text-white/30">Change Color</p>
         </div>
-        <ColorPicker onChange={handleColorChange} setColumnColor={setColumnColor} columnColor={columnColor} />
+        <ColorPicker onChange={() => { }} setColumnColor={setColumnColor} columnColor={columnColor} />
       </div>
 
-      {/* Separator */}
-      <div className="h-px bg-white/[0.06]" />
-
-      <div>
-        <SectionLabel>Items ({items.length})</SectionLabel>
-        <div className="bg-white/[0.04] border border-white/[0.06] rounded-xl p-3 space-y-2">
-          <div className="flex flex-col gap-2 max-h-[260px] overflow-y-auto
-            [&::-webkit-scrollbar]:w-1 [&::-webkit-scrollbar-track]:bg-transparent
-            [&::-webkit-scrollbar-thumb]:bg-white/10 [&::-webkit-scrollbar-thumb]:rounded-full">
-            {items.map((item) => (
-              <div key={item.id} className="flex items-start gap-2">
-                <textarea
-                  required
-                  placeholder="Item text..."
-                  value={item.label1}
-                  onChange={(e) => handleItemChange(item.id, e.target.value)}
-                  className="flex-1 bg-white/[0.04] border border-white/[0.06] rounded-lg px-3 py-2
-                    text-sm text-white placeholder-white/20 resize-y min-h-[44px]
-                    focus:outline-none focus:border-indigo-500/40 transition-colors"
-                />
-                {items.length >= 2 && (
-                  <button type="button" onClick={() => handleDeleteItem(item.id)}
-                    className="mt-1 p-1.5 rounded-lg bg-red-500/10 border border-red-500/20
-                      text-red-400 hover:bg-red-500/20 transition-all shrink-0">
-                    <X className="w-3.5 h-3.5" />
-                  </button>
-                )}
-              </div>
-            ))}
+      <div className="space-y-3">
+        <SectionLabel>Items</SectionLabel>
+        {items.map((item) => (
+          <div key={item.id} className="flex gap-2 items-center">
+            <textarea
+              value={item.label1}
+              onChange={(e) => setItems(items.map(it => it.id === item.id ? { ...it, label1: e.target.value } : it))}
+              className="flex-1 bg-white dark:bg-white/[0.04] border border-slate-200 dark:border-white/[0.06] rounded-lg p-2 text-sm text-slate-900 dark:text-white focus:outline-none focus:border-indigo-500/40 min-h-[40px] resize-none"
+            />
+            <button
+              type="button"
+              onClick={() => setItems(items.filter(it => it.id !== item.id))}
+              className="p-2 text-red-500 bg-red-500/10 hover:bg-red-500/20 rounded-lg transition-colors"
+            >
+              <X size={16} />
+            </button>
           </div>
-          <button type="button" onClick={handleAddItem}
-            className="w-full flex items-center justify-center gap-1.5 py-2 rounded-lg
-              bg-white/[0.04] border border-white/[0.06] text-white/40 text-xs
-              hover:text-white/70 hover:bg-white/[0.08] transition-all">
-            <Plus className="w-3.5 h-3.5" /> Add Item
-          </button>
-        </div>
+        ))}
+        <button
+          type="button"
+          onClick={() => setItems([...items, { id: crypto.randomUUID(), label1: "" }])}
+          className="w-full py-2 bg-slate-100 dark:bg-white/[0.04] text-slate-500 dark:text-white/40 text-xs font-bold rounded-lg border border-dashed border-slate-300 dark:border-white/10"
+        >
+          + Add Item
+        </button>
       </div>
 
-      <div className="flex gap-3 mt-1">
-        <button type="submit"
-          className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl
-            bg-green-600 hover:bg-green-500 text-white text-sm font-bold transition-all">
-          <Save className="w-4 h-4" /> Save
+      <div className="flex gap-2 mt-4 pb-4">
+        <button type="submit" className="flex-1 py-3 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl font-bold flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/20 transition-all active:scale-95">
+          <Save size={18} /> Save
         </button>
-        <button type="button" onClick={clearEditColumn}
-          className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl
-            bg-white/[0.04] border border-white/[0.06] text-white/50 text-sm hover:bg-white/[0.08] transition-all">
-          <X className="w-4 h-4" /> Cancel
+        <button type="button" onClick={clearEditColumn} className="flex-1 py-3 bg-slate-200 dark:bg-white/[0.06] text-slate-600 dark:text-white/50 rounded-xl font-bold transition-all hover:bg-slate-300 dark:hover:bg-white/[0.1]">
+          Cancel
         </button>
       </div>
     </form>
   );
 }
 
-// ── Collapsed sidebar ─────────────────────────────────────────────────────────
-const SideMenuClose = ({
-  setSideMenu, sideMenu,
-}: {
-  setSideMenu: React.Dispatch<SetStateAction<boolean>>;
-  sideMenu: boolean;
-}) => (
-  <div className="flex flex-col gap-3 text-xl py-5 px-4 text-white/30 items-center relative z-10">
-    <button onClick={() => setSideMenu(!sideMenu)}
-      className="p-2 rounded-lg hover:bg-white/[0.08] hover:text-white/60 transition-all">
-      <MdMenu />
-    </button>
-    <div className="flex flex-col gap-4 mt-6">
-      {[MdOutlineTitle, MdNumbers, MdOutlineColorLens, RiAlignItemRightFill].map((Icon, i) => (
-        <button key={i} onClick={() => setSideMenu(!sideMenu)}
-          className="p-2 rounded-lg hover:bg-white/[0.08] hover:text-white/60 transition-all">
-          <Icon />
-        </button>
-      ))}
+// ── Collapsed Sidebar Component ───────────────────────────────────────────────
+function SideMenuClose({ setSideMenu }: any) {
+  return (
+    <div className="flex flex-col gap-6 py-6 items-center bg-slate-100 dark:bg-transparent h-full border-r border-slate-200 dark:border-none">
+      <button onClick={() => setSideMenu(true)} className="p-2.5 bg-white dark:bg-white/[0.08] rounded-xl shadow-md text-slate-600 dark:text-white/40 hover:text-indigo-600 dark:hover:text-white transition-colors">
+        <MdMenu size={22} />
+      </button>
+      <div className="w-8 h-px bg-slate-300 dark:bg-white/[0.06]" />
+      <Plus className="text-slate-400 dark:text-white/20 cursor-pointer hover:text-indigo-500 transition-colors" onClick={() => setSideMenu(true)} />
+      <IoSearchOutline className="text-slate-400 dark:text-white/20 cursor-pointer hover:text-indigo-500 transition-colors" onClick={() => setSideMenu(true)} />
     </div>
-  </div>
-);
+  );
+}

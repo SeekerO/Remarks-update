@@ -1,178 +1,197 @@
 "use client";
-/* eslint-disable @typescript-eslint/no-unused-vars */
 
-import React, { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { ref, onValue, update } from "firebase/database";
-import { Search, Users, Command } from "lucide-react";
+import { Search, Users } from "lucide-react";
+import { AnimatePresence } from "framer-motion";
 
 import { db } from "@/lib/firebase/firebase";
 import { useAuth } from "@/lib/auth/AuthContext";
-import { PageId, UserProfile } from "@/lib/types/adminTypes";
-import UserCard from "./component/UserCard";
-import PermissionsModal from "./component/PermissionsModal";
-import AdminCommandPalette from "./component/AdminCommandPalette";
+import { PageId, UserProfile, AVAILABLE_PAGES } from "@/lib/types/adminTypes";
 import { useUserPresence } from "@/lib/hooks/useUserPresence";
+import PermissionsModal from "./component/PermissionsModal";
+import UserCard from "./component/UserCard"
 
+
+
+
+// ─── MAIN PAGE ────────────────────────────────────────────────────────────────
 export default function AdminPanel() {
     const { user } = useAuth();
     const [allUsers, setAllUsers] = useState<UserProfile[]>([]);
-    const [searchTerm, setSearchTerm] = useState<string>("");
-    const [showOnlineOnly, setShowOnlineOnly] = useState<boolean>(false);
-    const [showCanChatOnly, setShowCanChatOnly] = useState<boolean>(false);
-    const [isLoadingUsers, setIsLoadingUsers] = useState<boolean>(true);
+    const [searchTerm, setSearchTerm] = useState("");
+    const [isLoadingUsers, setIsLoadingUsers] = useState(true);
     const [selectedUserForPermissions, setSelectedUserForPermissions] = useState<UserProfile | null>(null);
 
-    const currentUserId = user?.uid ?? '';
+    const currentUserId = user?.uid ?? "";
     const { onlineUsers, isPresenceLoading, formatLastOnline } = useUserPresence();
     const isLoading = isLoadingUsers || isPresenceLoading;
 
     useEffect(() => {
         const usersRef = ref(db, "users");
-        const unsubscribeUsers = onValue(usersRef, (snapshot) => {
-            const usersData = snapshot.val();
-            if (usersData) {
-                const usersList = Object.keys(usersData).map((uid) => ({
+        const unsub = onValue(usersRef, snapshot => {
+            const data = snapshot.val();
+            if (data) {
+                setAllUsers(Object.keys(data).map(uid => ({
                     uid,
-                    photoURL: usersData[uid].photoURL || null,
-                    displayName: usersData[uid].displayName || "Unmaed user",
-                    email: usersData[uid].email || "No Email",
-                    isAdmin: usersData[uid].isAdmin || false,
-                    canChat: usersData[uid].canChat !== undefined ? usersData[uid].canChat : true,
-                    allowedPages: usersData[uid].allowedPages || undefined,
-                }));
-                setAllUsers(usersList);
-            } else {
-                setAllUsers([]);
-            }
+                    photoURL: data[uid].photoURL || null,
+                    displayName: data[uid].displayName || "Unnamed",
+                    email: data[uid].email || "—",
+                    isAdmin: data[uid].isAdmin || false,
+                    isPermitted: data[uid].isPermitted !== undefined ? data[uid].isPermitted : true,
+                    allowedPages: data[uid].allowedPages || undefined,
+                })));
+            } else { setAllUsers([]); }
             setIsLoadingUsers(false);
         });
-        return () => unsubscribeUsers();
+        return () => unsub();
     }, []);
 
     const handleToggleAdmin = useCallback(async (userId: string, currentAdminStatus: boolean) => {
-        if (userId === currentUserId) return alert("You cannot modify your own Admin status.");
-        try {
-            await update(ref(db, `users/${userId}`), { isAdmin: !currentAdminStatus });
-        } catch (error) {
-            console.error("Admin Update Error:", error);
-        }
+        if (userId === currentUserId) return;
+        await update(ref(db, `users/${userId}`), { isAdmin: !currentAdminStatus });
     }, [currentUserId]);
 
     const handleToggleCanChat = useCallback(async (userId: string, currentCanChatStatus: boolean) => {
-        if (userId === currentUserId) return alert("You cannot modify your own chat status.");
-        try {
-            await update(ref(db, `users/${userId}`), { canChat: !currentCanChatStatus });
-        } catch (error) {
-            console.error("Chat Update Error:", error);
-        }
+        if (userId === currentUserId) return;
+        await update(ref(db, `users/${userId}`), { isPermitted: !currentCanChatStatus });
     }, [currentUserId]);
 
-    const handleOpenPermissions = useCallback((user: UserProfile) => {
-        setSelectedUserForPermissions(user);
-    }, []);
-
     const handleSavePermissions = useCallback(async (userId: string, allowedPages: PageId[]) => {
-        try {
-            await update(ref(db, `users/${userId}`), { allowedPages });
-        } catch (error) {
-            alert("Failed to update page permissions.");
-        }
+        await update(ref(db, `users/${userId}`), { allowedPages });
     }, []);
 
-    if (!user) return <div className="h-screen w-screen flex items-center justify-center dark:bg-gray-900 bg-gray-50"><p>Authenticating...</p></div>;
+    if (!user) return (
+        <div className="h-full w-full flex items-center justify-center bg-gray-50 dark:bg-[#0f0e17]">
+            <div className="w-6 h-6 border-2 border-indigo-400 border-t-transparent rounded-full animate-spin" />
+        </div>
+    );
 
-    const filteredUsers = allUsers.filter((u) => {
-        const isOnline = onlineUsers[u.uid] === true;
-        const matchesSearch = u.displayName.toLowerCase().includes(searchTerm.toLowerCase()) || u.email.toLowerCase().includes(searchTerm.toLowerCase());
-        const matchesOnline = showOnlineOnly ? isOnline : true;
-        const matchesChat = showCanChatOnly ? u.canChat === true : true;
-        return matchesSearch && matchesOnline && matchesChat;
-    });
+    const filteredUsers = allUsers.filter(u =>
+        u.displayName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        u.email.toLowerCase().includes(searchTerm.toLowerCase())
+    );
 
-    if (isLoading) return <div className="h-screen w-screen flex items-center justify-center dark:bg-gray-900 bg-gray-50"><p>Loading User Data...</p></div>;
+    const onlineCount = allUsers.filter(u => onlineUsers[u.uid] === true).length;
+    const adminCount = allUsers.filter(u => u.isAdmin).length;
 
     return (
         <>
-            {/* The Enhanced Command Palette */}
-            <AdminCommandPalette
-                allUsers={allUsers}
-                onlineUsers={onlineUsers}
-                onToggleAdmin={handleToggleAdmin}
-                onToggleChat={handleToggleCanChat}
-                onOpenPermissions={handleOpenPermissions}
-                currentUserId={currentUserId}
-                formatLastOnline={formatLastOnline}
-            />
 
-            <div className="p-6 md:p-10 min-h-screen w-full bg-gray-50 dark:bg-[#0f0e17]   font-sans overflow-y-auto">
-                <header className="mb-8 border-b border-gray-200 dark:border-gray-700 pb-4 flex justify-between items-end">
-                    <div>
-                        <h1 className="text-3xl font-extrabold text-gray-900 dark:text-white flex items-center">
-                            <Users className="w-8 h-8 mr-3 text-blue-600" />
-                            User Management
-                        </h1>
-                    </div>
-                    {/* Desktop shortcut hint */}
-                    <p className="hidden md:block text-xs text-gray-400 dark:text-gray-500 font-mono">
-                        Press <kbd className="px-1.5 py-0.5 bg-gray-100 dark:bg-gray-700 rounded border border-gray-300 dark:border-gray-600">⌘K</kbd> to quick-search
-                    </p>
-                </header>
 
-                {/* Filter Section */}
-                <div className="bg-white dark:bg-gray-800 p-5 rounded-xl shadow-md mb-8 border border-gray-100 dark:border-gray-700">
-                    <div className="flex flex-col md:flex-row md:items-center space-y-4 md:space-y-0 md:space-x-6">
-                        <div className="relative flex-grow">
-                            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+            <div className="min-h-full w-full bg-gray-50 dark:bg-[#0f0e17] overflow-y-auto">
+
+                {/* ── Sticky Header ── */}
+                <div className="sticky top-0 z-20 bg-white/80 dark:bg-[#0f0e17]/80 backdrop-blur-md
+          border-b border-black/[0.06] dark:border-white/[0.06] px-6 py-4">
+                    <div className="max-w-6xl mx-auto flex items-center gap-4">
+                        <div className="flex items-center gap-3 flex-1">
+                            <div className="w-8 h-8 rounded-lg bg-red-500/10 border border-red-500/20 flex items-center justify-center">
+                                <Users className="w-4 h-4 text-red-400" />
+                            </div>
+                            <div>
+                                <h1 className="text-base font-semibold tracking-tight text-gray-800 dark:text-white/85">User Management</h1>
+                                <p className="text-[11px] text-gray-400 dark:text-white/30">
+                                    {allUsers.length} users · {onlineCount} online · {adminCount} admins
+                                </p>
+                            </div>
+                        </div>
+
+                        {/* Search */}
+                        <div className="relative w-64">
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 dark:text-white/25" />
                             <input
                                 type="text"
-                                placeholder="Search users..."
-                                className="pl-10 pr-4 py-3 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 rounded-lg w-full focus:ring-2 focus:ring-blue-500 text-gray-900 dark:text-white"
+                                placeholder="Search users…"
                                 value={searchTerm}
-                                onChange={(e) => setSearchTerm(e.target.value)}
+                                onChange={e => setSearchTerm(e.target.value)}
+                                className="w-full bg-white dark:bg-white/[0.04] border border-black/[0.08] dark:border-white/[0.06]
+                  rounded-xl pl-9 pr-4 py-2 text-sm text-gray-700 dark:text-white/70
+                  placeholder-gray-400 dark:placeholder-white/20
+                  focus:outline-none focus:border-indigo-400 dark:focus:border-indigo-500/50 transition-colors"
                             />
                         </div>
-                        {/* <div className="flex items-center space-x-6">
-                            <label className="flex items-center cursor-pointer text-sm text-gray-700 dark:text-gray-200">
-                                <input type="checkbox" className="mr-2" checked={showOnlineOnly} onChange={(e) => setShowOnlineOnly(e.target.checked)} />
-                                Online Only
-                            </label>
-                            <label className="flex items-center cursor-pointer text-sm text-gray-700 dark:text-gray-200">
-                                <input type="checkbox" className="mr-2" checked={showCanChatOnly} onChange={(e) => setShowCanChatOnly(e.target.checked)} />
-                                Chat Enabled
-                            </label>
-                        </div> */}
+
+                        {/* Keyboard hint */}
+                        <p className="hidden md:block text-[11px] text-gray-300 dark:text-white/15 font-mono whitespace-nowrap">
+                            ⌘K quick search
+                        </p>
                     </div>
                 </div>
 
-                {/* Users Grid */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 pb-20">
-                    {filteredUsers.length === 0 ? (
-                        <div className="col-span-full text-center py-20 bg-white dark:bg-gray-800 rounded-xl shadow-inner text-gray-500">
-                            No users match your criteria.
-                        </div>
-                    ) : (
-                        filteredUsers.map((u) => (
-                            <div
-                                key={u.uid}
-                                className="h-full"
-                            >
-                                <UserCard
-                                    user={u}
-                                    isOnline={onlineUsers[u.uid] === true}
-                                    lastOnlineTimestamp={typeof onlineUsers[u.uid] === 'number' ? onlineUsers[u.uid] as number : null}
-                                    currentUserId={currentUserId}
-                                    handleToggleCanChat={handleToggleCanChat}
-                                    handleToggleAdmin={handleToggleAdmin}
-                                    handleOpenPermissions={handleOpenPermissions}
-                                    formatLastOnline={formatLastOnline}
-                                />
+                <div className="max-w-6xl mx-auto px-6 py-6">
+
+                    {/* ── Stat strip ── */}
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
+                        {[
+                            { label: "Total users", value: allUsers.length, color: "text-gray-800 dark:text-white/80" },
+                            { label: "Online now", value: onlineCount, color: "text-emerald-600 dark:text-emerald-400" },
+                            { label: "Admins", value: adminCount, color: "text-indigo-600 dark:text-indigo-400" },
+                            { label: "Chat enabled", value: allUsers.filter(u => u.isPermitted).length, color: "text-amber-600 dark:text-amber-400" },
+                        ].map(({ label, value, color }) => (
+                            <div key={label} className="bg-white dark:bg-white/[0.03] border border-black/[0.07] dark:border-white/[0.07] rounded-xl p-4">
+                                <p className="text-[10px] font-medium uppercase tracking-[0.06em] text-gray-400 dark:text-white/25 mb-1.5">{label}</p>
+                                <p className={`text-2xl font-semibold tracking-tight ${color}`}>{value}</p>
                             </div>
-                        ))
+                        ))}
+                    </div>
+
+                    {/* ── Loading ── */}
+                    {isLoading && (
+                        <div className="flex items-center justify-center py-20">
+                            <div className="w-6 h-6 border-2 border-indigo-400 border-t-transparent rounded-full animate-spin" />
+                        </div>
+                    )}
+
+                    {/* ── User grid ── */}
+                    {!isLoading && (
+                        <>
+                            {/* Filter info */}
+                            {searchTerm && (
+                                <div className="flex items-center gap-2 mb-4">
+                                    <p className="text-xs text-gray-400 dark:text-white/30">
+                                        {filteredUsers.length} result{filteredUsers.length !== 1 ? "s" : ""} for "{searchTerm}"
+                                    </p>
+                                    <button onClick={() => setSearchTerm("")}
+                                        className="text-xs text-indigo-500 dark:text-indigo-400 hover:underline">
+                                        Clear
+                                    </button>
+                                </div>
+                            )}
+
+                            <AnimatePresence mode="popLayout">
+                                {filteredUsers.length > 0 ? (
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 pb-20">
+                                        {filteredUsers.map(u => (
+                                            <UserCard
+                                                key={u.uid}
+                                                user={u}
+                                                isOnline={onlineUsers[u.uid] === true}
+                                                lastOnlineTimestamp={typeof onlineUsers[u.uid] === "number" ? onlineUsers[u.uid] as number : null}
+                                                currentUserId={currentUserId}
+                                                handleToggleCanChat={handleToggleCanChat}
+                                                handleToggleAdmin={handleToggleAdmin}
+                                                handleOpenPermissions={setSelectedUserForPermissions}
+                                                formatLastOnline={formatLastOnline}
+                                            />
+                                        ))}
+                                    </div>
+                                ) : (
+                                    <div className="flex flex-col items-center justify-center py-20">
+                                        <div className="w-14 h-14 rounded-2xl bg-gray-100 dark:bg-white/[0.03] border border-black/[0.07] dark:border-white/[0.06] flex items-center justify-center mb-4">
+                                            <Search className="w-6 h-6 text-gray-300 dark:text-white/20" />
+                                        </div>
+                                        <p className="text-sm font-medium text-gray-500 dark:text-white/40">No users match your search</p>
+                                        <p className="text-xs text-gray-400 dark:text-white/25 mt-1">Try a different name or email</p>
+                                    </div>
+                                )}
+                            </AnimatePresence>
+                        </>
                     )}
                 </div>
             </div>
 
-            {/* Permissions Modal */}
+            {/* ── Permissions Modal ── */}
             {selectedUserForPermissions && (
                 <PermissionsModal
                     user={selectedUserForPermissions}

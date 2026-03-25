@@ -9,7 +9,7 @@ import { IoIosSettings } from "react-icons/io";
 import DarkModeToggle from "@/lib/components/dark-button";
 import { navItems, NavItem, UserRole } from "@/lib/types/adminTypes";
 import Image from "next/image";
-import Logo from "@/../public/Avexi.png"
+import Logo from "@/../public/Avexi.png";
 
 /* ─────────────────────────────────────────────
    SETTINGS MODAL
@@ -29,13 +29,13 @@ const SettingsModal = ({ open, onClose }: { open: boolean; onClose: () => void }
     if (!open) return null;
 
     return (
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/55 backdrop-blur-md">
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/40 dark:bg-black/55 backdrop-blur-md">
             <div
                 ref={ref}
                 className="flex flex-col items-center gap-5 p-8 w-64 rounded-2xl
-          bg-white dark:bg-[#0f0e17]
-          border border-black/10 dark:border-white/10
-          shadow-2xl"
+                    bg-white dark:bg-[#0f0e17]
+                    border border-black/10 dark:border-white/10
+                    shadow-2xl"
             >
                 <p className="text-sm font-medium text-gray-800 dark:text-gray-100">Appearance</p>
                 <DarkModeToggle />
@@ -67,15 +67,14 @@ const SidebarNavItem = ({
             onClick={onNavigate}
             title={collapsed ? item.name : undefined}
             className={[
-                // base
                 "flex items-center gap-2.5 rounded-md text-[13px] transition-all duration-150 no-underline",
-                // spacing
                 collapsed ? "justify-center p-2.5" : isSublink ? "py-1.5 px-3 pl-7" : "py-1.5 px-2.5",
-                // inactive
-                "text-white/50 hover:text-white/80 hover:bg-white/5",
+                // inactive — light and dark
+                "text-gray-500 hover:text-gray-800 hover:bg-gray-100",
+                "dark:text-white/50 dark:hover:text-white/80 dark:hover:bg-white/5",
                 // active
                 isActive
-                    ? "!bg-indigo-500/15 !text-indigo-300 font-medium before:absolute before:left-0 before:top-1.5 before:bottom-1.5 before:w-0.5 before:rounded-r before:bg-indigo-400"
+                    ? "!bg-indigo-50 !text-indigo-600 font-medium dark:!bg-indigo-500/15 dark:!text-indigo-300 before:absolute before:left-0 before:top-1.5 before:bottom-1.5 before:w-0.5 before:rounded-r before:bg-indigo-500 dark:before:bg-indigo-400"
                     : "",
                 "relative",
             ].join(" ")}
@@ -88,7 +87,6 @@ const SidebarNavItem = ({
 
 /* ─────────────────────────────────────────────
    NAV GROUP  (dropdown)
-   Clicking while collapsed → expand sidebar first, then open group
    ───────────────────────────────────────────── */
 const SidebarNavGroup = ({
     item, collapsed, getSubAccess, onNavigate, onExpand,
@@ -125,8 +123,8 @@ const SidebarNavGroup = ({
                     "flex items-center gap-2.5 w-full rounded-md text-[13px] transition-all duration-150",
                     collapsed ? "justify-center p-2.5" : "py-1.5 px-2.5",
                     parentActive
-                        ? "bg-indigo-500/15 text-indigo-300 font-medium"
-                        : "text-white/50 hover:text-white/80 hover:bg-white/5",
+                        ? "bg-indigo-50 text-indigo-600 font-medium dark:bg-indigo-500/15 dark:text-indigo-300"
+                        : "text-gray-500 hover:text-gray-800 hover:bg-gray-100 dark:text-white/50 dark:hover:text-white/80 dark:hover:bg-white/5",
                 ].join(" ")}
             >
                 <Icon className="w-4 h-4 flex-shrink-0 opacity-70" />
@@ -166,32 +164,37 @@ const UserPopup = ({
     user: any; onSettings: () => void; onLogout: () => void; onClose: () => void;
 }) => (
     <div className="absolute bottom-[calc(100%+4px)] left-2 right-2 z-60
-    rounded-xl overflow-hidden
-    bg-[#13132b] border border-white/10
-    shadow-[0_-8px_24px_rgba(0,0,0,0.4)]"
+        rounded-xl overflow-hidden
+        bg-white border border-gray-200
+        dark:bg-[#13132b] dark:border-white/10
+        shadow-[0_-8px_24px_rgba(0,0,0,0.15)] dark:shadow-[0_-8px_24px_rgba(0,0,0,0.4)]"
     >
         {/* Identity */}
-        <div className="px-3 py-2.5 border-b border-white/[0.06]">
-            <p className="text-xs font-medium text-white/85 truncate">{user?.displayName}</p>
-            <p className="text-[10px] text-white/30 truncate">{user?.email}</p>
+        <div className="px-3 py-2.5 border-b border-gray-100 dark:border-white/[0.06]">
+            <p className="text-xs font-medium text-gray-800 dark:text-white/85 truncate">{user?.displayName}</p>
+            <p className="text-[10px] text-gray-400 dark:text-white/30 truncate">{user?.email}</p>
         </div>
 
         {/* Settings */}
         <button
             onClick={() => { onClose(); onSettings(); }}
-            className="flex items-center gap-2 w-full px-3 py-2 text-xs text-white/55
-        hover:bg-white/5 transition-colors"
+            className="flex items-center gap-2 w-full px-3 py-2 text-xs
+                text-gray-500 hover:bg-gray-50
+                dark:text-white/55 dark:hover:bg-white/5
+                transition-colors"
         >
             <IoIosSettings size={13} /> Settings
         </button>
 
-        <div className="mx-2 h-px bg-white/[0.06]" />
+        <div className="mx-2 h-px bg-gray-100 dark:bg-white/[0.06]" />
 
         {/* Sign out */}
         <button
             onClick={() => { onClose(); onLogout(); }}
-            className="flex items-center gap-2 w-full px-3 py-2 text-xs text-red-400
-        hover:bg-red-500/8 transition-colors"
+            className="flex items-center gap-2 w-full px-3 py-2 text-xs
+                text-red-500 hover:bg-red-50
+                dark:text-red-400 dark:hover:bg-red-500/8
+                transition-colors"
         >
             <CiLogout size={13} /> Sign out
         </button>
@@ -200,7 +203,6 @@ const UserPopup = ({
 
 /* ─────────────────────────────────────────────
    SIDEBAR INNER CONTENT
-   shared by desktop aside + mobile drawer
    ───────────────────────────────────────────── */
 const SidebarContent = ({
     collapsed, onToggleCollapse, onNavigate, onSettings, onLogout,
@@ -251,29 +253,28 @@ const SidebarContent = ({
                 className={[
                     "flex items-center justify-center gap-2 w-full shrink-0",
                     "px-3.5 py-4",
-                    "border-b border-white/[0.06]",
+                    "border-b border-gray-200 dark:border-white/[0.06]",
                     "bg-transparent",
                     onToggleCollapse ? "cursor-pointer" : "cursor-default",
-                    "hover:bg-white/[0.03] transition-colors duration-150",
+                    "hover:bg-gray-50 dark:hover:bg-white/[0.03] transition-colors duration-150",
                 ].join(" ")}
             >
-                <Image src={Logo} alt={"Desmos"} width={36} />
+                <Image src={Logo} alt={"Avexi"} width={36} />
                 {!collapsed && (
                     <>
-                        <Link href={"/dashboard"} className="flex-1 text-[15px] font-semibold tracking-[-0.04em] text-white/90">
-                            Avexi<span className="text-indigo-400">.</span>
+                        <Link href={"/dashboard"} className="flex-1 text-[15px] font-semibold tracking-[-0.04em] text-gray-900 dark:text-white/90">
+                            Avexi<span className="text-indigo-500 dark:text-indigo-400">.</span>
                         </Link>
-                        <span className="text-[9px] text-white/20 font-mono pr-0.5">←</span>
+                        <span className="text-[9px] text-gray-300 dark:text-white/20 font-mono pr-0.5">←</span>
                     </>
                 )}
             </button>
 
             {/* ── Nav ── */}
             <nav className="flex-1 overflow-y-auto overflow-x-hidden py-2.5 px-2 scrollbar-none">
-                {/* Section label */}
                 {collapsed
-                    ? <div className="h-px bg-white/[0.08] mx-2.5 my-1.5" />
-                    : <p className="text-[10px] font-medium tracking-[0.07em] uppercase text-white/20 px-2.5 pt-1 pb-1">
+                    ? <div className="h-px bg-gray-200 dark:bg-white/[0.08] mx-2.5 my-1.5" />
+                    : <p className="text-[10px] font-medium tracking-[0.07em] uppercase text-gray-400 dark:text-white/20 px-2.5 pt-1 pb-1">
                         Workspace
                     </p>
                 }
@@ -313,7 +314,7 @@ const SidebarContent = ({
             {/* ── Footer / user chip ── */}
             <div
                 ref={userMenuRef}
-                className="relative shrink-0 px-2 pt-2 pb-3 border-t border-white/[0.06]"
+                className="relative shrink-0 px-2 pt-2 pb-3 border-t border-gray-200 dark:border-white/[0.06]"
             >
                 {userMenuOpen && !collapsed && (
                     <UserPopup
@@ -332,14 +333,14 @@ const SidebarContent = ({
                     }}
                     className={[
                         "flex items-center gap-2 w-full px-2 py-1.5 rounded-md",
-                        "hover:bg-white/5 transition-colors duration-150",
+                        "hover:bg-gray-100 dark:hover:bg-white/5 transition-colors duration-150",
                         "overflow-hidden",
                     ].join(" ")}
                 >
                     {/* Avatar */}
                     <div className="w-7 h-7 rounded-full flex-shrink-0 flex items-center justify-center
-            text-[11px] font-semibold text-white overflow-hidden
-            bg-gradient-to-br from-indigo-500 to-violet-600"
+                        text-[11px] font-semibold text-white overflow-hidden
+                        bg-gradient-to-br from-indigo-500 to-violet-600"
                     >
                         {user?.photoURL
                             ? <img src={user.photoURL} alt="" className="w-full h-full object-cover rounded-full" />
@@ -349,8 +350,8 @@ const SidebarContent = ({
                     {!collapsed && (
                         <>
                             <div className="flex-1 text-left min-w-0">
-                                <p className="text-xs font-medium text-white/85 truncate">{user?.displayName}</p>
-                                <p className="text-[10px] text-white/30 capitalize">
+                                <p className="text-xs font-medium text-gray-800 dark:text-white/85 truncate">{user?.displayName}</p>
+                                <p className="text-[10px] text-gray-400 dark:text-white/30 capitalize">
                                     {user?.isAdmin ? "Administrator" : "User"}
                                 </p>
                             </div>
@@ -361,7 +362,7 @@ const SidebarContent = ({
                 </button>
 
                 {!collapsed && (
-                    <p className="text-center mt-1.5 text-[10px] text-white/10 font-mono">Desmos v5.0.0</p>
+                    <p className="text-center mt-1.5 text-[10px] text-gray-300 dark:text-white/10 font-mono">Desmos v5.0.0</p>
                 )}
             </div>
         </>
@@ -387,7 +388,7 @@ const SlideDrawer = ({
             <div
                 onClick={onClose}
                 className={[
-                    "fixed inset-0 z-[200] bg-black/60 backdrop-blur-sm",
+                    "fixed inset-0 z-[200] bg-black/40 dark:bg-black/60 backdrop-blur-sm",
                     "transition-opacity duration-200",
                     open ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none",
                 ].join(" ")}
@@ -398,14 +399,13 @@ const SlideDrawer = ({
                 className={[
                     "fixed top-0 left-0 bottom-0 z-[201]",
                     "w-[270px] flex flex-col",
-                    "bg-[#0d0d1a] border-r border-white/[0.07]",
-                    "shadow-[8px_0_32px_rgba(0,0,0,0.5)]",
+                    "bg-white dark:bg-[#0d0d1a]",
+                    "border-r border-gray-200 dark:border-white/[0.07]",
+                    "shadow-[8px_0_32px_rgba(0,0,0,0.12)] dark:shadow-[8px_0_32px_rgba(0,0,0,0.5)]",
                     "transition-transform duration-[240ms] ease-[cubic-bezier(0.4,0,0.2,1)]",
                     open ? "translate-x-0" : "-translate-x-full",
                 ].join(" ")}
             >
-
-                {/* Full nav — always expanded inside drawer */}
                 <div className="flex-1 flex flex-col overflow-hidden">
                     <SidebarContent
                         collapsed={false}
@@ -443,16 +443,20 @@ const BottomTabBar = ({ onMenuOpen }: { onMenuOpen: () => void }) => {
         : "?";
 
     return (
-        <div className="fixed bottom-0 left-0 right-0 z-[100]
-      flex items-stretch h-[60px]
-      bg-[#0d0d1a] border-t border-white/[0.07]"
+        <div
+            className="fixed bottom-0 left-0 right-0 z-[100]
+                flex items-stretch h-[60px]
+                bg-white dark:bg-[#0d0d1a]
+                border-t border-gray-200 dark:border-white/[0.07]"
             style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
         >
             {/* Hamburger */}
             <button
                 onClick={onMenuOpen}
                 className="flex-1 flex flex-col items-center justify-center gap-0.5
-          text-white/45 hover:text-white/70 transition-colors"
+                    text-gray-400 hover:text-gray-700
+                    dark:text-white/45 dark:hover:text-white/70
+                    transition-colors"
             >
                 <Menu className="w-[18px] h-[18px]" />
                 <span className="text-[9px] font-medium tracking-[0.04em]">Menu</span>
@@ -468,12 +472,14 @@ const BottomTabBar = ({ onMenuOpen }: { onMenuOpen: () => void }) => {
                         href={item.href}
                         className={[
                             "flex-1 flex flex-col items-center justify-center gap-0.5 no-underline relative",
-                            active ? "text-indigo-300" : "text-white/40 hover:text-white/70",
+                            active
+                                ? "text-indigo-600 dark:text-indigo-300"
+                                : "text-gray-400 hover:text-gray-700 dark:text-white/40 dark:hover:text-white/70",
                             "transition-colors",
                         ].join(" ")}
                     >
                         {active && (
-                            <div className="absolute top-0 left-1/4 right-1/4 h-0.5 rounded-b bg-indigo-400" />
+                            <div className="absolute top-0 left-1/4 right-1/4 h-0.5 rounded-b bg-indigo-500 dark:bg-indigo-400" />
                         )}
                         <Icon className="w-[18px] h-[18px]" />
                         <span className={`text-[9px] tracking-[0.04em] max-w-[52px] truncate ${active ? "font-semibold" : "font-normal"}`}>
@@ -489,14 +495,14 @@ const BottomTabBar = ({ onMenuOpen }: { onMenuOpen: () => void }) => {
                 className="flex-1 flex flex-col items-center justify-center gap-0.5"
             >
                 <div className="w-6 h-6 rounded-full overflow-hidden flex items-center justify-center
-          text-[9px] font-semibold text-white
-          bg-gradient-to-br from-indigo-500 to-violet-600"
+                    text-[9px] font-semibold text-white
+                    bg-gradient-to-br from-indigo-500 to-violet-600"
                 >
                     {user?.photoURL
                         ? <img src={user.photoURL} alt="" className="w-full h-full object-cover" />
                         : initials}
                 </div>
-                <span className="text-[9px] text-white/40 tracking-[0.04em]">Profile</span>
+                <span className="text-[9px] text-gray-400 dark:text-white/40 tracking-[0.04em]">Profile</span>
             </button>
         </div>
     );
@@ -515,7 +521,8 @@ const Sidebar: React.FC = () => {
         <>
             {/* DESKTOP (lg+): persistent, collapsible */}
             <aside
-                className="hidden lg:flex flex-col bg-[var(--nexus-sidebar-bg)]"
+                className="hidden lg:flex flex-col bg-white dark:bg-[var(--nexus-sidebar-bg)]
+                    border-r border-gray-200 dark:border-transparent"
                 style={{
                     width: collapsed ? 72 : 240,
                     minWidth: collapsed ? 72 : 240,

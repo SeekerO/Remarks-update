@@ -20,7 +20,7 @@ const LogoMark = () => (
         }}
     >
 
-        <Image src={Logo} alt="Dosmos" width={48} className="animate-pulse" />
+        <Image src={Logo} alt="Dosmos" width={52} className="animate-pulse" />
     </div>
 );
 
@@ -83,7 +83,7 @@ export default function LoginPage() {
                     <div className="flex flex-col items-center gap-3">
                         <LogoMark />
                         <div className="text-center">
-                            <h1 className="text-xl font-semibold tracking-tight text-white/90">
+                            <h1 className="text-xl font-semibold tracking-wide text-white/90">
                                 Avexi<span className="text-indigo-400">.</span>
                             </h1>
                             <p className="text-xs text-white/35 mt-0.5 tracking-wide">
@@ -141,7 +141,11 @@ export default function LoginPage() {
                 <p className="text-center text-[10px] text-white/15 font-mono mt-4">
                     Avexi v5.0.0
                 </p>
+
             </div>
+            <Image src={Logo} alt="Avexi" className=" -top-30 -left-56 w-[60%] z-0 absolute blur-[70px] opacity-15" />
+            <Image src={Logo} alt="Avexi" className=" -top-30 -right-56 w-[60%] z-0 absolute blur-[70px] opacity-15" />
         </div>
+
     );
 }

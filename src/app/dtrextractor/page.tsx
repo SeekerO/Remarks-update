@@ -288,8 +288,7 @@ Rules:
                             </div>
 
                             <div>
-                                <h1 className="font-syne text-2xl font-extrabold tracking-tight text-slate-800 dark:text-transparent dark:bg-clip-text"
-                                    style={{ backgroundImage: 'linear-gradient(90deg,#f9fafb,#9ca3af)' }}>
+                                <h1 className="font-syne text-2xl font-extrabold tracking-tight text-slate-800 dark:text-transparent dark:bg-clip-text">
                                     DTR Extractor
                                 </h1>
                                 <p className="font-dm-mono text-xs text-slate-400 dark:text-slate-500">

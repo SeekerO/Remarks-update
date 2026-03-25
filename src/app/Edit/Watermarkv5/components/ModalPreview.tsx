@@ -1,7 +1,5 @@
 "use client";
 
-/* eslint-disable @typescript-eslint/no-explicit-any */
-
 import React, { SetStateAction, useLayoutEffect, useRef, useEffect, useState, useCallback } from "react";
 import { useImageEditor } from "./ImageEditorContext";
 import { applyPhotoAdjustments } from "../lib/utils/canvasFilters";
@@ -29,11 +27,7 @@ const TABS: { key: TabKey; label: string; icon: React.ElementType }[] = [
 ];
 
 const ModalPreview = ({
-    canvasRef,
-    open,
-    onClose,
-    modalCanvasId,
-    imageIndex,
+    canvasRef, open, onClose, modalCanvasId, imageIndex,
 }: ModalPreviewProps): React.JSX.Element | null => {
     const modalCanvasRef = useRef<HTMLCanvasElement>(null);
     const originalImageDataRef = useRef<ImageData | null>(null);
@@ -44,8 +38,6 @@ const ModalPreview = ({
 
     const [showControls, setShowControls] = useState(false);
     const [activeTab, setActiveTab] = useState<TabKey>("light");
-
-    // Zoom & pan state
     const [zoom, setZoom] = useState(1);
     const [pan, setPan] = useState({ x: 0, y: 0 });
     const [isPanning, setIsPanning] = useState(false);
@@ -60,7 +52,6 @@ const ModalPreview = ({
     const currentAdjustments = currentImage?.photoAdjustments || globalPhotoAdjustments;
     const hasModifications = Object.values(currentAdjustments).some((v) => v !== 0);
 
-    // Copy canvas + store original
     useLayoutEffect(() => {
         const originalCanvas = canvasRef.current;
         const modalCanvas = modalCanvasRef.current;
@@ -75,7 +66,6 @@ const ModalPreview = ({
         }
     }, [open, canvasRef]);
 
-    // Apply adjustments on change
     useEffect(() => {
         if (!open) return;
         const modalCanvas = modalCanvasRef.current;
@@ -86,7 +76,6 @@ const ModalPreview = ({
         applyPhotoAdjustments(modalCanvas, currentAdjustments);
     }, [currentAdjustments, open]);
 
-    // Keyboard shortcuts
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
             if (e.key === "Escape") onClose(false);
@@ -99,7 +88,6 @@ const ModalPreview = ({
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [onClose, zoom]);
 
-    // Scroll to zoom (focal point)
     useEffect(() => {
         const el = containerRef.current;
         if (!el) return;
@@ -112,10 +100,7 @@ const ModalPreview = ({
             setZoom(prevZoom => {
                 const newZoom = Math.min(5, Math.max(0.5, prevZoom + delta));
                 const ratio = newZoom / prevZoom;
-                setPan(prevPan => ({
-                    x: fx - ratio * (fx - prevPan.x),
-                    y: fy - ratio * (fy - prevPan.y),
-                }));
+                setPan(prevPan => ({ x: fx - ratio * (fx - prevPan.x), y: fy - ratio * (fy - prevPan.y) }));
                 return newZoom;
             });
         };
@@ -123,21 +108,13 @@ const ModalPreview = ({
         return () => el.removeEventListener("wheel", onWheel);
     }, []);
 
-    // Reset state when modal opens or image changes
     useEffect(() => {
-        if (open) {
-            setModeConfirmed(false);
-            setZoom(1);
-            setPan({ x: 0, y: 0 });
-        }
+        if (open) { setModeConfirmed(false); setZoom(1); setPan({ x: 0, y: 0 }); }
     }, [open, imageIndex]);
 
-    const handleZoom = (dir: "in" | "out") => {
-        setZoom((z) => Math.min(5, Math.max(0.5, z + (dir === "in" ? 0.25 : -0.25))));
-    };
+    const handleZoom = (dir: "in" | "out") => setZoom((z) => Math.min(5, Math.max(0.5, z + (dir === "in" ? 0.25 : -0.25))));
     const resetZoom = () => { setZoom(1); setPan({ x: 0, y: 0 }); };
 
-    // Pan handlers
     const onMouseDown = useCallback((e: React.MouseEvent) => {
         if (zoom <= 1) return;
         setIsPanning(true);
@@ -146,10 +123,7 @@ const ModalPreview = ({
 
     const onMouseMove = useCallback((e: React.MouseEvent) => {
         if (!isPanning) return;
-        setPan({
-            x: panStart.current.panX + (e.clientX - panStart.current.x),
-            y: panStart.current.panY + (e.clientY - panStart.current.y),
-        });
+        setPan({ x: panStart.current.panX + (e.clientX - panStart.current.x), y: panStart.current.panY + (e.clientY - panStart.current.y) });
     }, [isPanning]);
 
     const onMouseUp = useCallback(() => setIsPanning(false), []);
@@ -170,19 +144,13 @@ const ModalPreview = ({
         updateIndividualPhotoAdjustments(resetValues);
     };
 
-    // Touch handlers (pinch-to-zoom + pan)
     const onTouchStart = useCallback((e: React.TouchEvent) => {
         if (e.touches.length === 2) {
             const dx = e.touches[0].clientX - e.touches[1].clientX;
             const dy = e.touches[0].clientY - e.touches[1].clientY;
             lastPinchDist.current = Math.hypot(dx, dy);
         } else if (e.touches.length === 1) {
-            panStart.current = {
-                x: e.touches[0].clientX,
-                y: e.touches[0].clientY,
-                panX: pan.x,
-                panY: pan.y,
-            };
+            panStart.current = { x: e.touches[0].clientX, y: e.touches[0].clientY, panX: pan.x, panY: pan.y };
         }
     }, [pan]);
 
@@ -194,34 +162,24 @@ const ModalPreview = ({
             const dist = Math.hypot(dx, dy);
             const ratio = dist / lastPinchDist.current;
             lastPinchDist.current = dist;
-
             const midX = (e.touches[0].clientX + e.touches[1].clientX) / 2;
             const midY = (e.touches[0].clientY + e.touches[1].clientY) / 2;
             const rect = containerRef.current?.getBoundingClientRect();
             if (!rect) return;
             const fx = midX - rect.left - rect.width / 2;
             const fy = midY - rect.top - rect.height / 2;
-
             setZoom(prevZoom => {
                 const newZoom = Math.min(5, Math.max(0.5, prevZoom * ratio));
                 const scaleRatio = newZoom / prevZoom;
-                setPan(prevPan => ({
-                    x: fx - scaleRatio * (fx - prevPan.x),
-                    y: fy - scaleRatio * (fy - prevPan.y),
-                }));
+                setPan(prevPan => ({ x: fx - scaleRatio * (fx - prevPan.x), y: fy - scaleRatio * (fy - prevPan.y) }));
                 return newZoom;
             });
         } else if (e.touches.length === 1) {
-            setPan({
-                x: panStart.current.panX + (e.touches[0].clientX - panStart.current.x),
-                y: panStart.current.panY + (e.touches[0].clientY - panStart.current.y),
-            });
+            setPan({ x: panStart.current.panX + (e.touches[0].clientX - panStart.current.x), y: panStart.current.panY + (e.touches[0].clientY - panStart.current.y) });
         }
     }, []);
 
-    const onTouchEnd = useCallback(() => {
-        lastPinchDist.current = null;
-    }, []);
+    const onTouchEnd = useCallback(() => { lastPinchDist.current = null; }, []);
 
     if (!open) return null;
 
@@ -233,10 +191,7 @@ const ModalPreview = ({
             className="fixed inset-0 z-50 flex overflow-hidden
                 bg-gray-100 dark:bg-[#060709]"
         >
-
-
-            {/* asd */}
-            {/* ── Canvas Area ─────────────────────────────────────────── */}
+            {/* ── Canvas Area ── */}
             <div
                 ref={containerRef}
                 className="flex-1 relative flex items-center justify-center overflow-hidden"
@@ -252,18 +207,12 @@ const ModalPreview = ({
                 <motion.canvas
                     ref={modalCanvasRef}
                     id={modalCanvasId}
-                    style={{
-                        scale: zoom,
-                        x: pan.x,
-                        y: pan.y,
-                        transition: isPanning ? "none" : "scale 0.2s ease",
-                    }}
+                    style={{ scale: zoom, x: pan.x, y: pan.y, transition: isPanning ? "none" : "scale 0.2s ease" }}
                     className="max-w-full max-h-full object-contain rounded-xl
-                        shadow-[0_0_60px_rgba(0,0,0,0.25)] dark:shadow-[0_0_80px_rgba(0,0,0,0.8)]"
+                        shadow-[0_0_60px_rgba(0,0,0,0.15)] dark:shadow-[0_0_80px_rgba(0,0,0,0.8)]"
                     drag={false}
                 />
 
-                {/* Zoom badge */}
                 <AnimatePresence>
                     {zoom !== 1 && (
                         <motion.div
@@ -271,9 +220,9 @@ const ModalPreview = ({
                             animate={{ opacity: 1, y: 0 }}
                             exit={{ opacity: 0 }}
                             className="absolute bottom-6 left-1/2 -translate-x-1/2 px-3 py-1 rounded-full
-                                bg-white/80 dark:bg-black/60
+                                bg-white/90 dark:bg-black/60
                                 backdrop-blur-sm
-                                border border-gray-200 dark:border-white/10
+                                border border-gray-300 dark:border-white/10
                                 text-gray-800 dark:text-white
                                 text-xs font-mono font-bold shadow-sm"
                         >
@@ -283,13 +232,11 @@ const ModalPreview = ({
                 </AnimatePresence>
             </div>
 
-            {/* ── Top Bar ─────────────────────────────────────────────── */}
+            {/* ── Top Bar ── */}
             <div className="absolute top-0 left-0 right-0 flex items-center justify-between px-4 py-3
                 bg-gradient-to-b from-white/80 dark:from-black/70 to-transparent
                 pointer-events-none z-10 backdrop-blur-[2px] dark:backdrop-blur-none"
             >
-
-                {/* Left: zoom controls */}
                 <div className="flex items-center gap-1.5 pointer-events-auto">
                     <ToolButton onClick={() => handleZoom("out")} title="Zoom out (-)">
                         <ZoomOut className="w-4 h-4" />
@@ -314,7 +261,6 @@ const ModalPreview = ({
                     </ToolButton>
                 </div>
 
-                {/* Right: panel toggle + close */}
                 <div className="flex items-center gap-2 pointer-events-auto">
                     <motion.button
                         whileTap={{ scale: 0.93 }}
@@ -332,7 +278,6 @@ const ModalPreview = ({
                         </motion.div>
                     </motion.button>
 
-                    {/* ── Close button ─────────────────────────────────── */}
                     <motion.button
                         whileTap={{ scale: 0.93 }}
                         onClick={() => onClose(false)}
@@ -342,12 +287,12 @@ const ModalPreview = ({
                             text-gray-500 hover:text-red-600 dark:text-gray-300 dark:hover:text-red-400"
                         title="Close (Esc)"
                     >
-
                         <X className="w-4 h-4" />
                     </motion.button>
                 </div>
             </div>
-            {/* ── Side Panel ──────────────────────────────────────────── */}
+
+            {/* ── Side Panel ── */}
             <AnimatePresence>
                 {showControls && (
                     <motion.div
@@ -358,7 +303,8 @@ const ModalPreview = ({
                         transition={{ type: "spring", stiffness: 320, damping: 32 }}
                         className="w-72 shrink-0 flex flex-col overflow-hidden z-0
                             bg-white dark:bg-[#0e1014]
-                            border-l border-gray-200 dark:border-white/[0.06] absolute right-0 h-full"
+                            border-l border-gray-200 dark:border-white/[0.06]
+                            absolute right-0 h-full"
                     >
                         {/* Panel Header */}
                         <div className="px-5 pt-14 pb-4 border-b border-gray-100 dark:border-white/[0.06]">
@@ -422,7 +368,7 @@ const ModalPreview = ({
                                             className={`relative flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-[11px] font-semibold transition-all
                                                 ${isActive
                                                     ? "text-gray-900 dark:text-white"
-                                                    : "text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300"
+                                                    : "text-gray-400 dark:text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
                                                 }`}
                                         >
                                             {isActive && (
@@ -479,7 +425,7 @@ const ModalPreview = ({
                             </AnimatePresence>
                         </div>
 
-                        {/* Panel Footer — keyboard hints */}
+                        {/* Panel Footer */}
                         <div className="px-5 py-4 border-t border-gray-100 dark:border-white/[0.06]">
                             <div className="flex items-center gap-2 text-[10px] text-gray-400 dark:text-gray-600 flex-wrap">
                                 <Kbd>scroll</Kbd><span>zoom</span>
@@ -494,23 +440,15 @@ const ModalPreview = ({
                     </motion.div>
                 )}
             </AnimatePresence>
-
-
-
-        </motion.div >
+        </motion.div>
     );
 };
 
-// ─── SliderGroup ─────────────────────────────────────────────────────────────
 function SliderGroup({
     label, value, min, max, onChange, disabled = false,
 }: {
-    label: string;
-    value: number;
-    min: number;
-    max: number;
-    onChange: (v: number) => void;
-    disabled?: boolean;
+    label: string; value: number; min: number; max: number;
+    onChange: (v: number) => void; disabled?: boolean;
 }) {
     const percentage = ((value - min) / (max - min)) * 100;
     const isModified = value !== 0;
@@ -564,14 +502,7 @@ function SliderGroup({
     );
 }
 
-// ─── ToolButton ───────────────────────────────────────────────────────────────
-function ToolButton({
-    onClick, title, children,
-}: {
-    onClick: () => void;
-    title?: string;
-    children: React.ReactNode;
-}) {
+function ToolButton({ onClick, title, children }: { onClick: () => void; title?: string; children: React.ReactNode }) {
     return (
         <motion.button
             whileTap={{ scale: 0.9 }}
@@ -587,7 +518,6 @@ function ToolButton({
     );
 }
 
-// ─── Kbd hint pill ────────────────────────────────────────────────────────────
 function Kbd({ children }: { children: React.ReactNode }) {
     return (
         <span className="px-1.5 py-0.5 rounded font-mono
