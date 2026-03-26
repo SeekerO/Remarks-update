@@ -5,7 +5,7 @@ import { useAuth } from "../../lib/auth/AuthContext";
 
 export default function NotFound() {
     const { user } = useAuth();
-    const dest = user?.canChat ? "/dashboard" : "/login";
+    const dest = user?.isPermitted ? "/dashboard" : "/login";
 
     return (
         <div className="flex h-screen w-screen items-center justify-center bg-[var(--nexus-sidebar-bg)] overflow-hidden relative">
@@ -63,7 +63,7 @@ export default function NotFound() {
               text-white text-sm font-medium
               transition-colors duration-150 no-underline"
                     >
-                        ← Back to {user?.canChat ? "dashboard" : "login"}
+                        ← Back to {user?.isPermitted ? "dashboard" : "login"}
                     </Link>
 
                     <p className="text-[10px] text-white/15 font-mono">

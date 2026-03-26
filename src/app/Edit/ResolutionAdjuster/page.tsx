@@ -96,6 +96,7 @@ export default function ResolutionAdjuster() {
     /* ════════════════════════════════════════════
        RENDER
        ════════════════════════════════════════════ */
+
     return (
         <div className="min-h-full w-full bg-gray-50 dark:bg-[#0f0e17] overflow-y-auto">
 

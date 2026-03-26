@@ -365,6 +365,7 @@ export default function LogoMaker() {
     /* ════════════════════════════════════════════
        RENDER
        ════════════════════════════════════════════ */
+
     return (
         <div className="flex flex-col h-full w-full overflow-hidden bg-gray-50 dark:bg-[#0f0e17]">
 

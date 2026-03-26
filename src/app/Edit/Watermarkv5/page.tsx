@@ -355,245 +355,244 @@ function WatermarkPageContent() {
         </>
     );
 
-    if (user && (user as any)?.canChat === true)
-        return (
-            <div className="min-h-full overflow-y-auto font-sans w-full bg-gray-50 dark:bg-gray-950">
+    return (
+        <div className="min-h-full overflow-y-auto font-sans w-full bg-gray-50 dark:bg-gray-950">
 
-                {/* ── DESKTOP layout (lg+) ─────────────────────────────────────────── */}
-                <div className="hidden lg:flex h-screen overflow-hidden w-full">
+            {/* ── DESKTOP layout (lg+) ─────────────────────────────────────────── */}
+            <div className="hidden lg:flex h-screen overflow-hidden w-full">
 
-                    {/* ── Editor Sidebar ── */}
-                    <div className="w-[320px] flex-shrink-0 h-screen flex flex-col
+                {/* ── Editor Sidebar ── */}
+                <div className="w-[320px] flex-shrink-0 h-screen flex flex-col
                         bg-white dark:bg-[#0d0d1a]
                         border-r border-gray-200 dark:border-l dark:border-white/[0.06]
                         shadow-xl relative overflow-hidden">
 
-                        {/* Radial glow — dark only */}
-                        <div className="pointer-events-none absolute top-0 right-0 w-64 h-64 rounded-full opacity-0 dark:opacity-30"
-                            style={{ background: "radial-gradient(circle at 100% 0%, rgba(99,102,241,0.4) 0%, transparent 60%)" }} />
-                        <div className="pointer-events-none absolute bottom-0 left-0 w-48 h-48 rounded-full opacity-0 dark:opacity-20"
-                            style={{ background: "radial-gradient(circle at 0% 100%, rgba(99,102,241,0.3) 0%, transparent 60%)" }} />
+                    {/* Radial glow — dark only */}
+                    <div className="pointer-events-none absolute top-0 right-0 w-64 h-64 rounded-full opacity-0 dark:opacity-30"
+                        style={{ background: "radial-gradient(circle at 100% 0%, rgba(99,102,241,0.4) 0%, transparent 60%)" }} />
+                    <div className="pointer-events-none absolute bottom-0 left-0 w-48 h-48 rounded-full opacity-0 dark:opacity-20"
+                        style={{ background: "radial-gradient(circle at 0% 100%, rgba(99,102,241,0.3) 0%, transparent 60%)" }} />
 
-                        {/* Header */}
-                        <div className="px-5 pt-5 pb-4 border-b border-gray-200 dark:border-white/[0.06] relative z-10 flex-shrink-0">
-                            <div className="flex items-center justify-between mt-4">
-                                <div className="flex items-center gap-2.5">
-                                    <div className="w-8 h-8 rounded-lg bg-indigo-100 dark:bg-indigo-600/20 border border-indigo-200 dark:border-indigo-500/30 flex items-center justify-center">
-                                        <Droplets className="w-4 h-4 text-indigo-500 dark:text-indigo-400" />
-                                    </div>
-                                    <div>
-                                        <h1 className="font-syne text-lg font-extrabold tracking-tight text-gray-900 dark:text-transparent dark:bg-clip-text">
-                                            Watermark
-                                        </h1>
-                                        <p className="text-[10px] text-gray-400 dark:text-white/30 tracking-wider uppercase">Editor</p>
-                                    </div>
+                    {/* Header */}
+                    <div className="px-5 pt-5 pb-4 border-b border-gray-200 dark:border-white/[0.06] relative z-10 flex-shrink-0">
+                        <div className="flex items-center justify-between mt-4">
+                            <div className="flex items-center gap-2.5">
+                                <div className="w-8 h-8 rounded-lg bg-indigo-100 dark:bg-indigo-600/20 border border-indigo-200 dark:border-indigo-500/30 flex items-center justify-center">
+                                    <Droplets className="w-4 h-4 text-indigo-500 dark:text-indigo-400" />
                                 </div>
-                                {images.length > 0 && (
-                                    <button
-                                        onClick={removeAllImages}
-                                        title="Remove all images"
-                                        className="flex items-center justify-center w-7 h-7 rounded-lg
+                                <div>
+                                    <h1 className="font-syne text-lg font-extrabold tracking-tight text-gray-900 dark:text-transparent dark:bg-clip-text">
+                                        Watermark
+                                    </h1>
+                                    <p className="text-[10px] text-gray-400 dark:text-white/30 tracking-wider uppercase">Editor</p>
+                                </div>
+                            </div>
+                            {images.length > 0 && (
+                                <button
+                                    onClick={removeAllImages}
+                                    title="Remove all images"
+                                    className="flex items-center justify-center w-7 h-7 rounded-lg
                                             bg-red-50 border border-red-200 hover:bg-red-100 text-red-500 hover:text-red-600
                                             dark:bg-red-500/10 dark:border-red-500/20 dark:hover:bg-red-500/20 dark:text-red-400 dark:hover:text-red-300
                                             transition-all"
-                                    >
-                                        <MdDelete className="text-sm" />
-                                    </button>
-                                )}
-                            </div>
+                                >
+                                    <MdDelete className="text-sm" />
+                                </button>
+                            )}
                         </div>
+                    </div>
 
-                        {/* Privacy badge */}
-                        <div className="px-4 pt-3 pb-0 flex-shrink-0 relative z-10">
-                            <PrivacyBadge />
-                        </div>
+                    {/* Privacy badge */}
+                    <div className="px-4 pt-3 pb-0 flex-shrink-0 relative z-10">
+                        <PrivacyBadge />
+                    </div>
 
-                        {/* Desktop Tab Bar */}
-                        <div className="flex mt-3 mx-4
+                    {/* Desktop Tab Bar */}
+                    <div className="flex mt-3 mx-4
                             bg-gray-100 dark:bg-white/[0.04]
                             border border-gray-200 dark:border-white/[0.06]
                             rounded-xl p-1 gap-1 flex-shrink-0 relative z-10">
-                            {TABS.map((tab) => (
-                                <DesktopTab
-                                    key={tab.id}
-                                    id={tab.id}
-                                    label={tab.label}
-                                    icon={tab.icon}
-                                    count={tab.count}
-                                    countColor={tab.countColor}
-                                    active={activeTab === tab.id}
-                                    onClick={() => setActiveTab(tab.id)}
-                                />
-                            ))}
-                        </div>
+                        {TABS.map((tab) => (
+                            <DesktopTab
+                                key={tab.id}
+                                id={tab.id}
+                                label={tab.label}
+                                icon={tab.icon}
+                                count={tab.count}
+                                countColor={tab.countColor}
+                                active={activeTab === tab.id}
+                                onClick={() => setActiveTab(tab.id)}
+                            />
+                        ))}
+                    </div>
 
-                        {/* Scrollable content */}
-                        <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4 relative z-10
+                    {/* Scrollable content */}
+                    <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4 relative z-10
                             [&::-webkit-scrollbar]:w-1
                             [&::-webkit-scrollbar-track]:bg-transparent
                             [&::-webkit-scrollbar-thumb]:bg-gray-200
                             dark:[&::-webkit-scrollbar-thumb]:bg-white/10
                             [&::-webkit-scrollbar-thumb]:rounded-full">
-                            {renderTabContent()}
-                        </div>
+                        {renderTabContent()}
+                    </div>
 
-                        {/* Undo / Redo footer */}
-                        {images.length > 0 && (
-                            <div className="px-4 py-3 border-t border-gray-200 dark:border-white/[0.06] flex items-center gap-2 flex-shrink-0 relative z-10">
-                                <button
-                                    onClick={undo}
-                                    disabled={!canUndo}
-                                    title="Undo (Ctrl+Z)"
-                                    className="flex items-center gap-1.5 flex-1 justify-center py-2 text-xs font-semibold rounded-lg
+                    {/* Undo / Redo footer */}
+                    {images.length > 0 && (
+                        <div className="px-4 py-3 border-t border-gray-200 dark:border-white/[0.06] flex items-center gap-2 flex-shrink-0 relative z-10">
+                            <button
+                                onClick={undo}
+                                disabled={!canUndo}
+                                title="Undo (Ctrl+Z)"
+                                className="flex items-center gap-1.5 flex-1 justify-center py-2 text-xs font-semibold rounded-lg
                                         bg-gray-100 border border-gray-200 text-gray-500
                                         hover:bg-gray-200 hover:text-gray-800
                                         dark:bg-white/[0.04] dark:border-white/[0.06] dark:text-white/50
                                         dark:hover:bg-white/[0.08] dark:hover:text-white/80
                                         disabled:opacity-30 disabled:cursor-not-allowed
                                         transition-all duration-150"
+                            >
+                                <Undo2 className="w-3.5 h-3.5" />
+                                Undo
+                            </button>
+                            <button
+                                onClick={redo}
+                                disabled={!canRedo}
+                                title="Redo (Ctrl+Shift+Z)"
+                                className="flex items-center gap-1.5 flex-1 justify-center py-2 text-xs font-semibold rounded-lg
+                                        bg-gray-100 border border-gray-200 text-gray-500
+                                        hover:bg-gray-200 hover:text-gray-800
+                                        dark:bg-white/[0.04] dark:border-white/[0.06] dark:text-white/50
+                                        dark:hover:bg-white/[0.08] dark:hover:text-white/80
+                                        disabled:opacity-30 disabled:cursor-not-allowed
+                                        transition-all duration-150"
+                            >
+                                Redo
+                                <Redo2 className="w-3.5 h-3.5" />
+                            </button>
+                        </div>
+                    )}
+
+                    {/* Version */}
+                    <div className="px-4 pb-3 flex items-center gap-1.5 relative z-10">
+                        <Image src={Logo} alt="Avexi" width={14} />
+                        <span className="text-[10px] text-gray-400 dark:text-white/20 tracking-wider">Avexi · Watermark v5</span>
+                    </div>
+                </div>
+
+                {/* ── Right: Preview area ── */}
+                <div className="flex-1 overflow-auto h-screen w-full bg-gray-50 dark:bg-[#0a0a12]">
+                    <PreviewArea />
+                </div>
+            </div>
+
+            {/* ── MOBILE layout (< lg) ─────────────────────────────────────────── */}
+            <div className="lg:hidden flex flex-col min-h-screen bg-gray-50 dark:bg-[#0a0a12] w-full">
+
+                {/* Mobile top bar */}
+                <div className="sticky top-0 z-30 flex items-center justify-between px-4 py-3
+                        bg-white/95 dark:bg-[#0d0d1a]/95 backdrop-blur-md
+                        border-b border-indigo-100 dark:border-indigo-500/20 shadow-lg">
+                    <div className="flex items-center gap-2.5 min-w-0">
+                        <div className="w-7 h-7 rounded-lg
+                                bg-indigo-100 border border-indigo-200
+                                dark:bg-indigo-600/20 dark:border-indigo-500/30
+                                flex items-center justify-center flex-shrink-0">
+                            <Droplets className="w-3.5 h-3.5 text-indigo-500 dark:text-indigo-400" />
+                        </div>
+                        <div className="min-w-0">
+                            <h1 className="text-sm font-bold text-gray-900 dark:text-white truncate leading-tight">
+                                Watermark Editor
+                            </h1>
+                            <div className="flex items-center gap-1">
+                                <Shield className="w-2.5 h-2.5 text-indigo-500 dark:text-indigo-400" />
+                                <p className="text-[10px] text-indigo-600 dark:text-indigo-400 font-medium">Client-Side</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="flex items-center gap-1.5 flex-shrink-0">
+                        {images.length > 0 && (
+                            <>
+                                <button
+                                    onClick={undo}
+                                    disabled={!canUndo}
+                                    className="p-2 rounded-lg
+                                            bg-gray-100 border border-gray-200 text-gray-400 disabled:opacity-30
+                                            hover:text-gray-700 dark:bg-white/5 dark:border-white/10
+                                            dark:text-white/50 dark:hover:text-white/80 transition-colors"
                                 >
-                                    <Undo2 className="w-3.5 h-3.5" />
-                                    Undo
+                                    <Undo2 className="w-4 h-4" />
                                 </button>
                                 <button
                                     onClick={redo}
                                     disabled={!canRedo}
-                                    title="Redo (Ctrl+Shift+Z)"
-                                    className="flex items-center gap-1.5 flex-1 justify-center py-2 text-xs font-semibold rounded-lg
-                                        bg-gray-100 border border-gray-200 text-gray-500
-                                        hover:bg-gray-200 hover:text-gray-800
-                                        dark:bg-white/[0.04] dark:border-white/[0.06] dark:text-white/50
-                                        dark:hover:bg-white/[0.08] dark:hover:text-white/80
-                                        disabled:opacity-30 disabled:cursor-not-allowed
-                                        transition-all duration-150"
+                                    className="p-2 rounded-lg
+                                            bg-gray-100 border border-gray-200 text-gray-400 disabled:opacity-30
+                                            hover:text-gray-700 dark:bg-white/5 dark:border-white/10
+                                            dark:text-white/50 dark:hover:text-white/80 transition-colors"
                                 >
-                                    Redo
-                                    <Redo2 className="w-3.5 h-3.5" />
+                                    <Redo2 className="w-4 h-4" />
                                 </button>
-                            </div>
-                        )}
-
-                        {/* Version */}
-                        <div className="px-4 pb-3 flex items-center gap-1.5 relative z-10">
-                            <Image src={Logo} alt="Avexi" width={14} />
-                            <span className="text-[10px] text-gray-400 dark:text-white/20 tracking-wider">Avexi · Watermark v5</span>
-                        </div>
-                    </div>
-
-                    {/* ── Right: Preview area ── */}
-                    <div className="flex-1 overflow-auto h-screen w-full bg-gray-50 dark:bg-[#0a0a12]">
-                        <PreviewArea />
-                    </div>
-                </div>
-
-                {/* ── MOBILE layout (< lg) ─────────────────────────────────────────── */}
-                <div className="lg:hidden flex flex-col min-h-screen bg-gray-50 dark:bg-[#0a0a12] w-full">
-
-                    {/* Mobile top bar */}
-                    <div className="sticky top-0 z-30 flex items-center justify-between px-4 py-3
-                        bg-white/95 dark:bg-[#0d0d1a]/95 backdrop-blur-md
-                        border-b border-indigo-100 dark:border-indigo-500/20 shadow-lg">
-                        <div className="flex items-center gap-2.5 min-w-0">
-                            <div className="w-7 h-7 rounded-lg
-                                bg-indigo-100 border border-indigo-200
-                                dark:bg-indigo-600/20 dark:border-indigo-500/30
-                                flex items-center justify-center flex-shrink-0">
-                                <Droplets className="w-3.5 h-3.5 text-indigo-500 dark:text-indigo-400" />
-                            </div>
-                            <div className="min-w-0">
-                                <h1 className="text-sm font-bold text-gray-900 dark:text-white truncate leading-tight">
-                                    Watermark Editor
-                                </h1>
-                                <div className="flex items-center gap-1">
-                                    <Shield className="w-2.5 h-2.5 text-indigo-500 dark:text-indigo-400" />
-                                    <p className="text-[10px] text-indigo-600 dark:text-indigo-400 font-medium">Client-Side</p>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div className="flex items-center gap-1.5 flex-shrink-0">
-                            {images.length > 0 && (
-                                <>
-                                    <button
-                                        onClick={undo}
-                                        disabled={!canUndo}
-                                        className="p-2 rounded-lg
-                                            bg-gray-100 border border-gray-200 text-gray-400 disabled:opacity-30
-                                            hover:text-gray-700 dark:bg-white/5 dark:border-white/10
-                                            dark:text-white/50 dark:hover:text-white/80 transition-colors"
-                                    >
-                                        <Undo2 className="w-4 h-4" />
-                                    </button>
-                                    <button
-                                        onClick={redo}
-                                        disabled={!canRedo}
-                                        className="p-2 rounded-lg
-                                            bg-gray-100 border border-gray-200 text-gray-400 disabled:opacity-30
-                                            hover:text-gray-700 dark:bg-white/5 dark:border-white/10
-                                            dark:text-white/50 dark:hover:text-white/80 transition-colors"
-                                    >
-                                        <Redo2 className="w-4 h-4" />
-                                    </button>
-                                    <button
-                                        onClick={removeAllImages}
-                                        className="p-2 rounded-lg
+                                <button
+                                    onClick={removeAllImages}
+                                    className="p-2 rounded-lg
                                             bg-red-50 border border-red-200 text-red-500 hover:text-red-600
                                             dark:bg-red-500/10 dark:border-red-500/20 dark:text-red-400 dark:hover:text-red-300
                                             transition-colors"
-                                    >
-                                        <MdDelete className="text-base" />
-                                    </button>
-                                </>
-                            )}
-                        </div>
-                    </div>
-
-                    {/* Preview — padded for tab bar */}
-                    <div className="flex-1 pb-20">
-                        <PreviewArea />
-                    </div>
-
-                    {/* Bottom Sheet */}
-                    <BottomSheet
-                        open={sheetOpen}
-                        onClose={() => setSheetOpen(false)}
-                        snapPoints={[48, 88]}
-                    >
-                        {/* Tab switcher inside sheet */}
-                        <div className="flex
-                            bg-gray-100 dark:bg-white/[0.04]
-                            border border-gray-200 dark:border-white/[0.06]
-                            rounded-xl p-1 gap-1 flex-shrink-0">
-                            {TABS.map((tab) => (
-                                <DesktopTab
-                                    key={tab.id}
-                                    id={tab.id}
-                                    label={tab.label}
-                                    icon={tab.icon}
-                                    count={tab.count}
-                                    countColor={tab.countColor}
-                                    active={activeTab === tab.id}
-                                    onClick={() => setActiveTab(tab.id)}
-                                />
-                            ))}
-                        </div>
-                        {renderTabContent()}
-                    </BottomSheet>
-
-                    {/* Mobile Tab Bar */}
-                    <div className="relative w-full">
-                        <MobileTabBar
-                            tabs={TABS}
-                            activeTab={activeTab}
-                            onTabChange={setActiveTab}
-                            onOpen={() => setSheetOpen(true)}
-                            panelOpen={sheetOpen}
-                        />
+                                >
+                                    <MdDelete className="text-base" />
+                                </button>
+                            </>
+                        )}
                     </div>
                 </div>
 
-            </div >
-        );
+                {/* Preview — padded for tab bar */}
+                <div className="flex-1 pb-20">
+                    <PreviewArea />
+                </div>
+
+                {/* Bottom Sheet */}
+                <BottomSheet
+                    open={sheetOpen}
+                    onClose={() => setSheetOpen(false)}
+                    snapPoints={[48, 88]}
+                >
+                    {/* Tab switcher inside sheet */}
+                    <div className="flex
+                            bg-gray-100 dark:bg-white/[0.04]
+                            border border-gray-200 dark:border-white/[0.06]
+                            rounded-xl p-1 gap-1 flex-shrink-0">
+                        {TABS.map((tab) => (
+                            <DesktopTab
+                                key={tab.id}
+                                id={tab.id}
+                                label={tab.label}
+                                icon={tab.icon}
+                                count={tab.count}
+                                countColor={tab.countColor}
+                                active={activeTab === tab.id}
+                                onClick={() => setActiveTab(tab.id)}
+                            />
+                        ))}
+                    </div>
+                    {renderTabContent()}
+                </BottomSheet>
+
+                {/* Mobile Tab Bar */}
+                <div className="relative w-full">
+                    <MobileTabBar
+                        tabs={TABS}
+                        activeTab={activeTab}
+                        onTabChange={setActiveTab}
+                        onOpen={() => setSheetOpen(true)}
+                        panelOpen={sheetOpen}
+                    />
+                </div>
+            </div>
+
+        </div >
+    );
 }
 
 function WatermarkPage() {
