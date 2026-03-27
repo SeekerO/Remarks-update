@@ -1,7 +1,7 @@
 {
   "name": "Avexi",
   "short_name": "Avexi",
-  "description": "Professional workspace suite for image editing, document management, and election information tools.",
+  "description": "Professional workspace suite for image editing and document management.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",

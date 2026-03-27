@@ -84,7 +84,7 @@ import { GiCardExchange } from "react-icons/gi";
 import { IoWater } from "react-icons/io5";
 import { RiAdminFill } from "react-icons/ri";
 import { MdOutlineAdminPanelSettings, MdOpacity } from "react-icons/md";
-import { LayoutDashboard, FileCog, FolderClock, TestTube, Logs, MessageCircle } from "lucide-react"
+import { LayoutDashboard, FileCog, FolderClock, TestTube, Logs, MessageCircle, Folder } from "lucide-react"
 
 export type UserRole = "admin" | "standard";
 
@@ -190,7 +190,7 @@ export const navItems: NavItem[] = [
   {
     name: "Directory",
     href: "/Directory",
-    icon: GoFileDirectoryFill,
+    icon: Folder,
     active: false,
     pagePermissionId: "directory",
     sublinks: [

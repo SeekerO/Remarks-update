@@ -52,8 +52,6 @@ export const metadata: Metadata = {
     "logo maker",
     "PDF converter",
     "voter registration",
-    "COMELEC tools",
-    "election information",
     "document management",
     "Filipino workspace",
     "Avexi",
