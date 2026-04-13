@@ -42,7 +42,7 @@ export const FooterControlsBlock = ({
     });
 
     return (
-        <div className="space-y-3 pt-2 border-t border-gray-100 dark:border-gray-800">
+        <div className="space-y-3 pt-2 mb-20 border-t border-gray-100 dark:border-gray-800">
 
             {/* Auto Fit toggle */}
             <div className="flex items-center justify-between py-2 px-3 rounded-lg bg-green-50 dark:bg-green-900/10 border border-green-200 dark:border-green-800/40">
