@@ -19,7 +19,7 @@ const UserCard = React.memo(({
     formatLastOnline: (ts: number) => string;
 }) => {
     const isSelf = user.uid === currentUserId;
-    console.log(user)
+
     return (
         <motion.div
             layout

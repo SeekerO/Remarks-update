@@ -64,7 +64,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
                     isPermitted = userData.isPermitted !== undefined ? userData.isPermitted : true;
                     allowedPages = userData.allowedPages;
                 }
-                console.log(allowedPages)
+
                 const userWithRoles: CustomUser = {
                     ...currentUser,
                     isAdmin,

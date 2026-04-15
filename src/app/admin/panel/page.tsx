@@ -127,7 +127,7 @@ export default function AdminPanel() {
                             { label: "Total users", value: allUsers.length, color: "text-gray-800 dark:text-white/80" },
                             { label: "Online now", value: onlineCount, color: "text-emerald-600 dark:text-emerald-400" },
                             { label: "Admins", value: adminCount, color: "text-indigo-600 dark:text-indigo-400" },
-                            { label: "Chat enabled", value: allUsers.filter(u => u.isPermitted).length, color: "text-amber-600 dark:text-amber-400" },
+                            { label: "Permissions enabled", value: allUsers.filter(u => u.isPermitted).length, color: "text-amber-600 dark:text-amber-400" },
                         ].map(({ label, value, color }) => (
                             <div key={label} className="bg-white dark:bg-white/[0.03] border border-black/[0.07] dark:border-white/[0.07] rounded-xl p-4">
                                 <p className="text-[10px] font-medium uppercase tracking-[0.06em] text-gray-400 dark:text-white/25 mb-1.5">{label}</p>

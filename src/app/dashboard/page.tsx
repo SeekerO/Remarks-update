@@ -95,7 +95,7 @@ export default function DashboardPage() {
     const { user } = useAuth();
     const [time, setTime] = useState("");
     const [date, setDate] = useState("");
-    console.log(user);
+
 
     /* Live clock */
     useEffect(() => {
