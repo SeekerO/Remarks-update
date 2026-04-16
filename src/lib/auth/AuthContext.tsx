@@ -12,6 +12,7 @@ import {
 } from "firebase/auth";
 import { ref, set, onDisconnect, serverTimestamp, get, onValue } from "firebase/database";
 import { saveUserProfile } from "./saveUserProfile";
+import { useOfflineLogSync } from "@/lib/hooks/useOfflineLogSync";
 
 interface CustomUser extends User {
     isAdmin?: boolean;
@@ -35,6 +36,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
     const userRef = useRef(user);
     userRef.current = user;
+
+    useOfflineLogSync();
 
     useEffect(() => {
         let unsubscribePermissions: (() => void) | null = null;

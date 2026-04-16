@@ -12,7 +12,7 @@ import Image from 'next/image';
 import Logo from "@/../public/Avexi.png";
 import ConversionItem from './item';
 import { useAuth } from '@/lib/auth/AuthContext';
-import { addLog } from '@/lib/firebase/firebase.actions.firestore/logsFirestore';
+import { logActivity } from "@/lib/firebase/firebase.actions.firestore/offlineLogger";
 
 export type ConversionMode =
     'pdf-to-word' | 'pdf-to-excel' | 'word-to-pdf' | 'excel-to-pdf' |
@@ -188,7 +188,7 @@ const PDFConverter: React.FC = () => {
 
                     if (!user) return;
 
-                    await addLog({
+                    await logActivity({
                         userName: user.displayName ?? "Unknown",
                         userEmail: user.email ?? "unknown@email.com",
                         function: `"download_by_${mode}`,

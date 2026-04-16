@@ -176,8 +176,8 @@ export default function PhilippineMap() {
         const directoryRegionKey = REGION_LABEL_TO_DIRECTORY_KEY[region] ?? region;
         const formattedRegion = directoryRegionKey.toLowerCase().replace(/\s+/g, "");
         const formattedCity = city.toLowerCase().replace(/\s+/g, "");
-        const officeCaps = formattedCity === "caraga" || formattedCity === "barmm" ? "Offices" : "offices";
-        const url = `https://comelec.gov.ph/?r=ContactInformation/FieldOffices/CityMunicipalOffices/${formattedRegion + officeCaps}#${formattedCity}`;
+
+        const url = `https://comelec.gov.ph/?r=ContactInformation/FieldOffices/CityMunicipalOffices/${formattedRegion + "offices"}#${formattedCity}`;
         if (region.toLowerCase() === "ncr") return window.open("https://comelec.gov.ph/?r=ContactInformation/FieldOffices/NCROffices", "_blank", "noopener,noreferrer");
         window.open(url, "_blank", "noopener,noreferrer");
     };

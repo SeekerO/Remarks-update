@@ -362,7 +362,7 @@ const SidebarContent = ({
                 </button>
 
                 {!collapsed && (
-                    <p className="text-center mt-1.5 text-[10px] text-gray-300 dark:text-white/10 font-mono">Desmos v5.0.0</p>
+                    <p className="text-center mt-1.5 text-[10px] text-gray-300 dark:text-white/10 font-mono">Avexi v5.0.0</p>
                 )}
             </div>
         </>

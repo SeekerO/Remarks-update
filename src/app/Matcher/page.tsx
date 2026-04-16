@@ -7,7 +7,7 @@ import { useAuth } from "../../lib/auth/AuthContext";
 import { IoAnalytics } from "react-icons/io5";
 import { MdDelete } from 'react-icons/md';
 import { NoResults, LoadingState, DataSetPanel, ResultItem } from "./components/supporting";
-import { addLog } from "@/lib/firebase/firebase.actions.firestore/logsFirestore";
+import { logActivity } from "@/lib/firebase/firebase.actions.firestore/offlineLogger";
 
 const Matcher = () => {
     const { user } = useAuth();
@@ -34,7 +34,7 @@ const Matcher = () => {
             );
             if (!user) return;
 
-            await addLog({
+            await logActivity({
                 userName: user.displayName ?? "Unknown",
                 userEmail: user.email ?? "unknown@email.com",
                 function: `process_comparison_analysis`,

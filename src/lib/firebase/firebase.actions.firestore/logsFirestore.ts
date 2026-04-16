@@ -199,7 +199,6 @@ export async function addLogsBatch(
     );
 
     await Promise.all(promises);
-    console.log(`✅ Added ${logs.length} logs to Firestore.`);
 }
 
 // ── UPDATE ────────────────────────────────────────────────────────────────────

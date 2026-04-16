@@ -18,7 +18,7 @@ import {
   deleteFaq,
   setFaqTimer,
 } from "@/lib/firebase/firebase.actions.firestore/faqFirestore";
-import { addLog } from "@/lib/firebase/firebase.actions.firestore/logsFirestore";
+import { logActivity } from "@/lib/firebase/firebase.actions.firestore/offlineLogger";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -284,7 +284,7 @@ function AddFaqModal({
 
     if (!user) return;
 
-    await addLog({
+    await logActivity({
       userName: user.displayName ?? "Unknown",
       userEmail: user.email ?? "unknown@email.com",
       function: `addTopic_${topic}`,

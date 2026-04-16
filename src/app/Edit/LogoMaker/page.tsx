@@ -10,7 +10,7 @@ import {
 import { IoLogoBuffer } from "react-icons/io";
 
 import { useAuth } from "@/lib/auth/AuthContext";
-import { addLog } from "@/lib/firebase/firebase.actions.firestore/logsFirestore";
+import { logActivity } from "@/lib/firebase/firebase.actions.firestore/offlineLogger";
 
 /* ════════════════════════════════════════════
    TYPES
@@ -314,7 +314,7 @@ export default function LogoMaker() {
 
         if (!user) return;
 
-        await addLog({
+        await logActivity({
             userName: user.displayName ?? "Unknown",
             userEmail: user.email ?? "unknown@email.com",
             function: "downloadCanvasLogoMaker",

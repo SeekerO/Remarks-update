@@ -14,7 +14,7 @@ import BatchActions from "./BatchActions";
 import { useImageKeyNav } from "./hooks/useImageKeyNav";
 import { useInView } from "../lib/hooks/useInView";
 import { useAuth } from "@/lib/auth/AuthContext";
-import { addLog } from "@/lib/firebase/firebase.actions.firestore/logsFirestore";
+import { logActivity } from "@/lib/firebase/firebase.actions.firestore/offlineLogger";
 
 type GridSize = 1 | 2 | 3;
 
@@ -287,7 +287,7 @@ export default function PreviewArea() {
             await exportAsZip(imageBlobGetters.current, images.map(img => img.file.name), fileName.replace(/\./g, ' ') || 'watermarked_images', exportOptions, imageCanvases.current, (percent) => setDownloadProgress(40 + Math.round(percent * 0.6)), signal);
             if (!user) return
 
-            await addLog({
+            await logActivity({
                 userName: user.displayName ?? "Unknown",
                 userEmail: user.email ?? "unknown@email.com",
                 function: `downloadZIP_allImages_${images.length}`,
@@ -333,7 +333,7 @@ export default function PreviewArea() {
 
             if (!user) return
 
-            await addLog({
+            await logActivity({
                 userName: user.displayName ?? "Unknown",
                 userEmail: user.email ?? "unknown@email.com",
                 function: `downloadZIP_selectedImages_${selectedImages.length}`,

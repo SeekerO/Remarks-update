@@ -1,9 +1,9 @@
 'use client';
 
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { Upload, Download, X, Loader2, Image as ImageIcon, RotateCcw, Sparkles } from 'lucide-react';
-import { IoLogoBuffer, IoIosColorWand, IoIosPin } from "react-icons/io";
-import { addLog } from '@/lib/firebase/firebase.actions.firestore/logsFirestore';
+import { Upload, Download, X, Loader2, RotateCcw, Sparkles } from 'lucide-react';
+import { IoIosColorWand } from "react-icons/io";
+import { logActivity } from "@/lib/firebase/firebase.actions.firestore/offlineLogger";
 import { useAuth } from '@/lib/auth/AuthContext';
 
 export default function BackgroundRemover() {
@@ -106,7 +106,7 @@ export default function BackgroundRemover() {
 
         if (!user) return
 
-        await addLog({
+        await logActivity({
             userName: user.displayName ?? "Unknown",
             userEmail: user.email ?? "unknown@email.com",
             function: "downloadImageBackgroundRemoved",

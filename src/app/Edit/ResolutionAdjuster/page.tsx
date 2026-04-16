@@ -2,9 +2,9 @@
 
 import React, { useState, useRef, useCallback } from 'react';
 import { Upload, Download, RefreshCcw, ImageIcon, Maximize2 } from 'lucide-react';
-import { MdOutlineAdminPanelSettings, MdOpacity } from "react-icons/md";
+import { MdOpacity } from "react-icons/md";
 import { useAuth } from '@/lib/auth/AuthContext';
-import { addLog } from '@/lib/firebase/firebase.actions.firestore/logsFirestore';
+import { logActivity } from "@/lib/firebase/firebase.actions.firestore/offlineLogger";
 
 interface ImageMeta {
     name: string;
@@ -65,7 +65,7 @@ export default function ResolutionAdjuster() {
         reader.onload = (e) => processImage(e.target?.result as string, file.name, file.size);
         if (!user) return
 
-        await addLog({
+        await logActivity({
             userName: user.displayName ?? "Unknown",
             userEmail: user.email ?? "unknown@email.com",
             function: "downloadImageBackgroundRemoved",

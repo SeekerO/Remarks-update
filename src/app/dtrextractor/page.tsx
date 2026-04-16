@@ -3,7 +3,7 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { FileCog } from "lucide-react"
 import { useAuth } from '@/lib/auth/AuthContext';
-import { addLog } from '@/lib/firebase/firebase.actions.firestore/logsFirestore';
+import { logActivity } from "@/lib/firebase/firebase.actions.firestore/offlineLogger";
 // ─── Types ────────────────────────────────────────────────────────────────────
 interface DtrRow { day: number; morningIn: string; lunchOut: string; afternoonOut: string; }
 interface Employee {
@@ -170,7 +170,7 @@ const TimeCardExtractor: React.FC = () => {
 
             if (!user) return;
 
-            await addLog({
+            await logActivity({
                 userName: user.displayName ?? "Unknown",
                 userEmail: user.email ?? "unknown@email.com",
                 function: `process_dtr_${file.name}`,
