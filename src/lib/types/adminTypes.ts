@@ -114,7 +114,7 @@ export const navItems: NavItem[] = [
     sublinks: [
       {
         name: "Watermark",
-        href: "/edit/watermark",
+        href: "/Edit/watermark",
         icon: IoWater,
         active: true,
         pagePermissionId: "watermark",
@@ -122,7 +122,7 @@ export const navItems: NavItem[] = [
       },
       {
         name: "BG Remover",
-        href: "/edit/bgremover",
+        href: "/Edit/bgremover",
         icon: IoIosColorWand,
         active: true,
         pagePermissionId: "bgremover",
@@ -130,7 +130,7 @@ export const navItems: NavItem[] = [
       },
       {
         name: "Logo Editor",
-        href: "/edit/logoeditor",
+        href: "/Edit/logoeditor",
         icon: IoLogoBuffer,
         active: true,
         pagePermissionId: "logoeditor",
@@ -138,7 +138,7 @@ export const navItems: NavItem[] = [
       },
       {
         name: "Resolution Adjuster",
-        href: "/edit/resadjuster",
+        href: "/Edit/resadjuster",
         icon: MdOpacity,
         active: true,
         pagePermissionId: "resadjuster",
