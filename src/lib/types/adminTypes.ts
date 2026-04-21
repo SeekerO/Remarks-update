@@ -76,7 +76,6 @@ export interface PermissionsModalProps {
 
 
 import { Search, Settings } from "lucide-react";
-import { GoFileDirectoryFill } from "react-icons/go";
 import { IoLogoBuffer, IoIosColorWand, IoIosPin } from "react-icons/io";
 import { FaRegFileImage, FaFileAlt } from "react-icons/fa";
 import { FaRegNoteSticky, FaFilePen } from "react-icons/fa6";
@@ -123,7 +122,7 @@ export const navItems: NavItem[] = [
       },
       {
         name: "BG Remover",
-        href: "/edit/backgroundremover",
+        href: "/edit/bgremover",
         icon: IoIosColorWand,
         active: true,
         pagePermissionId: "bgremover",
@@ -131,7 +130,7 @@ export const navItems: NavItem[] = [
       },
       {
         name: "Logo Maker",
-        href: "/edit/logoMaker",
+        href: "/edit/logomaker",
         icon: IoLogoBuffer,
         active: true,
         pagePermissionId: "logomaker",

@@ -58,14 +58,14 @@
       "name": "Image Watermark",
       "short_name": "Watermark",
       "description": "Add watermarks to your images",
-      "url": "/Edit/Watermarkv5",
+      "url": "/edit/watermarkv5",
       "icons": [{ "src": "/Avexi", "sizes": "192x192" }]
     },
     {
       "name": "FAQ",
       "short_name": "FAQ",
       "description": "Voter registration FAQ",
-      "url": "/Documents/Faq",
+      "url": "/documents/faq",
       "icons": [{ "src": "/Avexi", "sizes": "192x192" }]
     }
   ]
