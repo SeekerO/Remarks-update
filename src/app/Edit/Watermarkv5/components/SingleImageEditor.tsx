@@ -8,8 +8,10 @@ import { useTemplateActions } from "../components/hooks/useTemplateActions";
 import { applyPhotoAdjustments } from '../lib/utils/canvasFilters';
 import { ExportOptions } from '../lib/types/watermark';
 import { AlertTriangle, CheckCircle2 } from "lucide-react";
+import { applyTextWatermark } from '../lib/utils/metadata';
 
 interface SingleImageEditorProps {
+    metadata: any;
     image: any;
     index: number;
     onCanvasReady: (index: number, getBlob: () => Promise<Blob | null>, canvas: HTMLCanvasElement) => void;
@@ -88,6 +90,7 @@ export default function SingleImageEditor({
     index,
     onCanvasReady,
     exportOptions,
+    metadata
 }: SingleImageEditorProps) {
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const [isRendering, setIsRendering] = useState(false);
@@ -273,10 +276,13 @@ export default function SingleImageEditor({
             await drawFooter(ctx, f.url, imgWidth, imgHeight, f.settings, shadowSettingsToUse, shadowTargetToUse, signal);
         }
 
+        
+
         if (signal.aborted) return;
         applyPhotoAdjustments(canvas, photoAdjustmentsToUse);
 
         if (signal.aborted) return;
+          applyTextWatermark(canvas, metadata);
         onCanvasReady(
             index,
             async () => new Promise(resolve => canvas.toBlob(resolve, 'image/png')),
