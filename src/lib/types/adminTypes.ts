@@ -1,7 +1,7 @@
 // --- Type Definitions ---\r\n
 export const AVAILABLE_PAGES = [
   { id: "dashboard", name: "Dashboard", category: "Dashboard" },
-  { id: "watermarkv5", name: "Watermark V5", category: "Edit" },
+  { id: "watermark", name: "Watermark", category: "Edit" },
   { id: "bgremover", name: "BG Remover", category: "Edit" },
   { id: "logoeditor", name: "Logo Editor", category: "Edit" },
   { id: "resadjuster", name: "Resolution Adjuster", category: "Edit" },
@@ -17,7 +17,7 @@ export const AVAILABLE_PAGES = [
 ] as const;
 
 export const TOOL_META: Record<string, { description: string; accent: string }> = {
-  "Watermark V5": { description: "Batch watermark images with logos and footers", accent: "bg-indigo-500/10" },
+  "Watermark": { description: "Batch watermark images with logos and footers", accent: "bg-indigo-500/10" },
   "BG Remover": { description: "Remove image backgrounds in-browser", accent: "bg-violet-500/10" },
   "Logo Editor": { description: "Build logos with shapes, text and images", accent: "bg-purple-500/10" },
   "Resolution Adjuster": { description: "Downsample images for web or print", accent: "bg-blue-500/10" },
@@ -113,11 +113,11 @@ export const navItems: NavItem[] = [
     active: false,
     sublinks: [
       {
-        name: "Watermark V5",
-        href: "/edit/watermarkv5",
+        name: "Watermark",
+        href: "/edit/watermark",
         icon: IoWater,
         active: true,
-        pagePermissionId: "watermarkv5",
+        pagePermissionId: "watermark",
         sublinks: [],
       },
       {

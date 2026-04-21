@@ -4,7 +4,7 @@ import { useImageEditor } from "./ImageEditorContext";
 import ModalPreview from "./ModalPreview";
 import { MdDelete } from "react-icons/md";
 import { FiDownload, FiMaximize2 } from "react-icons/fi";
-import { useTemplateActions } from "../components/hooks/useTemplateActions";
+import { useTemplateActions } from "./hooks/useTemplateActions";
 import { applyPhotoAdjustments } from '../lib/utils/canvasFilters';
 import { ExportOptions } from '../lib/types/watermark';
 import { AlertTriangle, CheckCircle2 } from "lucide-react";
