@@ -32,6 +32,7 @@ import MetadataInjector, {
   defaultMetadata,
   ImageMetadata,
 } from "./components/Metadatainjector";
+import HowtoUseModal from "./components/HowtoUseModal";
 
 type TabId = "upload" | "watermark" | "adjust" | "metadata";
 
@@ -251,7 +252,6 @@ function MobileTabBar({
 
 // ── Desktop Tab Button ────────────────────────────────────────────────────────
 function DesktopTab({
-  id,
   label,
   icon: Icon,
   count,
@@ -279,6 +279,7 @@ function DesktopTab({
     >
       <div className="relative mb-1">
         <Icon className="w-4 h-4" />
+
         {count !== undefined && count > 0 && (
           <span
             className={`absolute -top-1.5 -right-2 min-w-[14px] h-[14px] px-0.5 rounded-full text-[9px] font-bold text-white flex items-center justify-center ${countColor}`}
@@ -520,6 +521,10 @@ function WatermarkPageContent() {
           {/* Privacy badge */}
           <div className="px-4 pt-3 pb-0 flex-shrink-0 relative z-10">
             <PrivacyBadge />
+          </div>
+
+          <div className="mx-4 mt-3">
+            <HowtoUseModal />
           </div>
 
           {/* Desktop Tab Bar */}
