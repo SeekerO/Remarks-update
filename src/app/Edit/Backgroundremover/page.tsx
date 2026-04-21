@@ -139,7 +139,7 @@ export default function BackgroundRemover() {
                             <IoIosColorWand className="w-4 h-4 text-indigo-400" />
                         </div>
                         <div>
-                            <h1 className="font-syne text-lg font-extrabold tracking-tight text-slate-800 dark:text-transparent dark:bg-clip-text">Background Remover</h1>
+                            <h1 className="font-syne text-lg font-extrabold  text-slate-800 dark:text-slate-100 dark:bg-clip-text">Background Remover</h1>
                             <p className="text-[10px] text-gray-400 dark:text-white/30 tracking-wider uppercase">100% client-side · your images never leave this device</p>
                         </div>
                     </div>

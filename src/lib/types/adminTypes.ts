@@ -155,7 +155,7 @@ export const navItems: NavItem[] = [
     sublinks: [
       {
         name: "FAQ",
-        href: "/Documents/Faq",
+        href: "/document/faq",
         icon: FaFileAlt,
         active: true,
         pagePermissionId: "faq",
@@ -163,7 +163,7 @@ export const navItems: NavItem[] = [
       },
       {
         name: "Remarks",
-        href: "/Documents/Remarks",
+        href: "/document/remarks",
         icon: FaFilePen,
         active: true,
         pagePermissionId: "remarks",
@@ -171,7 +171,7 @@ export const navItems: NavItem[] = [
       },
       {
         name: "PDF",
-        href: "/Documents/Pdf",
+        href: "/document/pdf",
         icon: GiCardExchange,
         active: true,
         pagePermissionId: "pdf",

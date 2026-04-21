@@ -563,8 +563,7 @@ const FAQ = () => {
       {/* Content */}
       <div className="relative z-10 flex flex-col h-full max-w-4xl w-full mx-auto px-6 py-6">
 
-        {/* Breadcrumb */}
-        <div className="mb-4"><BreadCrumb /></div>
+       
 
         {/* Header */}
         <div className="flex items-start justify-between mb-6">
@@ -573,7 +572,7 @@ const FAQ = () => {
               <div className="w-8 h-8 rounded-lg bg-indigo-600/20 border border-indigo-500/30 flex items-center justify-center">
                 <FaFileAlt className="w-4 h-4 text-indigo-400" />
               </div>
-              <h1 className="font-syne text-2xl font-extrabold tracking-tight text-slate-800 dark:text-transparent dark:bg-clip-text">FAQ</h1>
+              <h1 className="font-syne text-2xl font-extrabold tracking-tight text-slate-800 dark:text-slate-100 dark:bg-clip-text">FAQ</h1>
               {activeTimers > 0 && (
                 <span className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold
                   bg-indigo-500/20 border border-indigo-500/30 text-indigo-300">

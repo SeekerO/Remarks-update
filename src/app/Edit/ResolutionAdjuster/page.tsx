@@ -109,7 +109,7 @@ export default function ResolutionAdjuster() {
                             <MdOpacity className="w-4 h-4 text-indigo-400" />
                         </div>
                         <div>
-                            <h1 className="font-syne text-lg font-extrabold tracking-tight text-slate-800 dark:text-transparent dark:bg-clip-text">Resolution Adjuster</h1>
+                            <h1 className="font-syne text-lg font-extrabold text-slate-800 dark:text-slate-100 dark:bg-clip-text">Resolution Adjuster</h1>
                             <p className="text-xs text-gray-400 dark:text-white/30 mt-0.5">Client-side image downsampling · no upload required</p>
                         </div>
                     </div>

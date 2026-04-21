@@ -381,7 +381,7 @@ function WatermarkPageContent() {
                                     <Droplets className="w-4 h-4 text-indigo-500 dark:text-indigo-400" />
                                 </div>
                                 <div>
-                                    <h1 className="font-syne text-lg font-extrabold tracking-tight text-gray-900 dark:text-transparent dark:bg-clip-text">
+                                    <h1 className="font-syne text-lg font-extrabold text-gray-900 dark:text-slate-100 dark:bg-clip-text">
                                         Watermark
                                     </h1>
                                     <p className="text-[10px] text-gray-400 dark:text-white/30 tracking-wider uppercase">Editor</p>

@@ -7,12 +7,11 @@ import {
     AlertCircle, Shield, Moon, Sun
 } from 'lucide-react';
 import { GiCardExchange } from "react-icons/gi";
-import { wordToPDF, pdfToWord, excelToPDF, pdfToExcel, htmlToPDF, combinePDFs, imagesToPDF } from './conversion_function';
+import { wordToPDF, pdfToWord, excelToPDF, pdfToExcel, htmlToPDF, combinePDFs, imagesToPDF, Logger } from './conversion_function';
 import Image from 'next/image';
 import Logo from "@/../public/Avexi.png";
 import ConversionItem from './item';
 import { useAuth } from '@/lib/auth/AuthContext';
-import { logActivity } from "@/lib/firebase/firebase.actions.firestore/offlineLogger";
 
 export type ConversionMode =
     'pdf-to-word' | 'pdf-to-excel' | 'word-to-pdf' | 'excel-to-pdf' |
@@ -48,7 +47,7 @@ const PDFConverter: React.FC = () => {
     const [dragActive, setDragActive] = useState(false);
     const [isDarkMode, setIsDarkMode] = useState(true);
     const fileInputRef = useRef<HTMLInputElement>(null);
-    const { user } = useAuth()
+    const { user } = useAuth();
 
     // Dark Mode Toggle Logic
     useEffect(() => {
@@ -157,6 +156,10 @@ const PDFConverter: React.FC = () => {
                 let blob: Blob;
                 if (mode === 'combine-pdf') blob = await combinePDFs(files);
                 else blob = await imagesToPDF(files);
+
+                // ✅ Logger called with user from hook + mode string
+                await Logger(user, mode);
+
                 const url = URL.createObjectURL(blob);
                 const outputName = mode === 'combine-pdf' ? 'combined.pdf' : 'images.pdf';
                 setFiles([{
@@ -186,14 +189,8 @@ const PDFConverter: React.FC = () => {
                         default: throw new Error('Invalid conversion mode');
                     }
 
-                    if (!user) return;
-
-                    await logActivity({
-                        userName: user.displayName ?? "Unknown",
-                        userEmail: user.email ?? "unknown@email.com",
-                        function: `"download_by_${mode}`,
-                        urlPath: "/Documents/Pdf",
-                    });
+                    // ✅ Logger called with user from hook + mode string
+                    await Logger(user, mode);
 
                     const url = URL.createObjectURL(blob);
                     updatedFiles[i] = {
@@ -361,7 +358,7 @@ const PDFConverter: React.FC = () => {
                             </div>
                             <div>
                                 <p className="text-base font-bold text-emerald-700 dark:text-emerald-300">Ready for Download</p>
-                                <p className="text-xs font-medium text-emerald-600/60 dark:text-emerald-400/60">Success! Your files are processed localy.</p>
+                                <p className="text-xs font-medium text-emerald-600/60 dark:text-emerald-400/60">Success! Your files are processed locally.</p>
                             </div>
                         </div>
                         <button onClick={downloadAllFiles}
@@ -384,7 +381,7 @@ const PDFConverter: React.FC = () => {
                     </p>
                 </div>
             </div>
-        </div >
+        </div>
     );
 };
 
