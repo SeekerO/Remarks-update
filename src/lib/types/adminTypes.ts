@@ -139,7 +139,7 @@ export const navItems: NavItem[] = [
       },
       {
         name: "Resolution Adjuster",
-        href: "/edit/resolutionAdjuster",
+        href: "/edit/resolutionadjuster",
         icon: MdOpacity,
         active: true,
         pagePermissionId: "resolutionadjuster",
