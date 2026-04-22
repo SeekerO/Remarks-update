@@ -14,6 +14,7 @@
     "@dnd-kit/utilities": "^3.2.2",
     "@google/genai": "^1.6.0",
     "@google/generative-ai": "^0.24.1",
+    "@imgly/background-removal": "^1.7.0",
     "@mediapipe/selfie_segmentation": "^0.1.1675465747",
     "@radix-ui/react-dialog": "^1.1.11",
     "@radix-ui/react-separator": "^1.1.4",
