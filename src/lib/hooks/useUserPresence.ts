@@ -1,6 +1,12 @@
 // src/lib/hooks/useUserPresence.ts
 import { useState, useEffect, useRef, useCallback } from "react";
-import { ref, onValue, set, serverTimestamp, onDisconnect } from "firebase/database";
+import {
+  ref,
+  onValue,
+  set,
+  serverTimestamp,
+  onDisconnect,
+} from "firebase/database";
 import { db } from "@/lib/firebase/firebase";
 import { useAuth } from "@/lib/auth/AuthContext";
 
@@ -49,7 +55,10 @@ export const useUserPresence = () => {
     const presenceRef = ref(db, `presence/${user.uid}`);
     await set(presenceRef, { online: true, lastSeen: serverTimestamp() });
     // Re-register onDisconnect after coming back online
-    onDisconnect(presenceRef).set({ online: false, lastSeen: serverTimestamp() });
+    onDisconnect(presenceRef).set({
+      online: false,
+      lastSeen: serverTimestamp(),
+    });
   }, [user]);
 
   const resetInactivityTimer = useCallback(() => {
@@ -65,14 +74,25 @@ export const useUserPresence = () => {
   useEffect(() => {
     if (!user) return;
 
-    const events = ["mousemove", "keydown", "mousedown", "touchstart", "scroll", "focus"];
-    events.forEach((e) => window.addEventListener(e, resetInactivityTimer, { passive: true }));
+    const events = [
+      "mousemove",
+      "keydown",
+      "mousedown",
+      "touchstart",
+      "scroll",
+      "focus",
+    ];
+    events.forEach((e) =>
+      window.addEventListener(e, resetInactivityTimer, { passive: true }),
+    );
 
     // Start the timer immediately
     resetInactivityTimer();
 
     return () => {
-      events.forEach((e) => window.removeEventListener(e, resetInactivityTimer));
+      events.forEach((e) =>
+        window.removeEventListener(e, resetInactivityTimer),
+      );
       if (inactivityTimer.current) clearTimeout(inactivityTimer.current);
     };
   }, [user, resetInactivityTimer]);
@@ -93,12 +113,12 @@ export const useUserPresence = () => {
           if (entry?.online === true) {
             statusMap[uid] = true;
           } else if (entry?.lastSeen) {
-            statusMap[uid] = entry.lastSeen; // timestamp for "last seen X ago"
+            statusMap[uid] = entry.lastSeen;
           } else {
             statusMap[uid] = false;
           }
         }
-
+        
         setOnlineUsers(statusMap);
         if (!loaded) {
           setIsPresenceLoading(false);
@@ -108,7 +128,7 @@ export const useUserPresence = () => {
       (error) => {
         console.error("Presence error:", error);
         setIsPresenceLoading(false);
-      }
+      },
     );
 
     return () => unsub();

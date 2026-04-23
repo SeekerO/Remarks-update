@@ -40,74 +40,72 @@ function getAccessibleHrefs(allowedPages: PageId[] | null): string[] {
   return hrefs;
 }
 
+// Replace BlockedCard's "Switch account" anchor with a button:
 const BlockedCard = ({
-  icon,
-  iconStyle,
-  title,
-  description,
-  buttonLabel,
-  buttonStyle,
-  onAction,
-  onLogout,
+    icon,
+    iconStyle,
+    title,
+    description,
+    buttonLabel,
+    buttonStyle,
+    onAction,
 }: {
-  icon: ReactNode;
-  iconStyle: React.CSSProperties;
-  title: string;
-  description: string;
-  buttonLabel: string;
-  buttonStyle?: string;
-  onAction: () => void;
-  onLogout?: () => void;
-}) => (
-  <div className="flex h-screen w-full items-center justify-center bg-[var(--nexus-sidebar-bg)]">
-    <div
-      className="flex flex-col items-center gap-4 p-8 rounded-[20px] w-[340px] mx-4 text-center"
-      style={{
-        background: "rgba(255,255,255,0.04)",
-        border: "0.5px solid rgba(255,255,255,0.08)",
-      }}
-    >
-      <div
-        className="w-12 h-12 rounded-[14px] flex items-center justify-center"
-        style={iconStyle}
-      >
-        {icon}
-      </div>
+    icon: ReactNode;
+    iconStyle: React.CSSProperties;
+    title: string;
+    description: string;
+    buttonLabel: string;
+    buttonStyle?: string;
+    onAction: () => void;
+}) => {
+    const { logout } = useAuth();
+    const router = useRouter();
 
-      <div className="flex flex-col gap-1.5">
-        <p
-          className="text-[15px] font-medium tracking-tight"
-          style={{ color: "rgba(255,255,255,0.85)" }}
-        >
-          {title}
-        </p>
-        <p
-          className="text-[12.5px] leading-relaxed max-w-[240px]"
-          style={{ color: "rgba(255,255,255,0.35)" }}
-        >
-          {description}
-        </p>
-      </div>
+    const handleSwitchAccount = async () => {
+        await logout();
+        router.replace('/login');
+    };
 
-      <div className="w-full flex flex-col gap-2 mt-1">
-        <button
-          onClick={onAction}
-          className={`w-full py-2.5 rounded-[10px] text-[13px] font-semibold tracking-wide transition-colors ${buttonStyle ?? "bg-indigo-600 hover:bg-indigo-500 text-white"}`}
-        >
-          {buttonLabel}
-        </button>
-        <a
-          href="/login"
-          onClick={onLogout}
-          className="text-[11px] mt-1 block"
-          style={{ color: "rgba(255,255,255,0.2)" }}
-        >
-          Switch account
-        </a>
-      </div>
-    </div>
-  </div>
-);
+    return (
+        <div className="flex h-screen w-screen items-center justify-center bg-[var(--nexus-sidebar-bg)]">
+            <div
+                className="flex flex-col items-center gap-4 p-8 rounded-[20px] w-[340px] mx-4 text-center"
+                style={{ background: 'rgba(255,255,255,0.04)', border: '0.5px solid rgba(255,255,255,0.08)' }}
+            >
+                <div className="w-12 h-12 rounded-[14px] flex items-center justify-center" style={iconStyle}>
+                    {icon}
+                </div>
+
+                <div className="flex flex-col gap-1.5">
+                    <p className="text-[15px] font-medium tracking-tight" style={{ color: 'rgba(255,255,255,0.85)' }}>
+                        {title}
+                    </p>
+                    <p className="text-[12.5px] leading-relaxed max-w-[240px]" style={{ color: 'rgba(255,255,255,0.35)' }}>
+                        {description}
+                    </p>
+                </div>
+
+                <div className="w-full flex flex-col gap-2 mt-1">
+                    <button
+                        onClick={onAction}
+                        className={`w-full py-2.5 rounded-[10px] text-[13px] font-semibold tracking-wide transition-colors ${buttonStyle ?? 'bg-indigo-600 hover:bg-indigo-500 text-white'}`}
+                    >
+                        {buttonLabel}
+                    </button>
+
+                    {/* ✅ Now properly logs out before switching */}
+                    <button
+                        onClick={handleSwitchAccount}
+                        className="text-[11px] mt-1"
+                        style={{ color: 'rgba(255,255,255,0.2)' }}
+                    >
+                        Switch account
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+};
 
 const AuthGuard = ({
   children,
@@ -126,6 +124,11 @@ const AuthGuard = ({
   const { user, isLoading, logout } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
+
+  const handleSwitchAccount = async () => {
+    await logout();
+    router.replace('/login');
+};
 
   useEffect(() => {
     if (isLoading) return;
@@ -217,7 +220,6 @@ const AuthGuard = ({
             buttonLabel="Request Approval"
             buttonStyle="text-indigo-300 font-semibold hover:bg-indigo-500/10 transition-colors"
             onAction={() => setShowModal(true)}
-            onLogout={logout}
           />
           {showModal && <RequestAccessModal {...modalProps} />}
         </>
