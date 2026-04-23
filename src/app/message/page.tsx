@@ -202,7 +202,7 @@ const ChatListPanel = ({
       const data = snap.val() || {};
       setAllUsers(
         Object.keys(data)
-          .filter((uid) => uid !== currentUserId && (data[uid].canChat ?? true))
+          .filter((uid) => uid !== currentUserId && (data[uid].isPermitted ?? true))
           .map((uid) => ({
             uid,
             name: data[uid].name || data[uid].email,
@@ -633,7 +633,7 @@ const ChatRoomPanel = ({
       const data = snap.val() || {};
       setAllUsers(
         Object.keys(data)
-          .filter((uid) => uid !== user?.uid && (data[uid].canChat ?? true))
+          .filter((uid) => uid !== user?.uid && (data[uid].isPermitted ?? true))
           .map((uid) => ({
             uid,
             name: data[uid].name || data[uid].email,
