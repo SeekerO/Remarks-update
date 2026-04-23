@@ -29,7 +29,6 @@ interface CustomUser extends User {
   allowedPages?: string[];
   roles?: UserRole[];
   allowedPresets?: string[];
-  // Subscription fields
   subscriptionStartDate?: string;
   subscriptionDays?: number;
   subscriptionInfinite?: boolean;
@@ -38,6 +37,7 @@ interface CustomUser extends User {
 interface AuthContextType {
   user: CustomUser | null;
   isLoading: boolean;
+  isOnline: boolean;
   loginWithGoogle: () => Promise<void>;
   logout: () => void;
   uid?: string;
@@ -54,7 +54,6 @@ function extractUserFields(userData: Record<string, any>) {
         ? rawPresets
         : undefined;
 
-  // Direct fix for your database structure
   const sub = userData.subscription || {};
 
   return {
@@ -66,7 +65,6 @@ function extractUserFields(userData: Record<string, any>) {
     allowedPresets,
     subscriptionStartDate: sub.subscriptionStartDate,
     subscriptionDays: sub.subscriptionDays,
-    // Checks both nested and root for safety
     subscriptionInfinite:
       sub.subscriptionInfinite === true ||
       userData.subscriptionInfinite === true,
@@ -76,6 +74,7 @@ function extractUserFields(userData: Record<string, any>) {
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState<CustomUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isOnline, setIsOnline] = useState(false);
 
   const userRef = useRef(user);
   userRef.current = user;
@@ -84,6 +83,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   useEffect(() => {
     let unsubscribePermissions: (() => void) | null = null;
+    let unsubscribePresence: (() => void) | null = null;
     let isInitialLoad = true;
 
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
@@ -118,6 +118,32 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         setUser({ ...currentUser, ...fields });
         setIsLoading(false);
 
+        // ✅ Online presence — write to DB
+        const presenceRef = ref(db, `presence/${currentUser.uid}`);
+        const connectedRef = ref(db, ".info/connected");
+
+        onValue(connectedRef, (snap) => {
+          if (snap.val() === true) {
+            // When connected, set online with current timestamp
+            set(presenceRef, { online: true, lastSeen: serverTimestamp() });
+            // When disconnected (tab close, network drop), Firebase sets this automatically
+            onDisconnect(presenceRef).set({
+              online: false,
+              lastSeen: serverTimestamp(),
+            });
+          }
+        });
+
+        // ✅ Subscribe to status node and sync to state
+        unsubscribePresence = onValue(presenceRef, (snap) => {
+          if (snap.exists()) {
+            setIsOnline(snap.val().online === true);
+          } else {
+            setIsOnline(false);
+          }
+        });
+
+        // ✅ Subscribe to user profile changes
         unsubscribePermissions = onValue(userProfileRef, (snap) => {
           if (isInitialLoad) {
             isInitialLoad = false;
@@ -130,28 +156,29 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
             setUser((prev) => {
               if (!prev) return null;
 
+              // ✅ Fixed: semicolon bug removed
               const hasChanged =
                 prev.isAdmin !== next.isAdmin ||
                 prev.isPermitted !== next.isPermitted ||
-                // CRITICAL: UI won't update without this line
                 prev.subscriptionInfinite !== next.subscriptionInfinite ||
                 prev.subscriptionStartDate !== next.subscriptionStartDate ||
-                prev.subscriptionDays !== next.subscriptionDays;
-              JSON.stringify(prev.allowedPages) !==
-                JSON.stringify(next.allowedPages) ||
+                prev.subscriptionDays !== next.subscriptionDays ||
+                JSON.stringify(prev.allowedPages) !==
+                  JSON.stringify(next.allowedPages) ||
                 JSON.stringify(prev.roles) !== JSON.stringify(next.roles) ||
                 JSON.stringify(prev.allowedPresets) !==
                   JSON.stringify(next.allowedPresets);
 
               if (!hasChanged) return prev;
-
               return { ...prev, ...next };
             });
           }
         });
       } else {
         if (unsubscribePermissions) unsubscribePermissions();
+        if (unsubscribePresence) unsubscribePresence();
         setUser(null);
+        setIsOnline(false);
         setIsLoading(false);
       }
     });
@@ -159,6 +186,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     return () => {
       unsubscribe();
       if (unsubscribePermissions) unsubscribePermissions();
+      if (unsubscribePresence) unsubscribePresence();
     };
   }, []);
 
@@ -174,12 +202,20 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   };
 
   const logout = async () => {
+    if (auth.currentUser) {
+      const presenceRef = ref(db, `presence/${auth.currentUser.uid}`);
+      // Cancel the onDisconnect handler first, then manually set offline
+      await onDisconnect(presenceRef).cancel();
+      await set(presenceRef, { online: false, lastSeen: serverTimestamp() });
+    }
     await signOut(auth);
     await fetch("/api/auth/session", { method: "DELETE" });
   };
 
   return (
-    <AuthContext.Provider value={{ user, isLoading, loginWithGoogle, logout }}>
+    <AuthContext.Provider
+      value={{ user, isLoading, isOnline, loginWithGoogle, logout }}
+    >
       {children}
     </AuthContext.Provider>
   );
