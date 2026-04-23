@@ -138,7 +138,7 @@ export default function DashboardPage() {
     });
 
     /* Group by category */
-    const editTools = allTools.filter((t) => ["Watermark V5", "BG Remover", "Logo Maker", "Resolution Adjuster"].includes(t.name));
+    const editTools = allTools.filter((t) => ["Watermark", "BG Remover", "Logo Editor", "Resolution Adjuster" ].includes(t.name));
     const docTools = allTools.filter((t) => ["FAQ", "Remarks", "PDF"].includes(t.name));
     const mainTools = allTools.filter((t) => ["Matcher", "CSC Reveiwer", "DTR Extractor"].includes(t.name));
     const adminTools = allTools.filter((t) => ["Admin Panel", "Time Log", "User Log", "Test Page"].includes(t.name));

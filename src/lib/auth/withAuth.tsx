@@ -4,215 +4,174 @@ import { useEffect, ReactNode, useState } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { useAuth } from '../auth/AuthContext';
 import { navItems, type NavItem, type PageId } from '@/lib/types/adminTypes';
-import { Loader2, ShieldOff } from 'lucide-react';
+import { Loader2, ShieldOff, Clock } from 'lucide-react';
+import RequestAccessModal from '@/app/login/requestLoginModal';
 
-/* ─────────────────────────────────────────────
-   CONSTANTS
-   ───────────────────────────────────────────── */
-const PUBLIC_PAGES = ['/login', '/not-found'];
-const ALWAYS_ALLOWED = ['/login', '/dashboard', '/', '/not-found'];
+/* ── Helpers ── */
 
-type UserRole = 'admin' | 'standard';
+function checkSubscription(user: any): { isExpired: boolean } {
+    // Admin or Infinite users never expire
+    if (!user || user.isAdmin || user.subscriptionInfinite) return { isExpired: false };
+    
+    // If no data exists, assume no access
+    if (!user.subscriptionStartDate || user.subscriptionDays === undefined) return { isExpired: true };
 
-/* ─────────────────────────────────────────────
-   HELPERS
-   ───────────────────────────────────────────── */
-function getAccessibleHrefs(allowedPages: PageId[] | null): string[] {
-  const hrefs: string[] = [];
+    const start = new Date(user.subscriptionStartDate);
+    const now = new Date();
+    
+    // Add the allowed days to the start date
+    const expiryDate = new Date(start);
+    expiryDate.setDate(start.getDate() + user.subscriptionDays);
 
-  const extract = (items: NavItem[]) => {
-    items.forEach((item) => {
-      if (allowedPages === null) {
-        // Admin — all hrefs
-        if (item.href) hrefs.push(item.href);
-      } else if (item.pagePermissionId && allowedPages.includes(item.pagePermissionId as PageId)) {
-        if (item.href) hrefs.push(item.href);
-      }
-      if (item.sublinks?.length) extract(item.sublinks);
-    });
-  };
-
-  extract(navItems);
-  return hrefs;
+    return { isExpired: now.getTime() > expiryDate.getTime() };
 }
 
-function hasAccessToPath(path: string, allowedHrefs: string[]): boolean {
-  if (ALWAYS_ALLOWED.includes(path)) return true;
-  return allowedHrefs.some(
-    (href) => path === href || path.startsWith(href + '/')
-  );
+function getAccessibleHrefs(allowedPages: PageId[] | null): string[] { 
+    const hrefs: string[] = [];
+    const extract = (items: NavItem[]) => {
+        items.forEach((item) => {
+            if (allowedPages === null) {
+                if (item.href) hrefs.push(item.href);
+            } else if (item.pagePermissionId && allowedPages.includes(item.pagePermissionId as PageId)) {
+                if (item.href) hrefs.push(item.href);
+            }
+            if (item.sublinks?.length) extract(item.sublinks);
+        });
+    };
+    extract(navItems);
+    return hrefs;
 }
 
-/* ─────────────────────────────────────────────
-   FULL-SCREEN STATES
-   ───────────────────────────────────────────── */
-const FullScreenSpinner = ({ message }: { message: string }) => (
-  <div className="flex h-screen w-screen items-center justify-center bg-[var(--nexus-sidebar-bg)]">
-    <div className="flex flex-col items-center gap-3">
-      <Loader2 className="w-5 h-5 text-indigo-400 animate-spin" />
-      <p className="text-xs text-white/25 font-mono tracking-wide">{message}</p>
-    </div>
-  </div>
-);
+/* ── UI Components ── */
 
-const AccessDenied = () => (
-  <div className="flex h-screen w-screen items-center justify-center bg-[var(--nexus-sidebar-bg)]">
-    <div
-      className="flex flex-col items-center gap-4 p-8 rounded-2xl max-w-sm w-full mx-4 text-center"
-      style={{
-        background: 'rgba(255,255,255,0.04)',
-        border: '0.5px solid rgba(255,255,255,0.08)',
-      }}
-    >
-      <div className="w-12 h-12 rounded-2xl bg-red-500/10 border border-red-500/20 flex items-center justify-center">
-        <ShieldOff className="w-5 h-5 text-red-400" />
-      </div>
-      <div>
-        <p className="text-sm font-medium text-white/70">Access denied</p>
-        <p className="text-xs text-white/30 mt-1.5 leading-relaxed">
-          You don't have permission to view this page.
-          Contact your administrator to request access.
-        </p>
-      </div>
-      <a
-        href="/dashboard"
-        className="text-xs text-indigo-400 hover:text-indigo-300 transition-colors"
-      >
-        ← Back to dashboard
-      </a>
-    </div>
-  </div>
-);
-
-/* ─────────────────────────────────────────────
-   AUTH GUARD
-   ───────────────────────────────────────────── */
-interface AuthGuardProps {
-  children: ReactNode;
-  redirectTo?: string;
-}
-
-const AuthGuard = ({ children, redirectTo = '/login' }: AuthGuardProps) => {
-  const [checked, setChecked] = useState(false);
-  const [granted, setGranted] = useState(false);
-
-  const { user, isLoading } = useAuth();
-  const router = useRouter();
-  const pathname = usePathname();
-
-  useEffect(() => {
-    // Wait for Firebase auth to resolve
-    if (isLoading) return;
-
-    setChecked(false);
-    setGranted(false);
-
-    // ── Public pages — always render ──
-    if (PUBLIC_PAGES.includes(pathname)) {
-      setChecked(true);
-      setGranted(true);
-      return;
-    }
-
-    // ── No user — go to login ──
-    if (!user) {
-      sessionStorage.setItem('redirectAfterLogin', pathname);
-      router.replace(redirectTo);
-      setChecked(true);
-      setGranted(false);
-      return;
-    }
-
-    // ── User exists but no isPermitted — show access denied ──
-    if (!user.isPermitted) {
-      setChecked(true);
-      setGranted(false);
-      return;
-    }
-
-    // ── Resolve allowed hrefs ──
-    const role: UserRole = user.isAdmin ? 'admin' : 'standard';
-    const allowedPages: PageId[] | null =
-      role === 'admin' ? null : (user.allowedPages as PageId[] ?? []);
-
-    const accessibleHrefs = getAccessibleHrefs(allowedPages);
-
-
-    // ── Handle post-login redirect ──
-    if (pathname === '/login') {
-      const saved = sessionStorage.getItem('redirectAfterLogin');
-      sessionStorage.removeItem('redirectAfterLogin');
-      const dest =
-        saved && saved !== '/login' && hasAccessToPath(saved, accessibleHrefs)
-          ? saved
-          : accessibleHrefs[0] ?? '/dashboard';
-      router.replace(dest);
-      setChecked(true);
-      setGranted(false);
-      return;
-    }
-
-    // ── Check current path ──
-    if (!hasAccessToPath(pathname, accessibleHrefs)) {
-      router.replace('/not-found');
-      setChecked(true);
-      setGranted(false);
-      return;
-    }
-
-    // ── All good ──
-    setChecked(true);
-    setGranted(true);
-  }, [user, isLoading, pathname, router, redirectTo]);
-
-  // Still loading Firebase auth
-  if (isLoading || !checked) {
-    return <FullScreenSpinner message="Verifying access…" />;
-  }
-
-  // Authenticated but isPermitted denied
-  if (checked && !granted && user && !user.isPermitted) {
-    return (
-      <div className="flex h-screen w-screen items-center justify-center bg-[var(--nexus-sidebar-bg)]">
-        <div
-          className="flex flex-col items-center gap-4 p-8 rounded-2xl max-w-sm w-full mx-4 text-center"
-          style={{
-            background: 'rgba(255,255,255,0.04)',
-            border: '0.5px solid rgba(255,255,255,0.08)',
-          }}
-        >
-          <div className="w-12 h-12 rounded-2xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center">
-            <ShieldOff className="w-5 h-5 text-amber-400" />
-          </div>
-          <div>
-            <p className="text-sm font-medium text-white/70">Pending approval</p>
-            <p className="text-xs text-white/30 mt-1.5 leading-relaxed">
-              Your account is registered but hasn't been approved yet.
-              Contact your administrator to get access.
-            </p>
-          </div>
-          <a
-            href="/login"
-            className="text-xs text-indigo-400 hover:text-indigo-300 transition-colors"
-          >
-            ← Sign in with a different account
-          </a>
+const NoRoleAssigned = ({ isExpired, onOpenRequest }: { isExpired: boolean, onOpenRequest: () => void }) => (
+    <div className="flex h-screen w-screen items-center justify-center bg-[var(--nexus-sidebar-bg)]">
+        <div className="flex flex-col items-center gap-4 p-8 rounded-2xl max-w-sm w-full mx-4 text-center bg-white/5 border border-white/10">
+            <div className={`w-12 h-12 rounded-2xl flex items-center justify-center ${isExpired ? 'bg-red-500/10 border-red-500/20' : 'bg-violet-500/10 border-violet-500/20'}`}>
+                {isExpired ? <Clock className="w-5 h-5 text-red-400" /> : <ShieldOff className="w-5 h-5 text-violet-400" />}
+            </div>
+            <div>
+                <p className="text-sm font-medium text-white/70">{isExpired ? "Subscription Expired" : "Access Restricted"}</p>
+                <p className="text-xs text-white/30 mt-1.5 leading-relaxed">
+                    {isExpired 
+                        ? "Your subscription period has ended. Please request a renewal to continue." 
+                        : "Your account is approved but no roles have been assigned yet."}
+                </p>
+            </div>
+            <button 
+                onClick={onOpenRequest}
+                className="w-full py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold transition-all"
+            >
+                {isExpired ? "Request Renewal" : "Request Access"}
+            </button>
+            <a href="/login" className="text-[10px] text-white/20 mt-2">Sign in with a different account</a>
         </div>
-      </div>
-    );
-  }
+    </div>
+);
 
-  // Redirecting (no content flash)
-  if (checked && !granted) {
-    return <FullScreenSpinner message="Redirecting…" />;
-  }
+/* ── Main Guard ── */
 
-  // Access granted — render page
-  if (granted) {
+const AuthGuard = ({ children, redirectTo = '/login' }: { children: ReactNode; redirectTo?: string }) => {
+    const [checked, setChecked] = useState(false);
+    const [granted, setGranted] = useState(false);
+    const [denialReason, setDenialReason] = useState<'not_permitted' | 'no_role' | 'expired' | null>(null);
+    const [showModal, setShowModal] = useState(false);
+
+    const { user, isLoading } = useAuth();
+    const router = useRouter();
+    const pathname = usePathname();
+
+    useEffect(() => {
+        if (isLoading) return;
+
+        if (!user) {
+            if (!['/login', '/not-found'].includes(pathname)) {
+                router.replace(redirectTo);
+            } else {
+                setGranted(true);
+                setChecked(true);
+            }
+            return;
+        }
+
+        // 1. Permitted Check
+        if (!user.isPermitted) {
+            setDenialReason('not_permitted');
+            setGranted(false);
+            setChecked(true);
+            return;
+        }
+
+        // 2. Expiry Check
+        const { isExpired } = checkSubscription(user);
+        if (isExpired) {
+            setDenialReason('expired');
+            setGranted(false);
+            setChecked(true);
+            return;
+        }
+
+        // 3. Role Check
+        const hasRole = user.isAdmin || (user.roles && user.roles.length > 0);
+        if (!hasRole) {
+            setDenialReason('no_role');
+            setGranted(false);
+            setChecked(true);
+            return;
+        }
+
+        // 4. Page Access Check
+        const allowedPages = user.isAdmin ? null : (user.allowedPages as PageId[] ?? []);
+        const accessibleHrefs = getAccessibleHrefs(allowedPages);
+
+        if (pathname !== '/login' && !accessibleHrefs.some(href => pathname === href || pathname.startsWith(href + '/'))) {
+            if (!['/dashboard', '/', '/not-found'].includes(pathname)) {
+                router.replace('/not-found');
+                return;
+            }
+        }
+
+        setGranted(true);
+        setChecked(true);
+    }, [user, isLoading, pathname, router, redirectTo]);
+
+    if (isLoading || !checked) {
+        return (
+            <div className="flex h-screen w-screen items-center justify-center bg-[var(--nexus-sidebar-bg)]">
+                <Loader2 className="w-5 h-5 text-indigo-400 animate-spin" />
+            </div>
+        );
+    }
+
+    // Handle block screens with Request Modal integration
+    if (!granted && user) {
+        if (denialReason === 'not_permitted') {
+            return (
+                <div className="flex h-screen w-screen items-center justify-center bg-[var(--nexus-sidebar-bg)]">
+                    <p className="text-white/50 text-sm">Waiting for account approval...</p>
+                </div>
+            );
+        }
+
+        if (denialReason === 'expired' || denialReason === 'no_role') {
+            return (
+                <>
+                    <NoRoleAssigned 
+                        isExpired={denialReason === 'expired'} 
+                        onOpenRequest={() => setShowModal(true)} 
+                    />
+                    {showModal && (
+                        <RequestAccessModal 
+                            user={{ displayName: user.displayName!, email: user.email!, uid: user.uid }} 
+                            onClose={() => setShowModal(false)} 
+                        />
+                    )}
+                </>
+            );
+        }
+    }
+
     return <>{children}</>;
-  }
-
-  return null;
 };
 
 export default AuthGuard;
