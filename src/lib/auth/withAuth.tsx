@@ -1,3 +1,4 @@
+// withAuth.tsx
 'use client';
 
 import { useEffect, ReactNode, useState } from 'react';
@@ -7,23 +8,20 @@ import { navItems, type NavItem, type PageId } from '@/lib/types/adminTypes';
 import { Loader2, ShieldOff, Clock } from 'lucide-react';
 import RequestAccessModal from '@/app/login/requestLoginModal';
 
-/* ── Helpers ── */
-
 function checkSubscription(user: any): { isExpired: boolean } {
-    // Admin or Infinite users never expire
-    if (!user || user.isAdmin || user.subscriptionInfinite) return { isExpired: false };
-    
-    // If no data exists, assume no access
-    if (!user.subscriptionStartDate || user.subscriptionDays === undefined) return { isExpired: true };
+    if (!user || user.isAdmin === true || user.subscriptionInfinite === true) {
+        return { isExpired: false }; 
+    }
+
+    if (!user.subscriptionStartDate || !user.subscriptionDays) {
+        return { isExpired: true };
+    }
 
     const start = new Date(user.subscriptionStartDate);
-    const now = new Date();
-    
-    // Add the allowed days to the start date
     const expiryDate = new Date(start);
-    expiryDate.setDate(start.getDate() + user.subscriptionDays);
+    expiryDate.setDate(start.getDate() + Number(user.subscriptionDays));
 
-    return { isExpired: now.getTime() > expiryDate.getTime() };
+    return { isExpired: Date.now() > expiryDate.getTime() };
 }
 
 function getAccessibleHrefs(allowedPages: PageId[] | null): string[] { 
@@ -42,8 +40,6 @@ function getAccessibleHrefs(allowedPages: PageId[] | null): string[] {
     return hrefs;
 }
 
-/* ── UI Components ── */
-
 const NoRoleAssigned = ({ isExpired, onOpenRequest }: { isExpired: boolean, onOpenRequest: () => void }) => (
     <div className="flex h-screen w-screen items-center justify-center bg-[var(--nexus-sidebar-bg)]">
         <div className="flex flex-col items-center gap-4 p-8 rounded-2xl max-w-sm w-full mx-4 text-center bg-white/5 border border-white/10">
@@ -54,8 +50,8 @@ const NoRoleAssigned = ({ isExpired, onOpenRequest }: { isExpired: boolean, onOp
                 <p className="text-sm font-medium text-white/70">{isExpired ? "Subscription Expired" : "Access Restricted"}</p>
                 <p className="text-xs text-white/30 mt-1.5 leading-relaxed">
                     {isExpired 
-                        ? "Your subscription period has ended. Please request a renewal to continue." 
-                        : "Your account is approved but no roles have been assigned yet."}
+                        ? "Your subscription period has ended. Request a renewal to continue." 
+                        : "Account approved, but no roles assigned yet."}
                 </p>
             </div>
             <button 
@@ -64,12 +60,10 @@ const NoRoleAssigned = ({ isExpired, onOpenRequest }: { isExpired: boolean, onOp
             >
                 {isExpired ? "Request Renewal" : "Request Access"}
             </button>
-            <a href="/login" className="text-[10px] text-white/20 mt-2">Sign in with a different account</a>
+            <a href="/login" className="text-[10px] text-white/20 mt-2">Switch account</a>
         </div>
     </div>
 );
-
-/* ── Main Guard ── */
 
 const AuthGuard = ({ children, redirectTo = '/login' }: { children: ReactNode; redirectTo?: string }) => {
     const [checked, setChecked] = useState(false);
@@ -85,16 +79,11 @@ const AuthGuard = ({ children, redirectTo = '/login' }: { children: ReactNode; r
         if (isLoading) return;
 
         if (!user) {
-            if (!['/login', '/not-found'].includes(pathname)) {
-                router.replace(redirectTo);
-            } else {
-                setGranted(true);
-                setChecked(true);
-            }
+            if (!['/login', '/not-found'].includes(pathname)) router.replace(redirectTo);
+            else { setGranted(true); setChecked(true); }
             return;
         }
 
-        // 1. Permitted Check
         if (!user.isPermitted) {
             setDenialReason('not_permitted');
             setGranted(false);
@@ -102,7 +91,6 @@ const AuthGuard = ({ children, redirectTo = '/login' }: { children: ReactNode; r
             return;
         }
 
-        // 2. Expiry Check
         const { isExpired } = checkSubscription(user);
         if (isExpired) {
             setDenialReason('expired');
@@ -111,7 +99,6 @@ const AuthGuard = ({ children, redirectTo = '/login' }: { children: ReactNode; r
             return;
         }
 
-        // 3. Role Check
         const hasRole = user.isAdmin || (user.roles && user.roles.length > 0);
         if (!hasRole) {
             setDenialReason('no_role');
@@ -120,7 +107,6 @@ const AuthGuard = ({ children, redirectTo = '/login' }: { children: ReactNode; r
             return;
         }
 
-        // 4. Page Access Check
         const allowedPages = user.isAdmin ? null : (user.allowedPages as PageId[] ?? []);
         const accessibleHrefs = getAccessibleHrefs(allowedPages);
 
@@ -133,6 +119,7 @@ const AuthGuard = ({ children, redirectTo = '/login' }: { children: ReactNode; r
 
         setGranted(true);
         setChecked(true);
+        setDenialReason(null);
     }, [user, isLoading, pathname, router, redirectTo]);
 
     if (isLoading || !checked) {
@@ -143,12 +130,11 @@ const AuthGuard = ({ children, redirectTo = '/login' }: { children: ReactNode; r
         );
     }
 
-    // Handle block screens with Request Modal integration
     if (!granted && user) {
         if (denialReason === 'not_permitted') {
             return (
                 <div className="flex h-screen w-screen items-center justify-center bg-[var(--nexus-sidebar-bg)]">
-                    <p className="text-white/50 text-sm">Waiting for account approval...</p>
+                    <p className="text-white/50 text-sm">Awaiting approval...</p>
                 </div>
             );
         }
@@ -156,10 +142,7 @@ const AuthGuard = ({ children, redirectTo = '/login' }: { children: ReactNode; r
         if (denialReason === 'expired' || denialReason === 'no_role') {
             return (
                 <>
-                    <NoRoleAssigned 
-                        isExpired={denialReason === 'expired'} 
-                        onOpenRequest={() => setShowModal(true)} 
-                    />
+                    <NoRoleAssigned isExpired={denialReason === 'expired'} onOpenRequest={() => setShowModal(true)} />
                     {showModal && (
                         <RequestAccessModal 
                             user={{ displayName: user.displayName!, email: user.email!, uid: user.uid }} 

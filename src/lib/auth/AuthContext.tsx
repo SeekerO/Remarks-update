@@ -4,217 +4,189 @@
 import { createContext, useContext, useEffect, useState, useRef } from "react";
 import { auth, db } from "../firebase/firebase";
 import {
-    GoogleAuthProvider,
-    onAuthStateChanged,
-    signInWithPopup,
-    signOut,
-    User,
+  GoogleAuthProvider,
+  onAuthStateChanged,
+  signInWithPopup,
+  signOut,
+  User,
 } from "firebase/auth";
-import { ref, set, onDisconnect, serverTimestamp, get, onValue } from "firebase/database";
+import {
+  ref,
+  set,
+  onDisconnect,
+  serverTimestamp,
+  get,
+  onValue,
+} from "firebase/database";
 import { saveUserProfile } from "./saveUserProfile";
 import { useOfflineLogSync } from "@/lib/hooks/useOfflineLogSync";
 
-// Keep in sync with UserRole in userRolesModal.tsx
-export type UserRole =  "editor" | "user" | "comelec";
+export type UserRole = "editor" | "user" | "comelec";
 
 interface CustomUser extends User {
-    isAdmin?: boolean;
-    isPermitted?: boolean;
-    allowedPages?: string[];
-    // Roles assigned via the Roles & Subscription modal
-    roles?: UserRole[];
-    // Preset IDs the user is allowed to use in PresSelect
-    allowedPresets?: string[];
+  isAdmin?: boolean;
+  isPermitted?: boolean;
+  allowedPages?: string[];
+  roles?: UserRole[];
+  allowedPresets?: string[];
+  // Subscription fields
+  subscriptionStartDate?: string;
+  subscriptionDays?: number;
+  subscriptionInfinite?: boolean;
 }
 
 interface AuthContextType {
-    user: CustomUser | null;
-    isLoading: boolean;
-    loginWithGoogle: () => Promise<void>;
-    logout: () => void;
-    uid?: string;
+  user: CustomUser | null;
+  isLoading: boolean;
+  loginWithGoogle: () => Promise<void>;
+  logout: () => void;
+  uid?: string;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
 
-// ── Helper: pull the fields we care about from a raw RTDB user snapshot ───────
-// function extractUserFields(userData: Record<string, any>): {
-//     isAdmin: boolean;
-//     isPermitted: boolean;
-//     allowedPages: string[] | undefined;
-//     roles: UserRole[];
-//     allowedPresets: string[] | undefined;
-// } {
-//     const rawPresets = userData.allowedPresets;
-//     // "__none__" sentinel means admin explicitly set 0 presets (Firebase drops [])
-//     const allowedPresets: string[] | undefined =
-//         Array.isArray(rawPresets) && rawPresets[0] === "__none__"
-//             ? []
-//             : Array.isArray(rawPresets)
-//             ? rawPresets
-//             : undefined;
-
-//     return {
-//         isAdmin: userData.isAdmin || false,
-//         isPermitted: userData.isPermitted !== undefined ? userData.isPermitted : true,
-//         allowedPages: userData.allowedPages,
-//         // Roles live under subscription.roles
-//         roles: Array.isArray(userData.subscription?.roles)
-//             ? (userData.subscription.roles as UserRole[])
-//             : [],
-//         allowedPresets,
-//     };
-// }
-// Inside AuthContext.tsx
-
 function extractUserFields(userData: Record<string, any>) {
-    const rawPresets = userData.allowedPresets;
-    const allowedPresets: string[] | undefined =
-        Array.isArray(rawPresets) && rawPresets[0] === "__none__"
-            ? []
-            : Array.isArray(rawPresets)
-            ? rawPresets
-            : undefined;
+  const rawPresets = userData.allowedPresets;
+  const allowedPresets: string[] | undefined =
+    Array.isArray(rawPresets) && rawPresets[0] === "__none__"
+      ? []
+      : Array.isArray(rawPresets)
+        ? rawPresets
+        : undefined;
 
-    return {
-        isAdmin: userData.isAdmin || false,
-        isPermitted: userData.isPermitted !== undefined ? userData.isPermitted : true,
-        allowedPages: userData.allowedPages,
-        roles: Array.isArray(userData.subscription?.roles)
-            ? (userData.subscription.roles as UserRole[])
-            : [],
-        allowedPresets,
-        // ADD THESE THREE LINES:
-        subscriptionStartDate: userData.subscriptionStartDate, // e.g. "2026-04-21..."
-        subscriptionDays: userData.subscriptionDays,           // e.g. 1
-        subscriptionInfinite: userData.subscriptionInfinite || false,
-    };
+  // Direct fix for your database structure
+  const sub = userData.subscription || {};
+
+  return {
+    isAdmin: userData.isAdmin || false,
+    isPermitted:
+      userData.isPermitted !== undefined ? userData.isPermitted : true,
+    allowedPages: userData.allowedPages,
+    roles: Array.isArray(sub.roles) ? (sub.roles as UserRole[]) : [],
+    allowedPresets,
+    subscriptionStartDate: sub.subscriptionStartDate,
+    subscriptionDays: sub.subscriptionDays,
+    // Checks both nested and root for safety
+    subscriptionInfinite:
+      sub.subscriptionInfinite === true ||
+      userData.subscriptionInfinite === true,
+  };
 }
 
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
-    const [user, setUser] = useState<CustomUser | null>(null);
-    const [isLoading, setIsLoading] = useState(true);
+  const [user, setUser] = useState<CustomUser | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
-    const userRef = useRef(user);
-    userRef.current = user;
+  const userRef = useRef(user);
+  userRef.current = user;
 
-    useOfflineLogSync();
+  useOfflineLogSync();
 
-    useEffect(() => {
-        let unsubscribePermissions: (() => void) | null = null;
-        let isInitialLoad = true;
+  useEffect(() => {
+    let unsubscribePermissions: (() => void) | null = null;
+    let isInitialLoad = true;
 
-        const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
-            if (currentUser) {
-                await saveUserProfile(currentUser);
+    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
+      if (currentUser) {
+        await saveUserProfile(currentUser);
 
-                const token = await currentUser.getIdToken();
-                await fetch("/api/auth/session", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ token }),
-                }).catch(() => {});
-
-                const userProfileRef = ref(db, `users/${currentUser.uid}`);
-                const snapshot = await get(userProfileRef);
-
-                let fields = {
-                    isAdmin: false,
-                    isPermitted: false,
-                    allowedPages: undefined as string[] | undefined,
-                    roles: [] as UserRole[],
-                    allowedPresets: undefined as string[] | undefined,
-                };
-
-                if (snapshot.exists()) {
-                    fields = extractUserFields(snapshot.val());
-                }
-
-                const userWithRoles: CustomUser = {
-                    ...currentUser,
-                    ...fields,
-                };
-                setUser(userWithRoles);
-                setIsLoading(false);
-
-                // Live listener — updates user object in real-time when admin changes anything
-                unsubscribePermissions = onValue(userProfileRef, (snap) => {
-                    if (isInitialLoad) {
-                        isInitialLoad = false;
-                        return;
-                    }
-
-                    if (snap.exists()) {
-                        const next = extractUserFields(snap.val());
-
-                        setUser((prev) => {
-                            if (!prev) return null;
-
-                            const hasChanged =
-                                prev.isAdmin !== next.isAdmin ||
-                                prev.isPermitted !== next.isPermitted ||
-                                JSON.stringify(prev.allowedPages) !== JSON.stringify(next.allowedPages) ||
-                                JSON.stringify(prev.roles) !== JSON.stringify(next.roles) ||
-                                JSON.stringify(prev.allowedPresets) !== JSON.stringify(next.allowedPresets);
-
-                            if (!hasChanged) return prev;
-
-                            return { ...prev, ...next };
-                        });
-                    }
-                });
-
-                const userStatusRef = ref(db, `presence/${currentUser.uid}`);
-                set(userStatusRef, true);
-                onDisconnect(userStatusRef).set(serverTimestamp());
-            } else {
-                if (unsubscribePermissions) {
-                    unsubscribePermissions();
-                    unsubscribePermissions = null;
-                }
-
-                if (userRef.current?.uid) {
-                    const userStatusRef = ref(db, `presence/${userRef.current.uid}`);
-                    set(userStatusRef, serverTimestamp());
-                }
-
-                await fetch("/api/auth/session", { method: "DELETE" }).catch(() => {});
-                setUser(null);
-                setIsLoading(false);
-            }
-        });
-
-        return () => {
-            unsubscribe();
-            if (unsubscribePermissions) unsubscribePermissions();
-        };
-    }, []);
-
-    const loginWithGoogle = async () => {
-        const provider = new GoogleAuthProvider();
-        const result = await signInWithPopup(auth, provider);
-        const token = await result.user.getIdToken();
+        const token = await currentUser.getIdToken();
         await fetch("/api/auth/session", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ token }),
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ token }),
+        }).catch(() => {});
+
+        const userProfileRef = ref(db, `users/${currentUser.uid}`);
+        const snapshot = await get(userProfileRef);
+
+        let fields = {
+          isAdmin: false,
+          isPermitted: false,
+          allowedPages: undefined,
+          roles: [],
+          allowedPresets: undefined,
+          subscriptionStartDate: undefined,
+          subscriptionDays: undefined,
+          subscriptionInfinite: false,
+        };
+
+        if (snapshot.exists()) {
+          fields = extractUserFields(snapshot.val()) as any;
+        }
+
+        setUser({ ...currentUser, ...fields });
+        setIsLoading(false);
+
+        unsubscribePermissions = onValue(userProfileRef, (snap) => {
+          if (isInitialLoad) {
+            isInitialLoad = false;
+            return;
+          }
+
+          if (snap.exists()) {
+            const next = extractUserFields(snap.val());
+
+            setUser((prev) => {
+              if (!prev) return null;
+
+              const hasChanged =
+                prev.isAdmin !== next.isAdmin ||
+                prev.isPermitted !== next.isPermitted ||
+                // CRITICAL: UI won't update without this line
+                prev.subscriptionInfinite !== next.subscriptionInfinite ||
+                prev.subscriptionStartDate !== next.subscriptionStartDate ||
+                prev.subscriptionDays !== next.subscriptionDays;
+              JSON.stringify(prev.allowedPages) !==
+                JSON.stringify(next.allowedPages) ||
+                JSON.stringify(prev.roles) !== JSON.stringify(next.roles) ||
+                JSON.stringify(prev.allowedPresets) !==
+                  JSON.stringify(next.allowedPresets);
+
+              if (!hasChanged) return prev;
+
+              return { ...prev, ...next };
+            });
+          }
         });
-    };
+      } else {
+        if (unsubscribePermissions) unsubscribePermissions();
+        setUser(null);
+        setIsLoading(false);
+      }
+    });
 
-    const logout = async () => {
-        await signOut(auth);
-        await fetch("/api/auth/session", { method: "DELETE" });
+    return () => {
+      unsubscribe();
+      if (unsubscribePermissions) unsubscribePermissions();
     };
+  }, []);
 
-    return (
-        <AuthContext.Provider value={{ user, isLoading, loginWithGoogle, logout }}>
-            {children}
-        </AuthContext.Provider>
-    );
+  const loginWithGoogle = async () => {
+    const provider = new GoogleAuthProvider();
+    const result = await signInWithPopup(auth, provider);
+    const token = await result.user.getIdToken();
+    await fetch("/api/auth/session", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ token }),
+    });
+  };
+
+  const logout = async () => {
+    await signOut(auth);
+    await fetch("/api/auth/session", { method: "DELETE" });
+  };
+
+  return (
+    <AuthContext.Provider value={{ user, isLoading, loginWithGoogle, logout }}>
+      {children}
+    </AuthContext.Provider>
+  );
 };
 
 export const useAuth = () => {
-    const context = useContext(AuthContext);
-    if (!context) throw new Error("useAuth must be used within an AuthProvider");
-    return context;
+  const context = useContext(AuthContext);
+  if (!context) throw new Error("useAuth must be used within an AuthProvider");
+  return context;
 };

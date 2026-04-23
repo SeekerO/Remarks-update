@@ -1,8 +1,6 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
-
+// saveUserProfile.ts
 import { ref, get, update, set } from "firebase/database";
 import { db } from "@/lib/firebase/firebase";
-
 
 export const saveUserProfile = async (user: any) => {
   const userRef = ref(db, `users/${user.uid}`);
@@ -16,22 +14,29 @@ export const saveUserProfile = async (user: any) => {
   };
 
   if (snapshot.exists()) {
-    // Preserve admin-controlled fields like allowedPages and isAdmin
     const existingData = snapshot.val();
 
     await update(userRef, {
       ...userData,
       isAdmin: existingData.isAdmin ?? false,
       isPermitted: existingData.isPermitted ?? false,
+      // CRITICAL: Preserve the nested subscription object
+      subscription: existingData.subscription ?? {},
       allowedPages: existingData.allowedPages ?? [],
     });
   } else {
-    // Create a new profile only if it doesn’t exist
+    // Default for new users
     await set(userRef, {
       ...userData,
       isAdmin: false,
       isPermitted: false,
-      allowedPages: [], // empty default for new users
+      subscription: {
+        subscriptionInfinite: false,
+        subscriptionDays: 0, // or whatever default
+        subscriptionStartDate: new Date().toISOString(),
+        roles: [],
+      },
+      allowedPages: [],
     });
   }
 };
