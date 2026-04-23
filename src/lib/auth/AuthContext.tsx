@@ -1,4 +1,4 @@
-// AuthContext.tsx
+// src/lib/auth/AuthContext.tsx
 "use client";
 
 import { createContext, useContext, useEffect, useState, useRef } from "react";
@@ -118,15 +118,13 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         setUser({ ...currentUser, ...fields });
         setIsLoading(false);
 
-        // ✅ Online presence — write to DB
+        // ✅ Write presence as object { online, lastSeen }
         const presenceRef = ref(db, `presence/${currentUser.uid}`);
         const connectedRef = ref(db, ".info/connected");
 
         onValue(connectedRef, (snap) => {
           if (snap.val() === true) {
-            // When connected, set online with current timestamp
             set(presenceRef, { online: true, lastSeen: serverTimestamp() });
-            // When disconnected (tab close, network drop), Firebase sets this automatically
             onDisconnect(presenceRef).set({
               online: false,
               lastSeen: serverTimestamp(),
@@ -134,10 +132,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           }
         });
 
-        // ✅ Subscribe to status node and sync to state
+        // ✅ Subscribe to own presence node and sync to isOnline state
         unsubscribePresence = onValue(presenceRef, (snap) => {
           if (snap.exists()) {
-            setIsOnline(snap.val().online === true);
+            setIsOnline(snap.val()?.online === true);
           } else {
             setIsOnline(false);
           }
@@ -156,7 +154,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
             setUser((prev) => {
               if (!prev) return null;
 
-              // ✅ Fixed: semicolon bug removed
+              // ✅ Fixed semicolon bug from original
               const hasChanged =
                 prev.isAdmin !== next.isAdmin ||
                 prev.isPermitted !== next.isPermitted ||
@@ -202,12 +200,13 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   };
 
   const logout = async () => {
+    // ✅ Immediately mark offline + cancel onDisconnect before signing out
     if (auth.currentUser) {
       const presenceRef = ref(db, `presence/${auth.currentUser.uid}`);
-      // Cancel the onDisconnect handler first, then manually set offline
       await onDisconnect(presenceRef).cancel();
       await set(presenceRef, { online: false, lastSeen: serverTimestamp() });
     }
+
     await signOut(auth);
     await fetch("/api/auth/session", { method: "DELETE" });
   };
