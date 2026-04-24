@@ -1,7 +1,6 @@
 "use client";
 // ─────────────────────────────────────────────────────────────────
-//  Full-page Chat — drop this at src/app/chat/page.tsx
-//  All Firebase hooks + actions are imported from your existing code.
+//  Full-page Chat — src/app/message/page.tsx
 // ─────────────────────────────────────────────────────────────────
 
 import React, { useState, useEffect, useRef, useCallback } from "react";
@@ -200,7 +199,6 @@ const ChatListPanel = ({
   const [groupName, setGroupName] = useState("");
   const [userSearch, setUserSearch] = useState("");
 
-  // Load users + presence
   useEffect(() => {
     const unsub1 = onValue(ref(db, "users"), (snap) => {
       const data = snap.val() || {};
@@ -220,7 +218,6 @@ const ChatListPanel = ({
     const unsub2 = onValue(ref(db, "presence"), (snap) => {
       const data = snap.val() || {};
       const map: Record<string, boolean> = {};
-      // ✅ Read .online from the object instead of comparing to true
       for (const uid in data) map[uid] = data[uid]?.online === true;
       setOnlineUsers(map);
     });
@@ -230,7 +227,6 @@ const ChatListPanel = ({
     };
   }, [currentUserId]);
 
-  // Unread counts
   useEffect(() => {
     if (!user || rawChats.length === 0 || !isPermitted) {
       setChatsWithUnread([]);
@@ -341,7 +337,6 @@ const ChatListPanel = ({
       setSelectedUsers([]);
       setGroupName("");
       setUserSearch("");
-      // Small delay so useUserChats has time to pick up the new chat
       setTimeout(() => onSelectChat(id), 300);
     } catch (err: any) {
       setCreateError(err.message || "Failed to create conversation");
@@ -577,14 +572,12 @@ const ChatRoomPanel = ({
   chatId,
   isPermitted,
   onDeleted,
-  webRTC,
   onStartCall,
 }: {
   chatId: string;
   isPermitted: boolean;
   onDeleted: () => void;
-  webRTC: UseWebRTCReturn;
-  onStartCall: (name: string, photo: string | null) => void;
+  onStartCall: (name: string, photo: string | null, chatId: string) => void;
 }) => {
   const { user } = useAuth();
   const messages = useChatMessages(chatId);
@@ -607,13 +600,11 @@ const ChatRoomPanel = ({
   const [showMenu, setShowMenu] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
 
-  // Nickname feature (1-on-1 chats)
   const nicknames = useNicknames(chatId, user?.uid || "");
   const [nicknameModalOpen, setNicknameModalOpen] = useState(false);
   const [nicknameLoading, setNicknameLoading] = useState(false);
   const [nicknameError, setNicknameError] = useState<string | null>(null);
 
-  // Group name feature (group chats)
   const [groupNameModalOpen, setGroupNameModalOpen] = useState(false);
   const [groupNameLoading, setGroupNameLoading] = useState(false);
   const [groupNameError, setGroupNameError] = useState<string | null>(null);
@@ -632,7 +623,6 @@ const ChatRoomPanel = ({
     }
   };
 
-  // Add members feature (group chats)
   const [allUsers, setAllUsers] = useState<UserProfile[]>([]);
   const [addMembersModalOpen, setAddMembersModalOpen] = useState(false);
   const [addMembersLoading, setAddMembersLoading] = useState(false);
@@ -684,16 +674,14 @@ const ChatRoomPanel = ({
       setNicknameLoading(false);
     }
   };
+
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
 
-  // Scroll to bottom
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  // Mark as read
   useEffect(() => {
     if (!user || messages.length === 0 || !isPermitted) return;
     const last = messages[messages.length - 1];
@@ -710,7 +698,6 @@ const ChatRoomPanel = ({
     });
   }, [messages, user, chatId, isPermitted]);
 
-  // Close menu on outside click
   useEffect(() => {
     const h = (e: MouseEvent) => {
       if (menuRef.current && !menuRef.current.contains(e.target as Node))
@@ -720,7 +707,6 @@ const ChatRoomPanel = ({
     return () => document.removeEventListener("mousedown", h);
   }, []);
 
-  // Fetch user details (cached)
   const fetchUser = useCallback(
     async (uid: string) => {
       if (userDetails[uid]) return userDetails[uid];
@@ -746,7 +732,6 @@ const ChatRoomPanel = ({
     [userDetails],
   );
 
-  // Chat data, presence, read receipts
   useEffect(() => {
     if (!user) return;
     const chatUnsub = onValue(ref(db, `chats/${chatId}`), async (snap) => {
@@ -759,7 +744,6 @@ const ChatRoomPanel = ({
 
       const presenceUnsubs = uids.map((uid) =>
         onValue(ref(db, `presence/${uid}`), (ps) => {
-          // ✅ Read .online from the object
           setOnlineUsers((prev) => ({
             ...prev,
             [uid]: ps.val()?.online === true,
@@ -793,7 +777,6 @@ const ChatRoomPanel = ({
     };
   }, [chatId, user, fetchUser]);
 
-  // Fetch details for message senders
   useEffect(() => {
     messages.forEach((m) => {
       if (!userDetails[m.senderId]) fetchUser(m.senderId);
@@ -848,8 +831,8 @@ const ChatRoomPanel = ({
       return lastRead && msgId <= lastRead;
     });
 
-  // Display name for header (uses nickname if set for 1-on-1)
   const otherUserId = usersInChat.find((uid) => uid !== user?.uid);
+
   const headerName = () => {
     if (chatName) return chatName;
     if (usersInChat.length === 2 && otherUserId) {
@@ -917,6 +900,7 @@ const ChatRoomPanel = ({
         </div>
 
         <div className="flex items-center gap-1.5">
+          {/* ── FIX: pass chatId to onStartCall so root knows which chat to call ── */}
           <button
             onClick={() => {
               const name = otherUserId
@@ -927,8 +911,7 @@ const ChatRoomPanel = ({
               const photo = otherUserId
                 ? userDetails[otherUserId]?.photoURL || null
                 : null;
-              onStartCall(name, photo);
-              webRTC.startCall("video");
+              onStartCall(name, photo, chatId);
             }}
             className="w-8 h-8 rounded-lg bg-white/[0.04] hover:bg-white/[0.07] flex items-center justify-center text-white/40 hover:text-white/70 transition-colors"
           >
@@ -1002,7 +985,6 @@ const ChatRoomPanel = ({
               key={msg.id}
               className={`flex items-end gap-2.5 ${isMe ? "justify-end" : "justify-start"}`}
             >
-              {/* Other's avatar */}
               {!isMe && (
                 <div className="flex-shrink-0" style={{ width: 28 }}>
                   {showAvatar && (
@@ -1018,14 +1000,12 @@ const ChatRoomPanel = ({
               <div
                 className={`flex flex-col max-w-[65%] ${isMe ? "items-end" : "items-start"}`}
               >
-                {/* Sender name for group chats */}
                 {isGroup && !isMe && showAvatar && (
                   <p className="text-[10px] text-white/35 mb-1 px-1">
                     {sender?.name}
                   </p>
                 )}
 
-                {/* Edit mode */}
                 {msg.id === editingId ? (
                   <div className="flex flex-col gap-1.5 w-full">
                     <input
@@ -1052,7 +1032,6 @@ const ChatRoomPanel = ({
                   </div>
                 ) : (
                   <div className="relative group">
-                    {/* Bubble */}
                     <div
                       className={`px-3.5 py-2.5 rounded-2xl text-xs leading-relaxed break-words ${
                         isMe
@@ -1082,7 +1061,6 @@ const ChatRoomPanel = ({
                       )}
                     </div>
 
-                    {/* Edit btn */}
                     {canEdit && (
                       <button
                         onClick={() => {
@@ -1097,7 +1075,6 @@ const ChatRoomPanel = ({
                   </div>
                 )}
 
-                {/* Timestamp + read receipt */}
                 <div className="flex items-center gap-1 mt-1 px-0.5">
                   <span className="text-[9px] text-white/25">
                     {msg.timestamp
@@ -1117,7 +1094,6 @@ const ChatRoomPanel = ({
                 </div>
               </div>
 
-              {/* My avatar */}
               {isMe && (
                 <Avatar
                   src={userDetails[user.uid]?.photoURL}
@@ -1129,7 +1105,6 @@ const ChatRoomPanel = ({
           );
         })}
 
-        {/* Typing indicator */}
         {typingUsers.length > 0 && (
           <div className="flex items-end gap-2.5">
             <Avatar
@@ -1168,7 +1143,6 @@ const ChatRoomPanel = ({
           </label>
 
           <input
-            ref={inputRef}
             value={input}
             onChange={handleTyping}
             onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && handleSend()}
@@ -1276,7 +1250,7 @@ const ChatRoomPanel = ({
 };
 
 // ═══════════════════════════════════════════════════════════════════
-//  EMPTY STATE (no chat selected)
+//  EMPTY STATE
 // ═══════════════════════════════════════════════════════════════════
 const EmptyState = ({ onNew }: { onNew: () => void }) => (
   <div className="flex flex-col items-center justify-center h-full bg-[#0f0e17] gap-4">
@@ -1310,14 +1284,23 @@ export default function ChatPage() {
   const { user } = useAuth();
   const [selectedChatId, setSelectedChatId] = useState<string | null>(null);
   const [mobileView, setMobileView] = useState<"list" | "room">("list");
-  const [newChatOpen, setNewChatOpen] = useState(false);
+
+  // ── Call state (stable, not reactive) ────────────────────────────
+  // The active call chatId is stored in a ref so the WebRTC hook never
+  // reinitializes mid-call when other state changes (e.g. selectedChatId,
+  // incomingChatId clearing after ringing→connected transition).
+  const activeCallChatIdRef = useRef<string>("");
+  const [activeCallChatId, setActiveCallChatId] = useState<string>("");
+
   const [callModalOpen, setCallModalOpen] = useState(false);
   const [calleeDisplayName, setCalleeDisplayName] = useState("User");
-  const [calleeDisplayPhoto, setCalleeDisplayPhoto] = useState<string | null>(null);
+  const [calleeDisplayPhoto, setCalleeDisplayPhoto] = useState<string | null>(
+    null,
+  );
   const [currentUserName, setCurrentUserName] = useState("You");
   const [currentUserPhoto, setCurrentUserPhoto] = useState<string | null>(null);
 
-  // Load current user's display name + photo for the hook
+  // Load current user details once
   useEffect(() => {
     if (!user?.uid) return;
     const unsub = onValue(ref(db, `users/${user.uid}`), (snap) => {
@@ -1330,67 +1313,98 @@ export default function ChatPage() {
     return () => unsub();
   }, [user?.uid]);
 
-  // Detect incoming calls by scanning all chats the user belongs to.
-  const [incomingChatId, setIncomingChatId] = useState<string | null>(null);
-  const userChatsForCalls = useUserChats(user?.uid || "");
-
-  useEffect(() => {
-    if (!user?.uid || userChatsForCalls.length === 0) return;
-    const unsubs = userChatsForCalls.map((chat) =>
-      onValue(ref(db, `calls/${chat.id}`), (snap) => {
-        const data = snap.val();
-        if (data?.state === "ringing" && data?.callerId !== user.uid) {
-          setIncomingChatId(chat.id);
-        }
-        // Only clear when fully ended/removed — NOT on "connected"
-        if (!data || data.state === "ended") {
-          setIncomingChatId((prev) => (prev === chat.id ? null : prev));
-        }
-      })
-    );
-    return () => unsubs.forEach((u) => u());
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user?.uid, userChatsForCalls.length]);
-
-  // Lock the active call chatId in a ref so it never changes mid-call.
-  // This prevents useWebRTC from reinitializing when incomingChatId clears
-  // after the call moves from "ringing" → "connected".
-  const lockedCallChatIdRef = useRef<string>("");
-  const activeChatId = (() => {
-    // If a call is in progress, keep using the locked chatId
-    const locked = lockedCallChatIdRef.current;
-    const candidate = incomingChatId || selectedChatId || "";
-    if (locked && candidate !== locked) {
-      // Only release the lock when the call is truly over (handled below)
-      return locked;
-    }
-    if (candidate) lockedCallChatIdRef.current = candidate;
-    return candidate;
-  })();
-
+  // ── WebRTC hook — chatId only changes when a call starts/ends ────
   const webRTC = useWebRTC({
-    chatId: activeChatId,
     currentUserId: user?.uid || "",
     currentUserName,
     currentUserPhoto,
   });
 
-  // Release the lock only when the call is fully idle/ended
-  useEffect(() => {
-    if (webRTC.callState === "idle" || webRTC.callState === "ended") {
-      lockedCallChatIdRef.current = selectedChatId || "";
-    }
-  }, [webRTC.callState, selectedChatId]);
+  
+  // ── Detect incoming calls across all user chats ───────────────────
+  const userChatsForCalls = useUserChats(user?.uid || "");
 
-  // Auto-open modal for outgoing calls
   useEffect(() => {
-    if (webRTC.callState === "calling" || webRTC.callState === "requesting-media") {
+    if (!user?.uid || userChatsForCalls.length === 0) return;
+
+    const unsubs = userChatsForCalls.map((chat) =>
+      onValue(ref(db, `calls/${chat.id}`), (snap) => {
+        const data = snap.val();
+
+        // Someone is calling us on this chat
+        if (
+          data?.state === "ringing" &&
+          data?.callerId !== user.uid &&
+          // Only lock in if we're not already in a call
+          activeCallChatIdRef.current === ""
+        ) {
+          activeCallChatIdRef.current = chat.id;
+          setActiveCallChatId(chat.id);
+          setCalleeDisplayName(data.callerName || "Unknown");
+          setCalleeDisplayPhoto(data.callerPhoto || null);
+        }
+
+        // Call ended or removed — release the lock ONLY if this is the active call
+        if (
+          (!data || data.state === "ended") &&
+          activeCallChatIdRef.current === chat.id
+        ) {
+          // Give the modal a moment to read the "ended" state before clearing
+          setTimeout(() => {
+            activeCallChatIdRef.current = "";
+            setActiveCallChatId("");
+            setCallModalOpen(false);
+          }, 1500);
+        }
+      }),
+    );
+
+    return () => unsubs.forEach((u) => u());
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.uid, userChatsForCalls.length]);
+
+  // ── Sync modal open state with call state machine ─────────────────
+  // IMPORTANT: only open on *active* call states; never close from here
+  // (closing is handled explicitly via hangUp or the ended listener above).
+  useEffect(() => {
+    const activeStates = [
+      "calling",
+      "requesting-media",
+      "connecting",
+      "connected",
+      "incoming",
+    ];
+    if (activeStates.includes(webRTC.callState)) {
       setCallModalOpen(true);
     }
-    if (webRTC.callState === "idle" || webRTC.callState === "ended") {
-      setCallModalOpen(false);
-    }
   }, [webRTC.callState]);
+
+  // ── Start an outgoing call ────────────────────────────────────────
+  const handleStartCall = useCallback(
+    (name: string, photo: string | null, chatId: string) => {
+      if (
+        activeCallChatIdRef.current !== "" &&
+        activeCallChatIdRef.current !== chatId
+      ) {
+        // Already in a call on a different chat
+        return;
+      }
+      setCalleeDisplayName(name);
+      setCalleeDisplayPhoto(photo);
+      activeCallChatIdRef.current = chatId;
+      setActiveCallChatId(chatId);
+      // webRTC.startCall is called by the ChatRoomPanel button after this
+    },
+    [],
+  );
+
+  // ── Handle hangup (cleans up both sides) ─────────────────────────
+  const handleHangUp = useCallback(async () => {
+    await webRTC.hangUp();
+    activeCallChatIdRef.current = "";
+    setActiveCallChatId("");
+    setCallModalOpen(false);
+  }, [webRTC]);
 
   const handleSelectChat = (id: string) => {
     setSelectedChatId(id);
@@ -1414,20 +1428,16 @@ export default function ChatPage() {
 
   return (
     <div className="flex h-full w-full bg-[#0f0e17] overflow-hidden">
-
-      {/* ── Global VideoCallModal — always mounted at root ── */}
+      {/* ── Global VideoCallModal ─────────────────────────────────── */}
       <VideoCallModal
         isOpen={callModalOpen}
-        onClose={() => {
-          webRTC.hangUp();
-          setCallModalOpen(false);
-        }}
+        onClose={handleHangUp}
         webRTC={webRTC}
         calleeName={webRTC.incomingCall?.callerName || calleeDisplayName}
         calleePhoto={webRTC.incomingCall?.callerPhoto || calleeDisplayPhoto}
       />
 
-      {/* ── Incoming call screen ── */}
+      {/* ── Incoming call overlay ─────────────────────────────────── */}
       {webRTC.callState === "incoming" && webRTC.incomingCall && (
         <div className="fixed inset-0 z-[9990] flex items-center justify-center bg-black/80 backdrop-blur-xl">
           <div
@@ -1441,11 +1451,19 @@ export default function ChatPage() {
           >
             {/* Pulse avatar */}
             <div className="relative flex items-center justify-center">
-              <span className="absolute w-24 h-24 rounded-full border border-indigo-400/20 animate-ping" style={{ animationDuration: "1.8s" }} />
-              <span className="absolute w-24 h-24 rounded-full border border-indigo-400/10 animate-ping" style={{ animationDuration: "1.8s", animationDelay: "0.6s" }} />
+              <span
+                className="absolute w-24 h-24 rounded-full border border-indigo-400/20 animate-ping"
+                style={{ animationDuration: "1.8s" }}
+              />
+              <span
+                className="absolute w-24 h-24 rounded-full border border-indigo-400/10 animate-ping"
+                style={{ animationDuration: "1.8s", animationDelay: "0.6s" }}
+              />
               <div
                 className="w-20 h-20 rounded-full flex items-center justify-center text-white font-bold text-2xl relative z-10"
-                style={{ background: "linear-gradient(135deg,#6366f1,#8b5cf6)" }}
+                style={{
+                  background: "linear-gradient(135deg,#6366f1,#8b5cf6)",
+                }}
               >
                 {webRTC.incomingCall.callerName.slice(0, 2).toUpperCase()}
               </div>
@@ -1464,7 +1482,7 @@ export default function ChatPage() {
               {/* Decline */}
               <div className="flex flex-col items-center gap-2">
                 <button
-                  onClick={() => webRTC.hangUp()}
+                  onClick={handleHangUp}
                   className="w-14 h-14 rounded-full bg-red-500 hover:bg-red-600 flex items-center justify-center text-white transition-colors"
                   style={{ boxShadow: "0 4px 18px rgba(239,68,68,0.4)" }}
                 >
@@ -1478,7 +1496,6 @@ export default function ChatPage() {
                 <button
                   onClick={async () => {
                     await webRTC.acceptCall();
-                    // Modal opens automatically via callState → "connecting"/"connected"
                     setCallModalOpen(true);
                   }}
                   className="w-14 h-14 rounded-full bg-emerald-500 hover:bg-emerald-600 flex items-center justify-center text-white transition-colors"
@@ -1492,7 +1509,8 @@ export default function ChatPage() {
           </div>
         </div>
       )}
-      {/* ── LEFT: Chat list (hidden on mobile when room is open) ── */}
+
+      {/* ── LEFT: Chat list ───────────────────────────────────────── */}
       <div
         className={`flex-shrink-0 flex flex-col ${
           mobileView === "room" ? "hidden lg:flex" : "flex"
@@ -1517,13 +1535,12 @@ export default function ChatPage() {
         )}
       </div>
 
-      {/* ── RIGHT: Chat room or empty state ── */}
+      {/* ── RIGHT: Chat room or empty state ──────────────────────── */}
       <div
         className={`flex-1 flex flex-col min-w-0 ${
           mobileView === "list" ? "hidden lg:flex" : "flex"
         }`}
       >
-        {/* Mobile back button */}
         {mobileView === "room" && selectedChatId && (
           <div className="lg:hidden flex items-center px-3 py-2 border-b border-white/[0.06] bg-[#0d0d1a]">
             <button
@@ -1544,10 +1561,9 @@ export default function ChatPage() {
             chatId={selectedChatId}
             isPermitted={isPermitted}
             onDeleted={handleDeleted}
-            webRTC={webRTC}
-            onStartCall={(name, photo) => {
-              setCalleeDisplayName(name);
-              setCalleeDisplayPhoto(photo);
+            onStartCall={(name, photo, chatId) => {
+              handleStartCall(name, photo, chatId);
+              webRTC.startCall(chatId, "video");
             }}
           />
         ) : (
