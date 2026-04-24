@@ -30,6 +30,7 @@ import {
 } from "./lib/components/ChatModals";
 import VideoCallModal from "./lib/components/voiceCallModal";
 import { useWebRTC, type UseWebRTCReturn } from "./lib/hooks/useWebRTC";
+import type { CallType } from "./lib/call/callSignaling";
 
 import {
   Search,
@@ -900,7 +901,6 @@ const ChatRoomPanel = ({
         </div>
 
         <div className="flex items-center gap-1.5">
-          {/* ── FIX: pass chatId to onStartCall so root knows which chat to call ── */}
           <button
             onClick={() => {
               const name = otherUserId
@@ -1285,12 +1285,10 @@ export default function ChatPage() {
   const [selectedChatId, setSelectedChatId] = useState<string | null>(null);
   const [mobileView, setMobileView] = useState<"list" | "room">("list");
 
-  // ── Call state (stable, not reactive) ────────────────────────────
-  // The active call chatId is stored in a ref so the WebRTC hook never
-  // reinitializes mid-call when other state changes (e.g. selectedChatId,
-  // incomingChatId clearing after ringing→connected transition).
+  // ── Stable ref for the active call chatId ─────────────────────────
+  // Stored in a ref so WebRTC never reinitialises mid-call when other
+  // state (selectedChatId, etc.) changes.
   const activeCallChatIdRef = useRef<string>("");
-  const [activeCallChatId, setActiveCallChatId] = useState<string>("");
 
   const [callModalOpen, setCallModalOpen] = useState(false);
   const [calleeDisplayName, setCalleeDisplayName] = useState("User");
@@ -1313,17 +1311,17 @@ export default function ChatPage() {
     return () => unsub();
   }, [user?.uid]);
 
-  // ── WebRTC hook — chatId only changes when a call starts/ends ────
+  // ── Single WebRTC hook instance ───────────────────────────────────
   const webRTC = useWebRTC({
     currentUserId: user?.uid || "",
     currentUserName,
     currentUserPhoto,
   });
 
-  
-  // ── Detect incoming calls across all user chats ───────────────────
+  // ── Register all user chats with the hook's incoming-call watcher ─
+  // This replaces the old page-level Firebase listener that caused
+  // double-subscription conflicts with useWebRTC's own listener.
   const userChatsForCalls = useUserChats(user?.uid || "");
-
   useEffect(() => {
     if (!user?.uid || userChatsForCalls.length === 0) return;
 
@@ -1331,28 +1329,24 @@ export default function ChatPage() {
       onValue(ref(db, `calls/${chat.id}`), (snap) => {
         const data = snap.val();
 
-        // Someone is calling us on this chat
         if (
           data?.state === "ringing" &&
           data?.callerId !== user.uid &&
-          // Only lock in if we're not already in a call
           activeCallChatIdRef.current === ""
         ) {
           activeCallChatIdRef.current = chat.id;
-          setActiveCallChatId(chat.id);
           setCalleeDisplayName(data.callerName || "Unknown");
           setCalleeDisplayPhoto(data.callerPhoto || null);
+          // Let useWebRTC's own signal subscription handle setting callState → "incoming"
+          // We just need to ensure the modal-display name is ready
         }
 
-        // Call ended or removed — release the lock ONLY if this is the active call
         if (
           (!data || data.state === "ended") &&
           activeCallChatIdRef.current === chat.id
         ) {
-          // Give the modal a moment to read the "ended" state before clearing
           setTimeout(() => {
             activeCallChatIdRef.current = "";
-            setActiveCallChatId("");
             setCallModalOpen(false);
           }, 1500);
         }
@@ -1360,50 +1354,67 @@ export default function ChatPage() {
     );
 
     return () => unsubs.forEach((u) => u());
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user?.uid, userChatsForCalls.length]);
+  }, [user?.uid, userChatsForCalls]);
 
-  // ── Sync modal open state with call state machine ─────────────────
-  // IMPORTANT: only open on *active* call states; never close from here
-  // (closing is handled explicitly via hangUp or the ended listener above).
+  // ── Open modal whenever the call enters an active state ───────────
+  // Do NOT include "incoming" here — that state has its own overlay.
+  // Do NOT close the modal from here — closing is handled by handleHangUp
+  // and the idle/ended watcher below, to avoid a double-hangup loop.
   useEffect(() => {
-    const activeStates = [
+    const activeStates: string[] = [
       "calling",
       "requesting-media",
       "connecting",
       "connected",
-      "incoming",
     ];
     if (activeStates.includes(webRTC.callState)) {
       setCallModalOpen(true);
     }
   }, [webRTC.callState]);
 
+  // ── Close modal and reset ref when call reaches a terminal state ──
+  useEffect(() => {
+    if (webRTC.callState === "idle" || webRTC.callState === "ended") {
+      setCallModalOpen(false);
+      activeCallChatIdRef.current = "";
+    }
+  }, [webRTC.callState]);
+
   // ── Start an outgoing call ────────────────────────────────────────
+  // Merged into a single handler — sets display info AND kicks off
+  // webRTC.startCall in one shot, eliminating the previous race condition
+  // where chatId could be stale by the time startCall was called separately.
   const handleStartCall = useCallback(
-    (name: string, photo: string | null, chatId: string) => {
+    (
+      name: string,
+      photo: string | null,
+      chatId: string,
+      type: CallType = "video",
+    ) => {
+      // Guard: already in a different call
       if (
         activeCallChatIdRef.current !== "" &&
         activeCallChatIdRef.current !== chatId
       ) {
-        // Already in a call on a different chat
         return;
       }
       setCalleeDisplayName(name);
       setCalleeDisplayPhoto(photo);
       activeCallChatIdRef.current = chatId;
-      setActiveCallChatId(chatId);
-      // webRTC.startCall is called by the ChatRoomPanel button after this
+      // startCall handles setting callModalOpen via the callState effect above
+      webRTC.startCall(chatId, type);
     },
-    [],
+    [webRTC],
   );
 
-  // ── Handle hangup (cleans up both sides) ─────────────────────────
+  // ── Hang up from either side ──────────────────────────────────────
+  // This is the single place that calls webRTC.hangUp(). The modal's
+  // onClose prop points here but does NOT additionally call hangUp itself,
+  // breaking the previous double-hangup loop.
   const handleHangUp = useCallback(async () => {
     await webRTC.hangUp();
-    activeCallChatIdRef.current = "";
-    setActiveCallChatId("");
-    setCallModalOpen(false);
+    // callState will transition to "idle", which triggers the effect above
+    // to close the modal and clear activeCallChatIdRef.
   }, [webRTC]);
 
   const handleSelectChat = (id: string) => {
@@ -1429,6 +1440,8 @@ export default function ChatPage() {
   return (
     <div className="flex h-full w-full bg-[#0f0e17] overflow-hidden">
       {/* ── Global VideoCallModal ─────────────────────────────────── */}
+      {/* onClose only closes the modal UI — actual hangup goes through
+          handleHangUp to avoid the double-hangup loop */}
       <VideoCallModal
         isOpen={callModalOpen}
         onClose={handleHangUp}
@@ -1491,7 +1504,7 @@ export default function ChatPage() {
                 <span className="text-[10px] text-white/35">Decline</span>
               </div>
 
-              {/* Accept */}
+              {/* Accept — opens modal after accepting */}
               <div className="flex flex-col items-center gap-2">
                 <button
                   onClick={async () => {
@@ -1561,10 +1574,8 @@ export default function ChatPage() {
             chatId={selectedChatId}
             isPermitted={isPermitted}
             onDeleted={handleDeleted}
-            onStartCall={(name, photo, chatId) => {
-              handleStartCall(name, photo, chatId);
-              webRTC.startCall(chatId, "video");
-            }}
+            // Single prop — handleStartCall now calls webRTC.startCall internally
+            onStartCall={handleStartCall}
           />
         ) : (
           <EmptyState onNew={() => {}} />
