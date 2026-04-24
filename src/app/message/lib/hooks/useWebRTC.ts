@@ -9,6 +9,8 @@
 "use client";
 
 import { useEffect, useRef, useState, useCallback } from "react";
+import { ref, get } from "firebase/database";
+import { db } from "@/lib/firebase/firebase";
 import {
     initiateCall,
     answerCall,
@@ -213,25 +215,27 @@ export function useWebRTC({
         setError(null);
     }, []);
 
+    const callerIdRef = useRef<string>("");
+
     // ── Subscribe to call document (detect incoming / state changes)
     useEffect(() => {
         if (!chatId || !currentUserId) return;
 
         const unsub = subscribeToCall(chatId, async (signal: CallSignal | null) => {
             if (!signal) {
-                // Call document removed → ended
                 if (callState !== "idle") cleanup();
                 return;
             }
 
             const { state, callerId, callerName, callerPhoto, callType: ct } = signal;
+            callerIdRef.current = callerId;
 
             if (state === "ended") {
                 cleanup();
                 return;
             }
 
-            // Detect incoming call for the callee
+            // Callee: detect incoming call
             if (
                 state === "ringing" &&
                 callerId !== currentUserId &&
@@ -244,7 +248,7 @@ export function useWebRTC({
                 return;
             }
 
-            // Caller: remote answered → set remote description
+            // Caller: callee answered → set remote description + subscribe to callee's ICE
             if (
                 state === "connected" &&
                 isCallerRef.current &&
@@ -256,11 +260,17 @@ export function useWebRTC({
                     await pcRef.current.setRemoteDescription(
                         new RTCSessionDescription(signal.answer)
                     );
-                    // Subscribe to callee's ICE
-                    // We need callee's userId — derive from chat participants
-                    // (for now, subscribe to all ICE from non-caller)
+                    // Now subscribe to callee's ICE candidates.
+                    // Callee is anyone in this chat who is NOT the caller.
+                    // We get the callee ID from the chat participants via Firebase.
+                    const chatSnap = await get(ref(db, `chats/${chatId}/users`));
+                    if (chatSnap.exists()) {
+                        const uids = Object.keys(chatSnap.val());
+                        const calleeId = uids.find((uid) => uid !== currentUserId);
+                        if (calleeId) subscribeToRemoteIce(calleeId);
+                    }
                     setCallState("connecting");
-                } catch (e) {
+                } catch {
                     setError("Failed to set remote answer.");
                 }
             }
@@ -283,17 +293,14 @@ export function useWebRTC({
             const stream = await getLocalStream(type);
             const pc = createPeerConnection();
 
-            // Add local tracks
             stream.getTracks().forEach((track) => pc.addTrack(track, stream));
 
-            // Create offer
             const offer = await pc.createOffer({
                 offerToReceiveAudio: true,
                 offerToReceiveVideo: type === "video",
             });
             await pc.setLocalDescription(offer);
 
-            // Push offer to Firebase
             await initiateCall(
                 chatId,
                 currentUserId,
@@ -303,17 +310,21 @@ export function useWebRTC({
                 offer
             );
 
-            setCallState("calling");
+            // Subscribe to callee's ICE candidates immediately
+            const chatSnap = await get(ref(db, `chats/${chatId}/users`));
+            if (chatSnap.exists()) {
+                const uids = Object.keys(chatSnap.val());
+                const calleeId = uids.find((uid) => uid !== currentUserId);
+                if (calleeId) subscribeToRemoteIce(calleeId);
+            }
 
-            // Subscribe to callee's ICE — we don't know callee ID here,
-            // so we'll subscribe broadly and filter in onicecandidate
-            // The signal doc will be updated with answer; callee ICE comes after accept
+            setCallState("calling");
         } catch (err: any) {
             setError(err.message || "Failed to start call.");
             setCallState("error");
             cleanup();
         }
-    }, [chatId, currentUserId, currentUserName, currentUserPhoto, getLocalStream, createPeerConnection, cleanup]);
+    }, [chatId, currentUserId, currentUserName, currentUserPhoto, getLocalStream, createPeerConnection, subscribeToRemoteIce, cleanup]);
 
     // ── Accept call (callee) ──────────────────────────────────────
     const acceptCall = useCallback(async () => {

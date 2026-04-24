@@ -1331,7 +1331,6 @@ export default function ChatPage() {
   }, [user?.uid]);
 
   // Detect incoming calls by scanning all chats the user belongs to.
-  // This fires immediately on mount — no dependency on selectedChatId.
   const [incomingChatId, setIncomingChatId] = useState<string | null>(null);
   const userChatsForCalls = useUserChats(user?.uid || "");
 
@@ -1340,13 +1339,12 @@ export default function ChatPage() {
     const unsubs = userChatsForCalls.map((chat) =>
       onValue(ref(db, `calls/${chat.id}`), (snap) => {
         const data = snap.val();
-        if (
-          data?.state === "ringing" &&
-          data?.callerId !== user.uid
-        ) {
+        if (data?.state === "ringing" && data?.callerId !== user.uid) {
           setIncomingChatId(chat.id);
-        } else if (incomingChatId === chat.id && (!data || data.state === "ended")) {
-          setIncomingChatId(null);
+        }
+        // Only clear when fully ended/removed — NOT on "connected"
+        if (!data || data.state === "ended") {
+          setIncomingChatId((prev) => (prev === chat.id ? null : prev));
         }
       })
     );
@@ -1354,8 +1352,21 @@ export default function ChatPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.uid, userChatsForCalls.length]);
 
-  // activeChatId: use incoming call's chat first, then selected chat
-  const activeChatId = incomingChatId || selectedChatId || "";
+  // Lock the active call chatId in a ref so it never changes mid-call.
+  // This prevents useWebRTC from reinitializing when incomingChatId clears
+  // after the call moves from "ringing" → "connected".
+  const lockedCallChatIdRef = useRef<string>("");
+  const activeChatId = (() => {
+    // If a call is in progress, keep using the locked chatId
+    const locked = lockedCallChatIdRef.current;
+    const candidate = incomingChatId || selectedChatId || "";
+    if (locked && candidate !== locked) {
+      // Only release the lock when the call is truly over (handled below)
+      return locked;
+    }
+    if (candidate) lockedCallChatIdRef.current = candidate;
+    return candidate;
+  })();
 
   const webRTC = useWebRTC({
     chatId: activeChatId,
@@ -1363,6 +1374,13 @@ export default function ChatPage() {
     currentUserName,
     currentUserPhoto,
   });
+
+  // Release the lock only when the call is fully idle/ended
+  useEffect(() => {
+    if (webRTC.callState === "idle" || webRTC.callState === "ended") {
+      lockedCallChatIdRef.current = selectedChatId || "";
+    }
+  }, [webRTC.callState, selectedChatId]);
 
   // Auto-open modal for outgoing calls
   useEffect(() => {
