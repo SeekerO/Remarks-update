@@ -3,7 +3,14 @@
 
 import React, { useState, useEffect } from 'react';
 import { X, Save, Users, Edit3, Check } from 'lucide-react';
-import { UserProfile } from '../types/types'; // Adjust import path as needed
+
+interface UserProfile {
+    uid: string;
+    name: string;
+    email: string;
+    photoURL: string | null;
+    canChat?: boolean;
+}
 
 // ═══════════════════════════════════════════════════════════════════
 //  NICKNAME MODAL (for 1-on-1 chats)

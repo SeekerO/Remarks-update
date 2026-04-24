@@ -29,6 +29,8 @@ import {
   GroupNameModal,
   AddMembersModal,
 } from "./lib/components/ChatModals";
+import VideoCallModal from "./lib/components/voiceCallModal";
+import { useWebRTC, type UseWebRTCReturn } from "./lib/hooks/useWebRTC";
 
 import {
   Search,
@@ -40,12 +42,14 @@ import {
   Send,
   Paperclip,
   ArrowLeft,
+  Video,
   X,
   Check,
   CheckCheck,
-  Video,
   ChevronLeft,
   UserPlus,
+  Phone,
+  PhoneOff,
 } from "lucide-react";
 import { IoMdNotifications } from "react-icons/io";
 
@@ -202,7 +206,9 @@ const ChatListPanel = ({
       const data = snap.val() || {};
       setAllUsers(
         Object.keys(data)
-          .filter((uid) => uid !== currentUserId && (data[uid].isPermitted ?? true))
+          .filter(
+            (uid) => uid !== currentUserId && (data[uid].isPermitted ?? true),
+          )
           .map((uid) => ({
             uid,
             name: data[uid].name || data[uid].email,
@@ -571,10 +577,14 @@ const ChatRoomPanel = ({
   chatId,
   isPermitted,
   onDeleted,
+  webRTC,
+  onStartCall,
 }: {
   chatId: string;
   isPermitted: boolean;
   onDeleted: () => void;
+  webRTC: UseWebRTCReturn;
+  onStartCall: (name: string, photo: string | null) => void;
 }) => {
   const { user } = useAuth();
   const messages = useChatMessages(chatId);
@@ -907,9 +917,24 @@ const ChatRoomPanel = ({
         </div>
 
         <div className="flex items-center gap-1.5">
-          <button className="w-8 h-8 rounded-lg bg-white/[0.04] hover:bg-white/[0.07] flex items-center justify-center text-white/40 hover:text-white/70 transition-colors">
+          <button
+            onClick={() => {
+              const name = otherUserId
+                ? nicknames[otherUserId]?.nickname ||
+                  userDetails[otherUserId]?.name ||
+                  "User"
+                : "Group Call";
+              const photo = otherUserId
+                ? userDetails[otherUserId]?.photoURL || null
+                : null;
+              onStartCall(name, photo);
+              webRTC.startCall("video");
+            }}
+            className="w-8 h-8 rounded-lg bg-white/[0.04] hover:bg-white/[0.07] flex items-center justify-center text-white/40 hover:text-white/70 transition-colors"
+          >
             <Video className="w-4 h-4" />
           </button>
+
           <div className="relative" ref={menuRef}>
             <button
               onClick={() => setShowMenu((v) => !v)}
@@ -1286,6 +1311,42 @@ export default function ChatPage() {
   const [selectedChatId, setSelectedChatId] = useState<string | null>(null);
   const [mobileView, setMobileView] = useState<"list" | "room">("list");
   const [newChatOpen, setNewChatOpen] = useState(false);
+  const [callModalOpen, setCallModalOpen] = useState(false);
+  const [calleeDisplayName, setCalleeDisplayName] = useState("User");
+  const [calleeDisplayPhoto, setCalleeDisplayPhoto] = useState<string | null>(null);
+  const [currentUserName, setCurrentUserName] = useState("You");
+  const [currentUserPhoto, setCurrentUserPhoto] = useState<string | null>(null);
+
+  // Load current user's display name + photo for the hook
+  useEffect(() => {
+    if (!user?.uid) return;
+    const unsub = onValue(ref(db, `users/${user.uid}`), (snap) => {
+      const d = snap.val();
+      if (d) {
+        setCurrentUserName(d.name || d.email || "You");
+        setCurrentUserPhoto(d.photoURL || null);
+      }
+    });
+    return () => unsub();
+  }, [user?.uid]);
+
+  // useWebRTC lives here so incoming calls are detected even when no chat is open
+  const webRTC = useWebRTC({
+    chatId: selectedChatId || "",
+    currentUserId: user?.uid || "",
+    currentUserName,
+    currentUserPhoto,
+  });
+
+  // Auto-open modal when incoming call detected or outgoing call starts
+  useEffect(() => {
+    if (webRTC.callState === "incoming" || webRTC.callState === "calling" || webRTC.callState === "requesting-media") {
+      setCallModalOpen(true);
+    }
+    if (webRTC.callState === "idle" || webRTC.callState === "ended") {
+      setCallModalOpen(false);
+    }
+  }, [webRTC.callState]);
 
   const handleSelectChat = (id: string) => {
     setSelectedChatId(id);
@@ -1309,6 +1370,54 @@ export default function ChatPage() {
 
   return (
     <div className="flex h-full w-full bg-[#0f0e17] overflow-hidden">
+
+      {/* ── Global VideoCallModal — always mounted at root ── */}
+      <VideoCallModal
+        isOpen={callModalOpen}
+        onClose={() => {
+          webRTC.hangUp();
+          setCallModalOpen(false);
+        }}
+        webRTC={webRTC}
+        calleeName={
+          webRTC.incomingCall?.callerName || calleeDisplayName
+        }
+        calleePhoto={
+          webRTC.incomingCall?.callerPhoto || calleeDisplayPhoto
+        }
+      />
+
+      {/* ── Incoming call banner (shown when no modal is open yet) ── */}
+      {webRTC.callState === "incoming" && webRTC.incomingCall && !callModalOpen && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[9998] flex items-center gap-4 px-5 py-3.5 rounded-2xl bg-[#13132b] border border-white/[0.1] shadow-2xl">
+          <div className="flex flex-col min-w-0">
+            <p className="text-xs font-semibold text-white/90 truncate">
+              {webRTC.incomingCall.callerName}
+            </p>
+            <p className="text-[10px] text-white/40">
+              Incoming {webRTC.incomingCall.callType} call…
+            </p>
+          </div>
+          <button
+            onClick={async () => {
+              await webRTC.acceptCall();
+              setCallModalOpen(true);
+            }}
+            className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-semibold transition-colors"
+          >
+            <Phone className="w-3.5 h-3.5" />
+            Accept
+          </button>
+          <button
+            onClick={() => webRTC.hangUp()}
+            className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-red-500 hover:bg-red-600 text-white text-xs font-semibold transition-colors"
+          >
+            <PhoneOff className="w-3.5 h-3.5" />
+            Decline
+          </button>
+        </div>
+      )}
+
       {/* ── LEFT: Chat list (hidden on mobile when room is open) ── */}
       <div
         className={`flex-shrink-0 flex flex-col ${
@@ -1361,6 +1470,11 @@ export default function ChatPage() {
             chatId={selectedChatId}
             isPermitted={isPermitted}
             onDeleted={handleDeleted}
+            webRTC={webRTC}
+            onStartCall={(name, photo) => {
+              setCalleeDisplayName(name);
+              setCalleeDisplayPhoto(photo);
+            }}
           />
         ) : (
           <EmptyState onNew={() => {}} />
