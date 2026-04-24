@@ -1330,17 +1330,43 @@ export default function ChatPage() {
     return () => unsub();
   }, [user?.uid]);
 
-  // useWebRTC lives here so incoming calls are detected even when no chat is open
+  // Detect incoming calls by scanning all chats the user belongs to.
+  // This fires immediately on mount — no dependency on selectedChatId.
+  const [incomingChatId, setIncomingChatId] = useState<string | null>(null);
+  const userChatsForCalls = useUserChats(user?.uid || "");
+
+  useEffect(() => {
+    if (!user?.uid || userChatsForCalls.length === 0) return;
+    const unsubs = userChatsForCalls.map((chat) =>
+      onValue(ref(db, `calls/${chat.id}`), (snap) => {
+        const data = snap.val();
+        if (
+          data?.state === "ringing" &&
+          data?.callerId !== user.uid
+        ) {
+          setIncomingChatId(chat.id);
+        } else if (incomingChatId === chat.id && (!data || data.state === "ended")) {
+          setIncomingChatId(null);
+        }
+      })
+    );
+    return () => unsubs.forEach((u) => u());
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.uid, userChatsForCalls.length]);
+
+  // activeChatId: use incoming call's chat first, then selected chat
+  const activeChatId = incomingChatId || selectedChatId || "";
+
   const webRTC = useWebRTC({
-    chatId: selectedChatId || "",
+    chatId: activeChatId,
     currentUserId: user?.uid || "",
     currentUserName,
     currentUserPhoto,
   });
 
-  // Auto-open modal when incoming call detected or outgoing call starts
+  // Auto-open modal for outgoing calls
   useEffect(() => {
-    if (webRTC.callState === "incoming" || webRTC.callState === "calling" || webRTC.callState === "requesting-media") {
+    if (webRTC.callState === "calling" || webRTC.callState === "requesting-media") {
       setCallModalOpen(true);
     }
     if (webRTC.callState === "idle" || webRTC.callState === "ended") {
@@ -1379,45 +1405,75 @@ export default function ChatPage() {
           setCallModalOpen(false);
         }}
         webRTC={webRTC}
-        calleeName={
-          webRTC.incomingCall?.callerName || calleeDisplayName
-        }
-        calleePhoto={
-          webRTC.incomingCall?.callerPhoto || calleeDisplayPhoto
-        }
+        calleeName={webRTC.incomingCall?.callerName || calleeDisplayName}
+        calleePhoto={webRTC.incomingCall?.callerPhoto || calleeDisplayPhoto}
       />
 
-      {/* ── Incoming call banner (shown when no modal is open yet) ── */}
-      {webRTC.callState === "incoming" && webRTC.incomingCall && !callModalOpen && (
-        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[9998] flex items-center gap-4 px-5 py-3.5 rounded-2xl bg-[#13132b] border border-white/[0.1] shadow-2xl">
-          <div className="flex flex-col min-w-0">
-            <p className="text-xs font-semibold text-white/90 truncate">
-              {webRTC.incomingCall.callerName}
-            </p>
-            <p className="text-[10px] text-white/40">
-              Incoming {webRTC.incomingCall.callType} call…
-            </p>
-          </div>
-          <button
-            onClick={async () => {
-              await webRTC.acceptCall();
-              setCallModalOpen(true);
+      {/* ── Incoming call screen ── */}
+      {webRTC.callState === "incoming" && webRTC.incomingCall && (
+        <div className="fixed inset-0 z-[9990] flex items-center justify-center bg-black/80 backdrop-blur-xl">
+          <div
+            className="flex flex-col items-center gap-6 px-10 py-10 rounded-[28px]"
+            style={{
+              background: "linear-gradient(160deg,#0d0d1f 0%,#0a0a18 100%)",
+              border: "0.5px solid rgba(255,255,255,0.08)",
+              boxShadow: "0 48px 96px rgba(0,0,0,0.85)",
+              minWidth: 300,
             }}
-            className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-semibold transition-colors"
           >
-            <Phone className="w-3.5 h-3.5" />
-            Accept
-          </button>
-          <button
-            onClick={() => webRTC.hangUp()}
-            className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-red-500 hover:bg-red-600 text-white text-xs font-semibold transition-colors"
-          >
-            <PhoneOff className="w-3.5 h-3.5" />
-            Decline
-          </button>
+            {/* Pulse avatar */}
+            <div className="relative flex items-center justify-center">
+              <span className="absolute w-24 h-24 rounded-full border border-indigo-400/20 animate-ping" style={{ animationDuration: "1.8s" }} />
+              <span className="absolute w-24 h-24 rounded-full border border-indigo-400/10 animate-ping" style={{ animationDuration: "1.8s", animationDelay: "0.6s" }} />
+              <div
+                className="w-20 h-20 rounded-full flex items-center justify-center text-white font-bold text-2xl relative z-10"
+                style={{ background: "linear-gradient(135deg,#6366f1,#8b5cf6)" }}
+              >
+                {webRTC.incomingCall.callerName.slice(0, 2).toUpperCase()}
+              </div>
+            </div>
+
+            <div className="text-center">
+              <p className="text-white font-semibold text-lg tracking-tight">
+                {webRTC.incomingCall.callerName}
+              </p>
+              <p className="text-white/40 text-xs mt-1">
+                Incoming {webRTC.incomingCall.callType} call…
+              </p>
+            </div>
+
+            <div className="flex items-center gap-6">
+              {/* Decline */}
+              <div className="flex flex-col items-center gap-2">
+                <button
+                  onClick={() => webRTC.hangUp()}
+                  className="w-14 h-14 rounded-full bg-red-500 hover:bg-red-600 flex items-center justify-center text-white transition-colors"
+                  style={{ boxShadow: "0 4px 18px rgba(239,68,68,0.4)" }}
+                >
+                  <PhoneOff className="w-5 h-5" />
+                </button>
+                <span className="text-[10px] text-white/35">Decline</span>
+              </div>
+
+              {/* Accept */}
+              <div className="flex flex-col items-center gap-2">
+                <button
+                  onClick={async () => {
+                    await webRTC.acceptCall();
+                    // Modal opens automatically via callState → "connecting"/"connected"
+                    setCallModalOpen(true);
+                  }}
+                  className="w-14 h-14 rounded-full bg-emerald-500 hover:bg-emerald-600 flex items-center justify-center text-white transition-colors"
+                  style={{ boxShadow: "0 4px 18px rgba(16,185,129,0.4)" }}
+                >
+                  <Phone className="w-5 h-5" />
+                </button>
+                <span className="text-[10px] text-white/35">Accept</span>
+              </div>
+            </div>
+          </div>
         </div>
       )}
-
       {/* ── LEFT: Chat list (hidden on mobile when room is open) ── */}
       <div
         className={`flex-shrink-0 flex flex-col ${
