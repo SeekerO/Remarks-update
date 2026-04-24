@@ -167,7 +167,7 @@ export default function VideoCallModal({
   const [visible, setVisible] = useState(false);
   const [fullscreen, setFullscreen] = useState(false);
   const timer = useTimer(callState === "connected");
-
+  // Commit changes uWu
   useEffect(() => {
     if (isOpen) requestAnimationFrame(() => setVisible(true));
     else {
