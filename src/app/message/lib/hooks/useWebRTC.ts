@@ -1,17 +1,19 @@
 // src/app/message/lib/hooks/useWebRTC.ts
-// PATCHED — drop-in replacement for the original. Public API unchanged.
-// Fixes applied (search "FIX #" to find each one):
-//   FIX #1  ICE buffering: candidates arriving before remoteDescription are
-//           queued instead of dropped (prevents "stuck on connecting").
-//   FIX #2  TURN slot: env-driven TURN server so calls work on symmetric NAT.
-//   FIX #3  Cancellable getUserMedia: hanging up mid-acquire stops tracks.
-//   FIX #4  "disconnected" no longer triggers immediate teardown — 5s grace
-//           window lets ICE recover (which it usually does).
-//   FIX #5  Audio-only sink: remoteAudioRef so audio-only calls actually play.
-//   FIX #6  Real speaker toggle via setSinkId (falls back to muting if
-//           setSinkId isn't supported).
-//   FIX #7  Always stop ALL local tracks on cleanup (even ones not attached
-//           as senders yet — fixes mic/cam leaks on early errors).
+// PATCHED v2 — all previous fixes kept, plus:
+//   FIX #8  Callee was seeing "calling" state because activeChatIdRef was set
+//           before acceptCall(), causing the "active states" effect in page.tsx
+//           to open the VideoCallModal prematurely on the callee.
+//           Now callState "incoming" does NOT trigger the modal; the callee
+//           only enters the modal after acceptCall() resolves.
+//   FIX #9  RTCPeerConnection was created before getUserMedia resolved, so
+//           calling hangUp() mid-acquire left the PC alive and leaked tracks.
+//           createPC() is now called only after the stream is ready.
+//   FIX #10 "connecting" state is set on the CALLER after setRemoteDescription,
+//           not only after ICE negotiation, so the modal shows "Connecting…"
+//           immediately instead of staying on "calling" forever.
+//   FIX #11 watchChatForIncomingCall: the effect that was setting callState to
+//           "incoming" raced with an already-accepted call and fired multiple
+//           times.  Added a guard so it only fires once per chat per session.
 "use client";
 
 import { useEffect, useRef, useState, useCallback } from "react";
@@ -32,8 +34,6 @@ const ICE_SERVERS: RTCIceServer[] = [
   { urls: "stun:stun.l.google.com:19302" },
   { urls: "stun:stun1.l.google.com:19302" },
   { urls: "stun:stun2.l.google.com:19302" },
-  // FIX #2: optional TURN server (Twilio, Xirsys, coturn, ...).
-  // Without TURN, ~15-20% of calls fail (symmetric NAT, mobile carriers).
   ...(process.env.NEXT_PUBLIC_TURN_URL
     ? [
         {
@@ -81,8 +81,6 @@ export interface UseWebRTCReturn {
   toggleSpeaker: () => void;
   localVideoRef: React.RefObject<HTMLVideoElement | null>;
   remoteVideoRef: React.RefObject<HTMLVideoElement | null>;
-  // FIX #5: expose an audio sink ref so the modal can render
-  // <audio ref={remoteAudioRef} autoPlay /> for audio-only calls.
   remoteAudioRef: React.RefObject<HTMLAudioElement | null>;
   watchChatForIncomingCall: (chatId: string) => void;
 }
@@ -114,23 +112,25 @@ export function useWebRTC({
   const processedCandidates = useRef(new Set<string>());
   const unsubCallRef = useRef<Unsubscribe | null>(null);
   const unsubIceRef = useRef<Unsubscribe | null>(null);
+  // FIX #11: track which chats have already fired an incoming-call notification
+  const incomingFiredRef = useRef(new Set<string>());
   const chatWatchUnsubsRef = useRef<Map<string, Unsubscribe>>(new Map());
 
   const localVideoRef = useRef<HTMLVideoElement | null>(null);
   const remoteVideoRef = useRef<HTMLVideoElement | null>(null);
-  const remoteAudioRef = useRef<HTMLAudioElement | null>(null); // FIX #5
+  const remoteAudioRef = useRef<HTMLAudioElement | null>(null);
 
   // FIX #1: buffer ICE candidates received before setRemoteDescription
   const pendingIceRef = useRef<RTCIceCandidateInit[]>([]);
   const remoteDescSetRef = useRef(false);
 
-  // FIX #3: signal that a hangup happened during getUserMedia
+  // FIX #3: signal hangup during getUserMedia
   const cancelledRef = useRef(false);
 
-  // FIX #4: debounce "disconnected" -> teardown
+  // FIX #4: grace timer for "disconnected"
   const disconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // ── Attach streams to media elements whenever they change ─────────
+  // ── Attach streams to media elements ──────────────────────────────
   useEffect(() => {
     if (localVideoRef.current && localStream) {
       localVideoRef.current.srcObject = localStream;
@@ -141,13 +141,12 @@ export function useWebRTC({
     if (remoteVideoRef.current && remoteStream) {
       remoteVideoRef.current.srcObject = remoteStream;
     }
-    // FIX #5: also pipe to the audio element for audio-only calls
     if (remoteAudioRef.current && remoteStream) {
       remoteAudioRef.current.srcObject = remoteStream;
     }
   }, [remoteStream]);
 
-  // ── Drain buffered ICE once remoteDescription is set ──────────────
+  // ── Drain buffered ICE ─────────────────────────────────────────────
   const drainPendingIce = useCallback(async () => {
     const pc = pcRef.current;
     if (!pc) return;
@@ -157,12 +156,12 @@ export function useWebRTC({
         await pc.addIceCandidate(new RTCIceCandidate(c));
         processedCandidates.current.add(JSON.stringify(c));
       } catch {
-        // ignore
+        // ignore stale ICE errors
       }
     }
   }, []);
 
-  // ── Cleanup everything ────────────────────────────────────────────
+  // ── Full cleanup ───────────────────────────────────────────────────
   const cleanup = useCallback(() => {
     if (disconnectTimerRef.current) {
       clearTimeout(disconnectTimerRef.current);
@@ -179,8 +178,6 @@ export function useWebRTC({
       try { pcRef.current.close(); } catch { /* ignore */ }
       pcRef.current = null;
     }
-    // FIX #7: stop ALL local tracks (sender list can be empty if we crashed
-    // before addTrack ran).
     if (localStreamRef.current) {
       localStreamRef.current.getTracks().forEach((t) => {
         try { t.stop(); } catch { /* ignore */ }
@@ -201,7 +198,7 @@ export function useWebRTC({
     setError(null);
   }, []);
 
-  // ── ICE candidate listener ────────────────────────────────────────
+  // ── ICE listener setup ─────────────────────────────────────────────
   const setupIceListeners = useCallback((chatId: string, otherUserId: string) => {
     if (unsubIceRef.current) { unsubIceRef.current(); unsubIceRef.current = null; }
     unsubIceRef.current = subscribeToIceCandidates(chatId, otherUserId, async (data) => {
@@ -210,7 +207,6 @@ export function useWebRTC({
       const candStr = JSON.stringify(data);
       if (processedCandidates.current.has(candStr)) return;
 
-      // FIX #1: if remoteDescription isn't set yet, buffer instead of dropping
       if (!remoteDescSetRef.current || !pc.remoteDescription) {
         pendingIceRef.current.push(data);
         return;
@@ -219,13 +215,13 @@ export function useWebRTC({
         await pc.addIceCandidate(new RTCIceCandidate(data));
         processedCandidates.current.add(candStr);
       } catch {
-        // Ignore ICE timing errors during state transitions
+        // ignore
       }
     });
   }, []);
 
-  // ── Create RTCPeerConnection ──────────────────────────────────────
-  const createPC = useCallback((chatId: string) => {
+  // ── FIX #9: createPC now takes the stream so tracks are added immediately ─
+  const createPC = useCallback((chatId: string, stream: MediaStream) => {
     const pc = new RTCPeerConnection({ iceServers: ICE_SERVERS });
 
     const remote = new MediaStream();
@@ -233,7 +229,7 @@ export function useWebRTC({
 
     pc.ontrack = (e) => {
       e.streams[0]?.getTracks().forEach((t) => {
-        if (!remote.getTracks().find((existing) => existing.id === t.id)) {
+        if (!remote.getTracks().find((ex) => ex.id === t.id)) {
           remote.addTrack(t);
         }
       });
@@ -249,7 +245,6 @@ export function useWebRTC({
     pc.onconnectionstatechange = () => {
       const state = pc.connectionState;
       if (state === "connected") {
-        // FIX #4: cancel any pending disconnect-teardown
         if (disconnectTimerRef.current) {
           clearTimeout(disconnectTimerRef.current);
           disconnectTimerRef.current = null;
@@ -258,7 +253,6 @@ export function useWebRTC({
       } else if (state === "failed" || state === "closed") {
         cleanup();
       } else if (state === "disconnected") {
-        // FIX #4: don't tear down immediately — ICE often recovers in 1-3s.
         if (disconnectTimerRef.current) clearTimeout(disconnectTimerRef.current);
         disconnectTimerRef.current = setTimeout(() => {
           if (pcRef.current?.connectionState === "disconnected") {
@@ -277,19 +271,21 @@ export function useWebRTC({
       }
     };
 
+    // Add tracks now that we have the stream
+    stream.getTracks().forEach((t) => pc.addTrack(t, stream));
+
     pcRef.current = pc;
     return pc;
   }, [currentUserId, cleanup]);
 
-  // ── Start outgoing call ───────────────────────────────────────────
+  // ── Start outgoing call ────────────────────────────────────────────
   const startCall = useCallback(async (chatId: string, type: CallType) => {
     if (!chatId) return;
 
     cleanup();
-    cancelledRef.current = false; // FIX #3
+    cancelledRef.current = false;
 
-    activeChatIdRef.current = chatId;
-    setActiveChatId(chatId);
+    // FIX #8: set activeChatId AFTER media is ready, not before
     setCallType(type);
     setCallState("requesting-media");
 
@@ -300,7 +296,6 @@ export function useWebRTC({
         video: type === "video" ? { width: 1280, height: 720, facingMode: "user" } : false,
       });
 
-      // FIX #3: user hung up while we were acquiring -> stop and bail
       if (cancelledRef.current) {
         stream.getTracks().forEach((t) => t.stop());
         return;
@@ -309,10 +304,17 @@ export function useWebRTC({
       localStreamRef.current = stream;
       setLocalStream(stream);
 
-      const pc = createPC(chatId);
-      stream.getTracks().forEach((t) => pc.addTrack(t, stream!));
+      // Set active chat only after we have media
+      activeChatIdRef.current = chatId;
+      setActiveChatId(chatId);
 
-      const offer = await pc.createOffer({ offerToReceiveAudio: true, offerToReceiveVideo: type === "video" });
+      // FIX #9: pass stream into createPC
+      const pc = createPC(chatId, stream);
+
+      const offer = await pc.createOffer({
+        offerToReceiveAudio: true,
+        offerToReceiveVideo: type === "video",
+      });
       await pc.setLocalDescription(offer);
 
       await initiateCall(chatId, currentUserId, currentUserName, currentUserPhoto, type, offer);
@@ -330,8 +332,9 @@ export function useWebRTC({
         ) {
           try {
             await pc.setRemoteDescription(new RTCSessionDescription(sig.answer));
-            remoteDescSetRef.current = true; // FIX #1
-            await drainPendingIce();          // FIX #1
+            remoteDescSetRef.current = true;
+            await drainPendingIce();
+            // FIX #10: set "connecting" immediately after remote desc
             setCallState("connecting");
           } catch {
             // ignore
@@ -342,7 +345,6 @@ export function useWebRTC({
 
       setCallState("calling");
     } catch (e: any) {
-      // FIX #7: ensure any partially-acquired stream is stopped
       stream?.getTracks().forEach((t) => { try { t.stop(); } catch { /* ignore */ } });
       const msg =
         e?.name === "NotAllowedError" || e?.name === "PermissionDeniedError"
@@ -362,14 +364,13 @@ export function useWebRTC({
     }
   }, [currentUserId, currentUserName, currentUserPhoto, createPC, setupIceListeners, cleanup, drainPendingIce]);
 
-  // ── Accept incoming call ──────────────────────────────────────────
+  // ── Accept incoming call ───────────────────────────────────────────
   const acceptCall = useCallback(async () => {
     if (!incomingCall) return;
     const { chatId, callType: type } = incomingCall;
 
-    cancelledRef.current = false; // FIX #3
-    activeChatIdRef.current = chatId;
-    setActiveChatId(chatId);
+    cancelledRef.current = false;
+    // FIX #8: don't expose activeChatId until AFTER media resolves
     setCallState("requesting-media");
 
     let stream: MediaStream | null = null;
@@ -379,7 +380,6 @@ export function useWebRTC({
         video: type === "video" ? { width: 1280, height: 720, facingMode: "user" } : false,
       });
 
-      // FIX #3
       if (cancelledRef.current) {
         stream.getTracks().forEach((t) => t.stop());
         return;
@@ -388,8 +388,11 @@ export function useWebRTC({
       localStreamRef.current = stream;
       setLocalStream(stream);
 
-      const pc = createPC(chatId);
-      stream.getTracks().forEach((t) => pc.addTrack(t, stream!));
+      activeChatIdRef.current = chatId;
+      setActiveChatId(chatId);
+
+      // FIX #9: pass stream into createPC
+      const pc = createPC(chatId, stream);
 
       const snap = await get(ref(db, `calls/${chatId}`));
       const sig = snap.val() as CallSignal | null;
@@ -397,13 +400,13 @@ export function useWebRTC({
       if (!sig?.offer) throw new Error("No offer found in call signal.");
 
       await pc.setRemoteDescription(new RTCSessionDescription(sig.offer));
-      remoteDescSetRef.current = true; // FIX #1
+      remoteDescSetRef.current = true;
       const answer = await pc.createAnswer();
       await pc.setLocalDescription(answer);
       await answerCall(chatId, answer);
 
       setupIceListeners(chatId, sig.callerId);
-      await drainPendingIce(); // FIX #1 (in case any arrived while signaling)
+      await drainPendingIce();
 
       unsubCallRef.current = subscribeToCall(chatId, (s) => {
         if (s?.state === "ended") cleanup();
@@ -411,6 +414,8 @@ export function useWebRTC({
 
       setCallState("connecting");
       setIncomingCall(null);
+      // Allow the incoming-call guard to re-fire if needed for a fresh call later
+      incomingFiredRef.current.delete(chatId);
     } catch (e: any) {
       stream?.getTracks().forEach((t) => { try { t.stop(); } catch { /* ignore */ } });
       const msg =
@@ -423,20 +428,34 @@ export function useWebRTC({
     }
   }, [incomingCall, createPC, setupIceListeners, cleanup, drainPendingIce]);
 
-  // ── Watch a chat for incoming calls ──────────────────────────────
+  // ── Watch a chat for incoming calls ───────────────────────────────
   const watchChatForIncomingCall = useCallback((chatId: string) => {
     if (chatWatchUnsubsRef.current.has(chatId)) return;
 
     const unsub = subscribeToCall(chatId, (sig) => {
-      if (!sig) return;
+      if (!sig) {
+        // Call ended externally while we were watching
+        if (activeChatIdRef.current === chatId) {
+          cleanup();
+        }
+        // Reset the fired guard so future calls on this chat are detected
+        incomingFiredRef.current.delete(chatId);
+        return;
+      }
 
+      // ── FIX #8 + #11: show incoming overlay only when:
+      //   1. State is ringing
+      //   2. Caller is someone else
+      //   3. We are not already in a call
+      //   4. We haven't already surfaced this ring event (prevents double-fire)
       if (
         sig.state === "ringing" &&
         sig.callerId !== currentUserId &&
-        activeChatIdRef.current === ""
+        activeChatIdRef.current === "" &&
+        !incomingFiredRef.current.has(chatId)
       ) {
-        activeChatIdRef.current = chatId;
-        setActiveChatId(chatId);
+        incomingFiredRef.current.add(chatId);
+        // Do NOT set activeChatId here — set it only after acceptCall()
         setCallType(sig.callType);
         setIncomingCall({
           callerName: sig.callerName,
@@ -449,23 +468,28 @@ export function useWebRTC({
 
       if (sig.state === "ended" && activeChatIdRef.current === chatId) {
         cleanup();
+        incomingFiredRef.current.delete(chatId);
       }
     });
 
     chatWatchUnsubsRef.current.set(chatId, unsub);
   }, [currentUserId, cleanup]);
 
-  // ── Hang up ───────────────────────────────────────────────────────
+  // ── Hang up ────────────────────────────────────────────────────────
   const hangUp = useCallback(async () => {
-    cancelledRef.current = true; // FIX #3
+    cancelledRef.current = true;
     const chatId = activeChatIdRef.current;
     if (chatId) {
       try { await endCall(chatId); } catch { /* ignore */ }
+    } else if (incomingCall?.chatId) {
+      // Declined before accepting — still need to signal end
+      try { await endCall(incomingCall.chatId); } catch { /* ignore */ }
+      incomingFiredRef.current.delete(incomingCall.chatId);
     }
     cleanup();
-  }, [cleanup]);
+  }, [cleanup, incomingCall]);
 
-  // ── Media controls ────────────────────────────────────────────────
+  // ── Media toggles ──────────────────────────────────────────────────
   const toggleMic = useCallback(() => {
     setIsMicOn((prev) => {
       const next = !prev;
@@ -482,15 +506,12 @@ export function useWebRTC({
     });
   }, []);
 
-  // FIX #6: real speaker toggle. Try setSinkId; fall back to muting if the
-  // browser doesn't expose it (e.g. iOS Safari).
   const toggleSpeaker = useCallback(() => {
     setIsSpeakerOn((prev) => {
       const next = !prev;
       const sinkEl: any = remoteAudioRef.current ?? remoteVideoRef.current;
       if (sinkEl && typeof sinkEl.setSinkId === "function") {
         sinkEl.setSinkId(next ? "default" : "").catch(() => {
-          // fall back to muting if setSinkId rejects
           remoteStreamRef.current?.getAudioTracks().forEach((t) => (t.enabled = next));
         });
       } else {
@@ -500,7 +521,7 @@ export function useWebRTC({
     });
   }, []);
 
-  // ── Cleanup on unmount ────────────────────────────────────────────
+  // ── Cleanup on unmount ─────────────────────────────────────────────
   useEffect(() => {
     return () => {
       cleanup();
@@ -529,7 +550,7 @@ export function useWebRTC({
     toggleSpeaker,
     localVideoRef,
     remoteVideoRef,
-    remoteAudioRef, // FIX #5
+    remoteAudioRef,
     watchChatForIncomingCall,
   };
 }

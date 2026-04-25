@@ -29,7 +29,7 @@ import {
   AddMembersModal,
 } from "./lib/components/ChatModals";
 import VideoCallModal from "./lib/components/voiceCallModal";
-import { useWebRTC, type UseWebRTCReturn } from "./lib/hooks/useWebRTC";
+import { useWebRTC, type UseWebRTCReturn, type UseWebRTCCallState } from "./lib/hooks/useWebRTC";
 import type { CallType } from "./lib/call/callSignaling";
 
 import {
@@ -1285,11 +1285,10 @@ export default function ChatPage() {
   const [selectedChatId, setSelectedChatId] = useState<string | null>(null);
   const [mobileView, setMobileView] = useState<"list" | "room">("list");
 
-  // ── Stable ref for the active call chatId ─────────────────────────
-  // Stored in a ref so WebRTC never reinitialises mid-call when other
-  // state (selectedChatId, etc.) changes.
   const activeCallChatIdRef = useRef<string>("");
 
+  // FIX #8: callModalOpen must NOT open for "incoming" state.
+  // The incoming overlay is separate and handled by callState === "incoming".
   const [callModalOpen, setCallModalOpen] = useState(false);
   const [calleeDisplayName, setCalleeDisplayName] = useState("User");
   const [calleeDisplayPhoto, setCalleeDisplayPhoto] = useState<string | null>(
@@ -1318,61 +1317,33 @@ export default function ChatPage() {
     currentUserPhoto,
   });
 
-  // ── Register all user chats with the hook's incoming-call watcher ─
-  // This replaces the old page-level Firebase listener that caused
-  // double-subscription conflicts with useWebRTC's own listener.
+  // ── Register all user chats with watchChatForIncomingCall ─────────
+  // This is the ONLY place that sets up incoming-call detection.
+  // The old page-level Firebase onValue loop has been removed to prevent
+  // duplicate/racing state updates.
   const userChatsForCalls = useUserChats(user?.uid || "");
   useEffect(() => {
     if (!user?.uid || userChatsForCalls.length === 0) return;
+    userChatsForCalls.forEach((chat) => {
+      webRTC.watchChatForIncomingCall(chat.id);
+    });
+    // watchChatForIncomingCall is idempotent — safe to call on every render
+  }, [user?.uid, userChatsForCalls, webRTC.watchChatForIncomingCall]);
 
-    const unsubs = userChatsForCalls.map((chat) =>
-      onValue(ref(db, `calls/${chat.id}`), (snap) => {
-        const data = snap.val();
 
-        if (
-          data?.state === "ringing" &&
-          data?.callerId !== user.uid &&
-          activeCallChatIdRef.current === ""
-        ) {
-          activeCallChatIdRef.current = chat.id;
-          setCalleeDisplayName(data.callerName || "Unknown");
-          setCalleeDisplayPhoto(data.callerPhoto || null);
-          // Let useWebRTC's own signal subscription handle setting callState → "incoming"
-          // We just need to ensure the modal-display name is ready
-        }
-
-        if (
-          (!data || data.state === "ended") &&
-          activeCallChatIdRef.current === chat.id
-        ) {
-          setTimeout(() => {
-            activeCallChatIdRef.current = "";
-            setCallModalOpen(false);
-          }, 1500);
-        }
-      }),
-    );
-
-    return () => unsubs.forEach((u) => u());
-  }, [user?.uid, userChatsForCalls]);
-
-  // ── Open modal whenever the call enters an active state ───────────
-  // Do NOT include "incoming" here — that state has its own overlay.
-  // Do NOT close the modal from here — closing is handled by handleHangUp
-  // and the idle/ended watcher below, to avoid a double-hangup loop.
   useEffect(() => {
-    const activeStates: string[] = [
+    const activeStates: UseWebRTCCallState[] = [
       "calling",
       "requesting-media",
       "connecting",
       "connected",
     ];
-    if (activeStates.includes(webRTC.callState)) {
+    if (activeStates.includes(webRTC.callState as UseWebRTCCallState)) {
       setCallModalOpen(true);
     }
   }, [webRTC.callState]);
 
-  // ── Close modal and reset ref when call reaches a terminal state ──
+  // ── Close modal when call reaches a terminal state ────────────────
   useEffect(() => {
     if (webRTC.callState === "idle" || webRTC.callState === "ended") {
       setCallModalOpen(false);
@@ -1381,9 +1352,6 @@ export default function ChatPage() {
   }, [webRTC.callState]);
 
   // ── Start an outgoing call ────────────────────────────────────────
-  // Merged into a single handler — sets display info AND kicks off
-  // webRTC.startCall in one shot, eliminating the previous race condition
-  // where chatId could be stale by the time startCall was called separately.
   const handleStartCall = useCallback(
     (
       name: string,
@@ -1391,30 +1359,24 @@ export default function ChatPage() {
       chatId: string,
       type: CallType = "video",
     ) => {
-      // Guard: already in a different call
       if (
         activeCallChatIdRef.current !== "" &&
         activeCallChatIdRef.current !== chatId
       ) {
-        return;
+        return; // already in a different call
       }
       setCalleeDisplayName(name);
       setCalleeDisplayPhoto(photo);
       activeCallChatIdRef.current = chatId;
-      // startCall handles setting callModalOpen via the callState effect above
       webRTC.startCall(chatId, type);
     },
     [webRTC],
   );
 
-  // ── Hang up from either side ──────────────────────────────────────
-  // This is the single place that calls webRTC.hangUp(). The modal's
-  // onClose prop points here but does NOT additionally call hangUp itself,
-  // breaking the previous double-hangup loop.
+  // ── Hang up — single entry point for both sides ───────────────────
   const handleHangUp = useCallback(async () => {
     await webRTC.hangUp();
-    // callState will transition to "idle", which triggers the effect above
-    // to close the modal and clear activeCallChatIdRef.
+    // callState → "idle" triggers the effect above to close modal and clear ref
   }, [webRTC]);
 
   const handleSelectChat = (id: string) => {
