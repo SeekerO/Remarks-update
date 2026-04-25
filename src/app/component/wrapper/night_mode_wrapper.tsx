@@ -4,6 +4,7 @@ import Sidebar from "../sidebar";
 import { useAuth } from "@/lib/auth/AuthContext";
 import { usePathname } from "next/navigation";
 import MessageNotification from "../messageNotification";
+import IncomingCallToast from "../callNotificationOverlay";
 interface WrapperProps {
   children: React.ReactNode;
 }
@@ -39,13 +40,16 @@ const ThemeWrapper: React.FC<WrapperProps> = ({ children }) => {
                               no padding needed on desktop (persistent sidebar)
       */}
       <MessageNotification />
+
       <div
         className={[
           "flex w-full overflow-y-auto",
           showSidebar ? "pb-16 lg:pb-0" : "",
         ].join(" ")}
       >
+              <IncomingCallToast>
         {children}
+        </IncomingCallToast>
       </div>
     </main>
   );
