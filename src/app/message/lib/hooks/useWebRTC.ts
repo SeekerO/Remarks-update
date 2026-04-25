@@ -98,7 +98,9 @@ export function useWebRTC({
   const [callType, setCallType] = useState<CallType>("video");
   const [localStream, setLocalStream] = useState<MediaStream | null>(null);
   const [remoteStream, setRemoteStream] = useState<MediaStream | null>(null);
-  const [incomingCall, setIncomingCall] = useState<IncomingCallInfo | null>(null);
+  const [incomingCall, setIncomingCall] = useState<IncomingCallInfo | null>(
+    null,
+  );
   const [activeChatId, setActiveChatId] = useState("");
   const [isMicOn, setIsMicOn] = useState(true);
   const [isCamOn, setIsCamOn] = useState(true);
@@ -167,20 +169,34 @@ export function useWebRTC({
       clearTimeout(disconnectTimerRef.current);
       disconnectTimerRef.current = null;
     }
-    if (unsubCallRef.current) { unsubCallRef.current(); unsubCallRef.current = null; }
-    if (unsubIceRef.current) { unsubIceRef.current(); unsubIceRef.current = null; }
+    if (unsubCallRef.current) {
+      unsubCallRef.current();
+      unsubCallRef.current = null;
+    }
+    if (unsubIceRef.current) {
+      unsubIceRef.current();
+      unsubIceRef.current = null;
+    }
 
     if (pcRef.current) {
       pcRef.current.ontrack = null;
       pcRef.current.onicecandidate = null;
       pcRef.current.onconnectionstatechange = null;
       pcRef.current.oniceconnectionstatechange = null;
-      try { pcRef.current.close(); } catch { /* ignore */ }
+      try {
+        pcRef.current.close();
+      } catch {
+        /* ignore */
+      }
       pcRef.current = null;
     }
     if (localStreamRef.current) {
       localStreamRef.current.getTracks().forEach((t) => {
-        try { t.stop(); } catch { /* ignore */ }
+        try {
+          t.stop();
+        } catch {
+          /* ignore */
+        }
       });
       localStreamRef.current = null;
     }
@@ -199,170 +215,219 @@ export function useWebRTC({
   }, []);
 
   // ── ICE listener setup ─────────────────────────────────────────────
-  const setupIceListeners = useCallback((chatId: string, otherUserId: string) => {
-    if (unsubIceRef.current) { unsubIceRef.current(); unsubIceRef.current = null; }
-    unsubIceRef.current = subscribeToIceCandidates(chatId, otherUserId, async (data) => {
-      const pc = pcRef.current;
-      if (!pc) return;
-      const candStr = JSON.stringify(data);
-      if (processedCandidates.current.has(candStr)) return;
-
-      if (!remoteDescSetRef.current || !pc.remoteDescription) {
-        pendingIceRef.current.push(data);
-        return;
+  const setupIceListeners = useCallback(
+    (chatId: string, otherUserId: string) => {
+      if (unsubIceRef.current) {
+        unsubIceRef.current();
+        unsubIceRef.current = null;
       }
-      try {
-        await pc.addIceCandidate(new RTCIceCandidate(data));
-        processedCandidates.current.add(candStr);
-      } catch {
-        // ignore
-      }
-    });
-  }, []);
+      unsubIceRef.current = subscribeToIceCandidates(
+        chatId,
+        otherUserId,
+        async (data) => {
+          const pc = pcRef.current;
+          if (!pc) return;
+          const candStr = JSON.stringify(data);
+          if (processedCandidates.current.has(candStr)) return;
 
-  // ── FIX #9: createPC now takes the stream so tracks are added immediately ─
-  const createPC = useCallback((chatId: string, stream: MediaStream) => {
-    const pc = new RTCPeerConnection({ iceServers: ICE_SERVERS });
-
-    const remote = new MediaStream();
-    remoteStreamRef.current = remote;
-
-    pc.ontrack = (e) => {
-      e.streams[0]?.getTracks().forEach((t) => {
-        if (!remote.getTracks().find((ex) => ex.id === t.id)) {
-          remote.addTrack(t);
-        }
-      });
-      setRemoteStream(new MediaStream(remote.getTracks()));
-    };
-
-    pc.onicecandidate = (e) => {
-      if (e.candidate && activeChatIdRef.current) {
-        sendIceCandidate(activeChatIdRef.current, currentUserId, e.candidate.toJSON());
-      }
-    };
-
-    pc.onconnectionstatechange = () => {
-      const state = pc.connectionState;
-      if (state === "connected") {
-        if (disconnectTimerRef.current) {
-          clearTimeout(disconnectTimerRef.current);
-          disconnectTimerRef.current = null;
-        }
-        setCallState("connected");
-      } else if (state === "failed" || state === "closed") {
-        cleanup();
-      } else if (state === "disconnected") {
-        if (disconnectTimerRef.current) clearTimeout(disconnectTimerRef.current);
-        disconnectTimerRef.current = setTimeout(() => {
-          if (pcRef.current?.connectionState === "disconnected") {
-            cleanup();
+          if (!remoteDescSetRef.current || !pc.remoteDescription) {
+            pendingIceRef.current.push(data);
+            return;
           }
-        }, 5000);
-      }
-    };
-
-    pc.oniceconnectionstatechange = () => {
-      if (
-        pc.iceConnectionState === "connected" ||
-        pc.iceConnectionState === "completed"
-      ) {
-        setCallState("connected");
-      }
-    };
-
-    // Add tracks now that we have the stream
-    stream.getTracks().forEach((t) => pc.addTrack(t, stream));
-
-    pcRef.current = pc;
-    return pc;
-  }, [currentUserId, cleanup]);
-
-  // ── Start outgoing call ────────────────────────────────────────────
-  const startCall = useCallback(async (chatId: string, type: CallType) => {
-    if (!chatId) return;
-
-    cleanup();
-    cancelledRef.current = false;
-
-    // FIX #8: set activeChatId AFTER media is ready, not before
-    setCallType(type);
-    setCallState("requesting-media");
-
-    let stream: MediaStream | null = null;
-    try {
-      stream = await navigator.mediaDevices.getUserMedia({
-        audio: true,
-        video: type === "video" ? { width: 1280, height: 720, facingMode: "user" } : false,
-      });
-
-      if (cancelledRef.current) {
-        stream.getTracks().forEach((t) => t.stop());
-        return;
-      }
-
-      localStreamRef.current = stream;
-      setLocalStream(stream);
-
-      // Set active chat only after we have media
-      activeChatIdRef.current = chatId;
-      setActiveChatId(chatId);
-
-      // FIX #9: pass stream into createPC
-      const pc = createPC(chatId, stream);
-
-      const offer = await pc.createOffer({
-        offerToReceiveAudio: true,
-        offerToReceiveVideo: type === "video",
-      });
-      await pc.setLocalDescription(offer);
-
-      await initiateCall(chatId, currentUserId, currentUserName, currentUserPhoto, type, offer);
-
-      const snap = await get(ref(db, `chats/${chatId}/users`));
-      const calleeId = Object.keys(snap.val() || {}).find((id) => id !== currentUserId);
-      if (calleeId) setupIceListeners(chatId, calleeId);
-
-      unsubCallRef.current = subscribeToCall(chatId, async (sig) => {
-        if (!sig) return;
-        if (
-          sig.state === "connected" &&
-          sig.answer &&
-          pc.signalingState === "have-local-offer"
-        ) {
           try {
-            await pc.setRemoteDescription(new RTCSessionDescription(sig.answer));
-            remoteDescSetRef.current = true;
-            await drainPendingIce();
-            // FIX #10: set "connecting" immediately after remote desc
-            setCallState("connecting");
+            await pc.addIceCandidate(new RTCIceCandidate(data));
+            processedCandidates.current.add(candStr);
           } catch {
             // ignore
           }
-        }
-        if (sig.state === "ended") cleanup();
-      });
+        },
+      );
+    },
+    [],
+  );
 
-      setCallState("calling");
-    } catch (e: any) {
-      stream?.getTracks().forEach((t) => { try { t.stop(); } catch { /* ignore */ } });
-      const msg =
-        e?.name === "NotAllowedError" || e?.name === "PermissionDeniedError"
-          ? "Camera/microphone permission denied."
-          : e?.name === "NotFoundError"
-            ? "No camera or microphone found."
-            : e?.name === "NotReadableError"
-              ? "Camera/mic is already in use by another app."
-              : "Failed to start call.";
-      setError(msg);
-      setCallState("error");
-      localStreamRef.current?.getTracks().forEach((t) => t.stop());
-      localStreamRef.current = null;
-      setLocalStream(null);
-      activeChatIdRef.current = "";
-      setActiveChatId("");
-    }
-  }, [currentUserId, currentUserName, currentUserPhoto, createPC, setupIceListeners, cleanup, drainPendingIce]);
+  // ── FIX #9: createPC now takes the stream so tracks are added immediately ─
+  const createPC = useCallback(
+    (chatId: string, stream: MediaStream) => {
+      const pc = new RTCPeerConnection({ iceServers: ICE_SERVERS });
+
+      const remote = new MediaStream();
+      remoteStreamRef.current = remote;
+
+      pc.ontrack = (e) => {
+        e.streams[0]?.getTracks().forEach((t) => {
+          if (!remote.getTracks().find((ex) => ex.id === t.id)) {
+            remote.addTrack(t);
+          }
+        });
+        setRemoteStream(new MediaStream(remote.getTracks()));
+      };
+
+      pc.onicecandidate = (e) => {
+        if (e.candidate && activeChatIdRef.current) {
+          sendIceCandidate(
+            activeChatIdRef.current,
+            currentUserId,
+            e.candidate.toJSON(),
+          );
+        }
+      };
+
+      pc.onconnectionstatechange = () => {
+        const state = pc.connectionState;
+        if (state === "connected") {
+          if (disconnectTimerRef.current) {
+            clearTimeout(disconnectTimerRef.current);
+            disconnectTimerRef.current = null;
+          }
+          setCallState("connected");
+        } else if (state === "failed" || state === "closed") {
+          cleanup();
+        } else if (state === "disconnected") {
+          if (disconnectTimerRef.current)
+            clearTimeout(disconnectTimerRef.current);
+          disconnectTimerRef.current = setTimeout(() => {
+            if (pcRef.current?.connectionState === "disconnected") {
+              cleanup();
+            }
+          }, 5000);
+        }
+      };
+
+      pc.oniceconnectionstatechange = () => {
+        if (
+          pc.iceConnectionState === "connected" ||
+          pc.iceConnectionState === "completed"
+        ) {
+          setCallState("connected");
+        }
+      };
+
+      // Add tracks now that we have the stream
+      stream.getTracks().forEach((t) => pc.addTrack(t, stream));
+
+      pcRef.current = pc;
+      return pc;
+    },
+    [currentUserId, cleanup],
+  );
+
+  // ── Start outgoing call ────────────────────────────────────────────
+  const startCall = useCallback(
+    async (chatId: string, type: CallType) => {
+      if (!chatId) return;
+
+      cleanup();
+      cancelledRef.current = false;
+
+      // FIX #8: set activeChatId AFTER media is ready, not before
+      setCallType(type);
+      setCallState("requesting-media");
+
+      let stream: MediaStream | null = null;
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({
+          audio: true,
+          video:
+            type === "video"
+              ? { width: 1280, height: 720, facingMode: "user" }
+              : false,
+        });
+
+        if (cancelledRef.current) {
+          stream.getTracks().forEach((t) => t.stop());
+          return;
+        }
+
+        localStreamRef.current = stream;
+        setLocalStream(stream);
+
+        // Set active chat only after we have media
+        activeChatIdRef.current = chatId;
+        setActiveChatId(chatId);
+
+        // FIX #9: pass stream into createPC
+        const pc = createPC(chatId, stream);
+
+        const offer = await pc.createOffer({
+          offerToReceiveAudio: true,
+          offerToReceiveVideo: type === "video",
+        });
+        await pc.setLocalDescription(offer);
+
+        await initiateCall(
+          chatId,
+          currentUserId,
+          currentUserName,
+          currentUserPhoto,
+          type,
+          offer,
+        );
+
+        const snap = await get(ref(db, `chats/${chatId}/users`));
+        const calleeId = Object.keys(snap.val() || {}).find(
+          (id) => id !== currentUserId,
+        );
+        if (calleeId) setupIceListeners(chatId, calleeId);
+
+        unsubCallRef.current = subscribeToCall(chatId, async (sig) => {
+          if (!sig) return;
+          if (
+            sig.state === "connected" &&
+            sig.answer &&
+            pc.signalingState === "have-local-offer"
+          ) {
+            try {
+              await pc.setRemoteDescription(
+                new RTCSessionDescription(sig.answer),
+              );
+              remoteDescSetRef.current = true;
+              await drainPendingIce();
+              // FIX #10: set "connecting" immediately after remote desc
+              setCallState("connecting");
+            } catch {
+              // ignore
+            }
+          }
+          if (sig.state === "ended") cleanup();
+        });
+
+        setCallState("calling");
+      } catch (e: any) {
+        stream?.getTracks().forEach((t) => {
+          try {
+            t.stop();
+          } catch {
+            /* ignore */
+          }
+        });
+        const msg =
+          e?.name === "NotAllowedError" || e?.name === "PermissionDeniedError"
+            ? "Camera/microphone permission denied."
+            : e?.name === "NotFoundError"
+              ? "No camera or microphone found."
+              : e?.name === "NotReadableError"
+                ? "Camera/mic is already in use by another app."
+                : "Failed to start call.";
+        setError(msg);
+        setCallState("error");
+        localStreamRef.current?.getTracks().forEach((t) => t.stop());
+        localStreamRef.current = null;
+        setLocalStream(null);
+        activeChatIdRef.current = "";
+        setActiveChatId("");
+      }
+    },
+    [
+      currentUserId,
+      currentUserName,
+      currentUserPhoto,
+      createPC,
+      setupIceListeners,
+      cleanup,
+      drainPendingIce,
+    ],
+  );
 
   // ── Accept incoming call ───────────────────────────────────────────
   const acceptCall = useCallback(async () => {
@@ -377,7 +442,10 @@ export function useWebRTC({
     try {
       stream = await navigator.mediaDevices.getUserMedia({
         audio: true,
-        video: type === "video" ? { width: 1280, height: 720, facingMode: "user" } : false,
+        video:
+          type === "video"
+            ? { width: 1280, height: 720, facingMode: "user" }
+            : false,
       });
 
       if (cancelledRef.current) {
@@ -417,7 +485,13 @@ export function useWebRTC({
       // Allow the incoming-call guard to re-fire if needed for a fresh call later
       incomingFiredRef.current.delete(chatId);
     } catch (e: any) {
-      stream?.getTracks().forEach((t) => { try { t.stop(); } catch { /* ignore */ } });
+      stream?.getTracks().forEach((t) => {
+        try {
+          t.stop();
+        } catch {
+          /* ignore */
+        }
+      });
       const msg =
         e?.name === "NotAllowedError" || e?.name === "PermissionDeniedError"
           ? "Camera/microphone permission denied."
@@ -429,61 +503,76 @@ export function useWebRTC({
   }, [incomingCall, createPC, setupIceListeners, cleanup, drainPendingIce]);
 
   // ── Watch a chat for incoming calls ───────────────────────────────
-  const watchChatForIncomingCall = useCallback((chatId: string) => {
-    if (chatWatchUnsubsRef.current.has(chatId)) return;
+  const watchChatForIncomingCall = useCallback(
+    (chatId: string) => {
+      if (chatWatchUnsubsRef.current.has(chatId)) return;
 
-    const unsub = subscribeToCall(chatId, (sig) => {
-      if (!sig) {
-        // Call ended externally while we were watching
-        if (activeChatIdRef.current === chatId) {
-          cleanup();
+      const unsub = subscribeToCall(chatId, (sig) => {
+        if (!sig) {
+          // Call ended externally — covers two cases:
+          // 1. Remote hung up during an active/connected call
+          // 2. Caller CANCELLED before the callee accepted (activeChatIdRef is still "")
+          if (activeChatIdRef.current === chatId) {
+            cleanup();
+          } else if (incomingFiredRef.current.has(chatId)) {
+            // Caller cancelled while incoming overlay was showing
+            cleanup();
+          }
+          incomingFiredRef.current.delete(chatId);
+          return;
         }
-        // Reset the fired guard so future calls on this chat are detected
-        incomingFiredRef.current.delete(chatId);
-        return;
-      }
 
-      // ── FIX #8 + #11: show incoming overlay only when:
-      //   1. State is ringing
-      //   2. Caller is someone else
-      //   3. We are not already in a call
-      //   4. We haven't already surfaced this ring event (prevents double-fire)
-      if (
-        sig.state === "ringing" &&
-        sig.callerId !== currentUserId &&
-        activeChatIdRef.current === "" &&
-        !incomingFiredRef.current.has(chatId)
-      ) {
-        incomingFiredRef.current.add(chatId);
-        // Do NOT set activeChatId here — set it only after acceptCall()
-        setCallType(sig.callType);
-        setIncomingCall({
-          callerName: sig.callerName,
-          callerPhoto: sig.callerPhoto,
-          callType: sig.callType,
-          chatId,
-        });
-        setCallState("incoming");
-      }
+        // ── FIX #8 + #11: show incoming overlay only when:
+        //   1. State is ringing
+        //   2. Caller is someone else
+        //   3. We are not already in a call
+        //   4. We haven't already surfaced this ring event (prevents double-fire)
+        if (
+          sig.state === "ringing" &&
+          sig.callerId !== currentUserId &&
+          activeChatIdRef.current === "" &&
+          !incomingFiredRef.current.has(chatId)
+        ) {
+          incomingFiredRef.current.add(chatId);
+          // Do NOT set activeChatId here — set it only after acceptCall()
+          setCallType(sig.callType);
+          setIncomingCall({
+            callerName: sig.callerName,
+            callerPhoto: sig.callerPhoto,
+            callType: sig.callType,
+            chatId,
+          });
+          setCallState("incoming");
+        }
 
-      if (sig.state === "ended" && activeChatIdRef.current === chatId) {
-        cleanup();
-        incomingFiredRef.current.delete(chatId);
-      }
-    });
+        if (sig.state === "ended" && activeChatIdRef.current === chatId) {
+          cleanup();
+          incomingFiredRef.current.delete(chatId);
+        }
+      });
 
-    chatWatchUnsubsRef.current.set(chatId, unsub);
-  }, [currentUserId, cleanup]);
+      chatWatchUnsubsRef.current.set(chatId, unsub);
+    },
+    [currentUserId, cleanup],
+  );
 
   // ── Hang up ────────────────────────────────────────────────────────
   const hangUp = useCallback(async () => {
     cancelledRef.current = true;
     const chatId = activeChatIdRef.current;
     if (chatId) {
-      try { await endCall(chatId); } catch { /* ignore */ }
+      try {
+        await endCall(chatId);
+      } catch {
+        /* ignore */
+      }
     } else if (incomingCall?.chatId) {
       // Declined before accepting — still need to signal end
-      try { await endCall(incomingCall.chatId); } catch { /* ignore */ }
+      try {
+        await endCall(incomingCall.chatId);
+      } catch {
+        /* ignore */
+      }
       incomingFiredRef.current.delete(incomingCall.chatId);
     }
     cleanup();
@@ -493,7 +582,9 @@ export function useWebRTC({
   const toggleMic = useCallback(() => {
     setIsMicOn((prev) => {
       const next = !prev;
-      localStreamRef.current?.getAudioTracks().forEach((t) => (t.enabled = next));
+      localStreamRef.current
+        ?.getAudioTracks()
+        .forEach((t) => (t.enabled = next));
       return next;
     });
   }, []);
@@ -501,7 +592,9 @@ export function useWebRTC({
   const toggleCam = useCallback(() => {
     setIsCamOn((prev) => {
       const next = !prev;
-      localStreamRef.current?.getVideoTracks().forEach((t) => (t.enabled = next));
+      localStreamRef.current
+        ?.getVideoTracks()
+        .forEach((t) => (t.enabled = next));
       return next;
     });
   }, []);
@@ -512,10 +605,14 @@ export function useWebRTC({
       const sinkEl: any = remoteAudioRef.current ?? remoteVideoRef.current;
       if (sinkEl && typeof sinkEl.setSinkId === "function") {
         sinkEl.setSinkId(next ? "default" : "").catch(() => {
-          remoteStreamRef.current?.getAudioTracks().forEach((t) => (t.enabled = next));
+          remoteStreamRef.current
+            ?.getAudioTracks()
+            .forEach((t) => (t.enabled = next));
         });
       } else {
-        remoteStreamRef.current?.getAudioTracks().forEach((t) => (t.enabled = next));
+        remoteStreamRef.current
+          ?.getAudioTracks()
+          .forEach((t) => (t.enabled = next));
       }
       return next;
     });

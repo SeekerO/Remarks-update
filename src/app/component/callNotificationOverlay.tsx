@@ -96,7 +96,10 @@ const CallAvatar = ({
     .slice(0, 2);
 
   return (
-    <div className="relative flex-shrink-0" style={{ width: size, height: size }}>
+    <div
+      className="relative flex-shrink-0"
+      style={{ width: size, height: size }}
+    >
       {pulse && (
         <>
           <span
@@ -137,7 +140,7 @@ export interface GlobalCallContextValue {
     name: string,
     photo: string | null,
     chatId: string,
-    type?: CallType
+    type?: CallType,
   ) => void;
   webRTC: ReturnType<typeof useWebRTC> | null;
 }
@@ -190,7 +193,9 @@ export default function CallNotificationOverlay({
   // ── Call modal open state ─────────────────────────────────────────────────
   const [callModalOpen, setCallModalOpen] = useState(false);
   const [calleeDisplayName, setCalleeDisplayName] = useState("User");
-  const [calleeDisplayPhoto, setCalleeDisplayPhoto] = useState<string | null>(null);
+  const [calleeDisplayPhoto, setCalleeDisplayPhoto] = useState<string | null>(
+    null,
+  );
 
   // ── Outgoing: callee info for display ────────────────────────────────────
   const [outgoingChatId, setOutgoingChatId] = useState("");
@@ -218,7 +223,7 @@ export default function CallNotificationOverlay({
             ref(db, `presence/${otherId}`),
             (ps) => {
               setCalleeOnline(ps.val()?.online === true);
-            }
+            },
           );
           // single read is enough for initial display — keep live for duration
           return presenceUnsub;
@@ -226,7 +231,7 @@ export default function CallNotificationOverlay({
       });
       return unsub;
     },
-    [user?.uid]
+    [user?.uid],
   );
 
   // ── Clear ring timer helper ───────────────────────────────────────────────
@@ -243,13 +248,13 @@ export default function CallNotificationOverlay({
       name: string,
       photo: string | null,
       chatId: string,
-      type: CallType = "video"
+      type: CallType = "video",
     ) => {
       if (webRTC.callState !== "idle") return;
 
       setCalleeDisplayName(name);
       setCalleeDisplayPhoto(photo);
-      setOutgoingChatId(chatId);
+      
 
       // Resolve callee online status
       resolveCalleeOnline(chatId);
@@ -274,7 +279,7 @@ export default function CallNotificationOverlay({
         clearRingTimer();
       }, RING_TIMEOUT_MS);
     },
-    [webRTC, resolveCalleeOnline, clearRingTimer]
+    [webRTC, resolveCalleeOnline, clearRingTimer],
   );
 
   // ── Ringtone logic based on call state + callee online status ─────────────
@@ -326,6 +331,11 @@ export default function CallNotificationOverlay({
       setCalleeOnline(null);
       calleeUidRef.current = null;
       clearRingTimer();
+      // ADD THESE LINES — reset outgoing call state so the toast disappears
+      setCalleeDisplayName("User");
+      setCalleeDisplayPhoto(null);
+      setOutgoingChatId("");
+      setRingStartedAt(0);
     }
   }, [webRTC.callState, clearRingTimer]);
 
@@ -352,12 +362,8 @@ export default function CallNotificationOverlay({
         isOpen={callModalOpen}
         onClose={handleHangUp}
         webRTC={webRTC}
-        calleeName={
-          webRTC.incomingCall?.callerName || calleeDisplayName
-        }
-        calleePhoto={
-          webRTC.incomingCall?.callerPhoto || calleeDisplayPhoto
-        }
+        calleeName={webRTC.incomingCall?.callerName || calleeDisplayName}
+        calleePhoto={webRTC.incomingCall?.callerPhoto || calleeDisplayPhoto}
       />
 
       {/* ── Incoming call overlay (shown outside /message) ──────── */}
@@ -378,16 +384,17 @@ export default function CallNotificationOverlay({
 
       {/* ── Outgoing call mini overlay (shown everywhere) ─────────── */}
       {(webRTC.callState === "calling" ||
-        webRTC.callState === "requesting-media") && (
-        <OutgoingCallToast
-          calleeName={calleeDisplayName}
-          calleePhoto={calleeDisplayPhoto}
-          calleeOnline={calleeOnline}
-          ringStartedAt={ringStartedAt}
-          callState={webRTC.callState}
-          onCancel={handleHangUp}
-        />
-      )}
+        webRTC.callState === "requesting-media") &&
+        ringStartedAt > 0 && ( // ← add this check
+          <OutgoingCallToast
+            calleeName={calleeDisplayName}
+            calleePhoto={calleeDisplayPhoto}
+            calleeOnline={calleeOnline}
+            ringStartedAt={ringStartedAt}
+            callState={webRTC.callState}
+            onCancel={handleHangUp}
+          />
+        )}
     </GlobalCallContext.Provider>
   );
 }
@@ -421,9 +428,12 @@ function IncomingCallToast({
       <div
         className="pointer-events-auto"
         style={{
-          transform: visible ? "translateX(0)" : "translateX(calc(100% + 24px))",
+          transform: visible
+            ? "translateX(0)"
+            : "translateX(calc(100% + 24px))",
           opacity: visible ? 1 : 0,
-          transition: "transform 0.42s cubic-bezier(0.16,1,0.3,1), opacity 0.3s ease",
+          transition:
+            "transform 0.42s cubic-bezier(0.16,1,0.3,1), opacity 0.3s ease",
         }}
       >
         <div
@@ -446,12 +456,7 @@ function IncomingCallToast({
           />
 
           <div className="flex items-center gap-3">
-            <CallAvatar
-              name={callerName}
-              photo={callerPhoto}
-              pulse
-              size={44}
-            />
+            <CallAvatar name={callerName} photo={callerPhoto} pulse size={44} />
             <div className="flex-1 min-w-0">
               <p className="text-xs font-semibold text-white/85 truncate">
                 {callerName}
@@ -536,7 +541,9 @@ function OutgoingCallToast({
       <div
         className="pointer-events-auto"
         style={{
-          transform: visible ? "translateX(0)" : "translateX(calc(100% + 24px))",
+          transform: visible
+            ? "translateX(0)"
+            : "translateX(calc(100% + 24px))",
           opacity: visible ? 1 : 0,
           transition:
             "transform 0.4s cubic-bezier(0.16,1,0.3,1), opacity 0.28s ease",

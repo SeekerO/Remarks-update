@@ -273,3 +273,16 @@ export async function setUnreadCount(
 export async function clearUnreadMessages(chatId: string, userId: string) {
     await setUnreadCount(chatId, userId, 0);
 }
+
+export async function blockCaller(userId: string, targetId: string): Promise<void> {
+  await set(ref(db, `users/${userId}/blockedCallers/${targetId}`), true);
+}
+
+export async function unblockCaller(userId: string, targetId: string): Promise<void> {
+  await remove(ref(db, `users/${userId}/blockedCallers/${targetId}`));
+}
+
+export async function isCallerBlocked(userId: string, targetId: string): Promise<boolean> {
+  const snap = await get(ref(db, `users/${userId}/blockedCallers/${targetId}`));
+  return snap.val() === true;
+}

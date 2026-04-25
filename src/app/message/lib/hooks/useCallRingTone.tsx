@@ -1,8 +1,8 @@
-// src/lib/hooks/useCallRingtone.ts
-// Generates Web Audio API ringtones:
-//   - "online"  : classic phone ring (dual-tone pattern)
-//   - "offline" : busy/unavailable tone (monotone slow beep)
-//   - "incoming": ascending chime pattern
+// src/app/message/lib/hooks/useCallRingTone.tsx
+// Modern Web Audio API ringtones:
+//   - "online"  : smooth modern phone ring (sine + soft harmonics, subtle reverb)
+//   - "offline" : gentle unavailable tone (descending soft chime)
+//   - "incoming": warm melodic pulse (like Signal / WhatsApp modern ring)
 
 "use client";
 
@@ -14,6 +14,7 @@ export function useCallRingtone() {
   const ctxRef = useRef<AudioContext | null>(null);
   const stopRef = useRef<(() => void) | null>(null);
   const activeRef = useRef(false);
+  const scheduledTimeoutsRef = useRef<ReturnType<typeof setTimeout>[]>([]);
 
   const getCtx = () => {
     if (!ctxRef.current || ctxRef.current.state === "closed") {
@@ -22,43 +23,118 @@ export function useCallRingtone() {
     return ctxRef.current;
   };
 
+  // ── Clear all scheduled timeouts ──────────────────────────────────────────
+  const clearAllTimeouts = useCallback(() => {
+    scheduledTimeoutsRef.current.forEach((t) => clearTimeout(t));
+    scheduledTimeoutsRef.current = [];
+  }, []);
+
   const stop = useCallback(() => {
+    clearAllTimeouts();
     if (stopRef.current) {
       stopRef.current();
       stopRef.current = null;
     }
     activeRef.current = false;
+  }, [clearAllTimeouts]);
+
+  // ── Helper: create a soft reverb convolver ─────────────────────────────────
+  const createReverb = useCallback((ctx: AudioContext, duration = 0.8, decay = 2): ConvolverNode => {
+    const convolver = ctx.createConvolver();
+    const sampleRate = ctx.sampleRate;
+    const length = sampleRate * duration;
+    const impulse = ctx.createBuffer(2, length, sampleRate);
+
+    for (let c = 0; c < 2; c++) {
+      const channel = impulse.getChannelData(c);
+      for (let i = 0; i < length; i++) {
+        channel[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / length, decay);
+      }
+    }
+    convolver.buffer = impulse;
+    return convolver;
   }, []);
 
-  // ── Online ring: dual-tone DTMF-style ring (400Hz + 450Hz) ────────────────
+  // ── Helper: play a single soft tone with attack/release envelope ───────────
+  const playTone = useCallback((
+    ctx: AudioContext,
+    destination: AudioNode,
+    freq: number,
+    startTime: number,
+    duration: number,
+    gainPeak: number,
+    type: OscillatorType = "sine",
+    detune = 0
+  ) => {
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+
+    osc.type = type;
+    osc.frequency.setValueAtTime(freq, startTime);
+    osc.detune.setValueAtTime(detune, startTime);
+
+    const attack = Math.min(0.03, duration * 0.1);
+    const release = Math.min(0.15, duration * 0.4);
+
+    gain.gain.setValueAtTime(0, startTime);
+    gain.gain.linearRampToValueAtTime(gainPeak, startTime + attack);
+    gain.gain.setValueAtTime(gainPeak, startTime + duration - release);
+    gain.gain.exponentialRampToValueAtTime(0.0001, startTime + duration);
+
+    osc.connect(gain);
+    gain.connect(destination);
+    osc.start(startTime);
+    osc.stop(startTime + duration + 0.01);
+  }, []);
+
+  // ── ONLINE ring: modern smooth dual-pulse ring ─────────────────────────────
+  // Inspired by iPhone/Pixel — two short melodic pulses, then silence
   const playOnlineRing = useCallback((ctx: AudioContext): (() => void) => {
     let cancelled = false;
-    const nodes: AudioNode[] = [];
+
+    const reverb = createReverb(ctx, 0.6, 3);
+    const masterGain = ctx.createGain();
+    masterGain.gain.setValueAtTime(0.55, ctx.currentTime);
+
+    const dryGain = ctx.createGain();
+    dryGain.gain.setValueAtTime(0.7, ctx.currentTime);
+
+    const wetGain = ctx.createGain();
+    wetGain.gain.setValueAtTime(0.3, ctx.currentTime);
+
+    reverb.connect(wetGain);
+    wetGain.connect(masterGain);
+    dryGain.connect(masterGain);
+    masterGain.connect(ctx.destination);
+
+    // Two-tone chord: perfect fifth (G4 + D5) — warm, modern
+    const ringFreqs = [392.0, 587.3]; // G4, D5
+    const pulseGap = 0.22; // gap between the two pulses
 
     const ring = () => {
       if (cancelled) return;
+      const t = ctx.currentTime;
 
-      const gainNode = ctx.createGain();
-      gainNode.gain.setValueAtTime(0.08, ctx.currentTime);
-      gainNode.connect(ctx.destination);
-
-      const freqs = [400, 450];
-      freqs.forEach((freq) => {
-        const osc = ctx.createOscillator();
-        osc.type = "sine";
-        osc.frequency.value = freq;
-        osc.connect(gainNode);
-        osc.start(ctx.currentTime);
-        osc.stop(ctx.currentTime + 0.8);
-        nodes.push(osc);
+      // Pulse 1
+      ringFreqs.forEach((freq, i) => {
+        playTone(ctx, dryGain, freq, t, 0.35, 0.18 - i * 0.04, "sine");
+        playTone(ctx, reverb, freq, t, 0.35, 0.12 - i * 0.03, "sine");
+        // Soft harmonic shimmer
+        playTone(ctx, dryGain, freq * 2, t + 0.02, 0.28, 0.025, "sine", 5);
       });
 
-      gainNode.gain.setValueAtTime(0.08, ctx.currentTime);
-      gainNode.gain.linearRampToValueAtTime(0, ctx.currentTime + 0.75);
+      // Pulse 2 (slightly softer)
+      const t2 = t + 0.35 + pulseGap;
+      ringFreqs.forEach((freq, i) => {
+        playTone(ctx, dryGain, freq, t2, 0.3, 0.14 - i * 0.03, "sine");
+        playTone(ctx, reverb, freq, t2, 0.3, 0.09 - i * 0.02, "sine");
+        playTone(ctx, dryGain, freq * 2, t2 + 0.02, 0.24, 0.02, "sine", 5);
+      });
 
-      // ring: 0.8s on, 4s off
+      // Repeat every 3.2s
       if (!cancelled) {
-        setTimeout(() => ring(), 4800);
+        const id = setTimeout(() => ring(), 3200);
+        scheduledTimeoutsRef.current.push(id);
       }
     };
 
@@ -66,83 +142,119 @@ export function useCallRingtone() {
 
     return () => {
       cancelled = true;
-      nodes.forEach((n) => {
-        try { (n as OscillatorNode).stop(); } catch {}
-      });
+      try { masterGain.disconnect(); } catch {}
+      try { dryGain.disconnect(); } catch {}
+      try { wetGain.disconnect(); } catch {}
+      try { reverb.disconnect(); } catch {}
     };
-  }, []);
+  }, [createReverb, playTone]);
 
-  // ── Offline ring: slow monotone beep (350Hz) ──────────────────────────────
+  // ── OFFLINE ring: gentle descending "unavailable" tone ────────────────────
+  // Three descending soft notes — communicates "not reachable" gently
   const playOfflineRing = useCallback((ctx: AudioContext): (() => void) => {
     let cancelled = false;
 
+    const masterGain = ctx.createGain();
+    masterGain.gain.setValueAtTime(0.35, ctx.currentTime);
+    masterGain.connect(ctx.destination);
+
+    const reverb = createReverb(ctx, 1.2, 2.5);
+    const wetGain = ctx.createGain();
+    wetGain.gain.setValueAtTime(0.45, ctx.currentTime);
+    reverb.connect(wetGain);
+    wetGain.connect(masterGain);
+
+    // Descending minor triad: C5, A4, F4 — soft and melancholic
+    const notes = [523.25, 440.0, 349.23];
+
     const beep = () => {
       if (cancelled) return;
+      const t = ctx.currentTime;
 
-      const gainNode = ctx.createGain();
-      gainNode.gain.setValueAtTime(0.05, ctx.currentTime);
-      gainNode.gain.linearRampToValueAtTime(0, ctx.currentTime + 0.5);
-      gainNode.connect(ctx.destination);
-
-      const osc = ctx.createOscillator();
-      osc.type = "sine";
-      osc.frequency.value = 350;
-      osc.connect(gainNode);
-      osc.start(ctx.currentTime);
-      osc.stop(ctx.currentTime + 0.5);
+      notes.forEach((freq, i) => {
+        const noteTime = t + i * 0.22;
+        playTone(ctx, masterGain, freq, noteTime, 0.28, 0.1 - i * 0.01, "sine");
+        playTone(ctx, reverb, freq, noteTime, 0.28, 0.07, "sine");
+        // Subtle sub-octave warmth
+        playTone(ctx, masterGain, freq / 2, noteTime, 0.2, 0.02, "sine");
+      });
 
       if (!cancelled) {
-        setTimeout(() => beep(), 3000);
+        const id = setTimeout(() => beep(), 3800);
+        scheduledTimeoutsRef.current.push(id);
       }
     };
 
     beep();
 
-    return () => { cancelled = true; };
-  }, []);
+    return () => {
+      cancelled = true;
+      try { masterGain.disconnect(); } catch {}
+      try { wetGain.disconnect(); } catch {}
+      try { reverb.disconnect(); } catch {}
+    };
+  }, [createReverb, playTone]);
 
-  // ── Incoming ring: ascending chime (musical, pleasant) ────────────────────
+  // ── INCOMING ring: warm melodic rising pulse (Signal/WhatsApp-like) ────────
+  // Ascending four-note arpeggio with a lush, warm character
   const playIncomingRing = useCallback((ctx: AudioContext): (() => void) => {
     let cancelled = false;
 
-    const notes = [523.25, 659.25, 783.99, 1046.5]; // C5 E5 G5 C6
+    const masterGain = ctx.createGain();
+    masterGain.gain.setValueAtTime(0.5, ctx.currentTime);
+    masterGain.connect(ctx.destination);
+
+    const reverb = createReverb(ctx, 1.0, 2.8);
+    const wetGain = ctx.createGain();
+    wetGain.gain.setValueAtTime(0.35, ctx.currentTime);
+    reverb.connect(wetGain);
+    wetGain.connect(masterGain);
+
+    // Rising major 7th arpeggio: C5, E5, G5, B5 — bright, optimistic
+    const arpNotes = [523.25, 659.25, 783.99, 987.77];
+    const noteSpacing = 0.10; // 100ms between notes
+    const noteDuration = 0.22;
 
     const chime = () => {
       if (cancelled) return;
+      const t = ctx.currentTime;
 
-      notes.forEach((freq, i) => {
-        const t = ctx.currentTime + i * 0.12;
-        const gainNode = ctx.createGain();
-        gainNode.gain.setValueAtTime(0, t);
-        gainNode.gain.linearRampToValueAtTime(0.1, t + 0.04);
-        gainNode.gain.linearRampToValueAtTime(0, t + 0.35);
-        gainNode.connect(ctx.destination);
+      arpNotes.forEach((freq, i) => {
+        const noteTime = t + i * noteSpacing;
+        const peakGain = 0.15 + i * 0.02; // crescendo through the arp
 
-        const osc = ctx.createOscillator();
-        osc.type = "sine";
-        osc.frequency.value = freq;
-        osc.connect(gainNode);
-        osc.start(t);
-        osc.stop(t + 0.4);
+        // Primary tone
+        playTone(ctx, masterGain, freq, noteTime, noteDuration, peakGain, "sine");
+        // Soft 2nd harmonic shimmer
+        playTone(ctx, masterGain, freq * 2, noteTime + 0.01, noteDuration - 0.04, peakGain * 0.12, "sine", 3);
+        // Reverb send
+        playTone(ctx, reverb, freq, noteTime, noteDuration + 0.05, peakGain * 0.5, "sine");
       });
 
-      // repeat ascending chime every 2.5s
+      // Short pause then repeat
       if (!cancelled) {
-        setTimeout(() => chime(), 2500);
+        const id = setTimeout(() => chime(), 2800);
+        scheduledTimeoutsRef.current.push(id);
       }
     };
 
     chime();
-    return () => { cancelled = true; };
-  }, []);
 
+    return () => {
+      cancelled = true;
+      try { masterGain.disconnect(); } catch {}
+      try { wetGain.disconnect(); } catch {}
+      try { reverb.disconnect(); } catch {}
+    };
+  }, [createReverb, playTone]);
+
+  // ── Public: play ──────────────────────────────────────────────────────────
   const play = useCallback(
     (mode: RingtoneMode) => {
-      stop(); // stop any existing
+      stop(); // stop any existing ringtone first
 
       try {
         const ctx = getCtx();
-        // Safari / mobile requires resume
         if (ctx.state === "suspended") ctx.resume();
 
         let cleanup: () => void;
@@ -162,13 +274,13 @@ export function useCallRingtone() {
         activeRef.current = true;
         stopRef.current = cleanup!;
       } catch {
-        // AudioContext not available (SSR or restricted)
+        // AudioContext not available (SSR or restricted environment)
       }
     },
     [stop, playOnlineRing, playOfflineRing, playIncomingRing]
   );
 
-  // Cleanup on unmount
+  // ── Cleanup on unmount ────────────────────────────────────────────────────
   useEffect(() => {
     return () => {
       stop();

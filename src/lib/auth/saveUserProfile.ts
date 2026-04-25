@@ -20,6 +20,7 @@ export const saveUserProfile = async (user: any) => {
       ...userData,
       isAdmin: existingData.isAdmin ?? false,
       isPermitted: existingData.isPermitted ?? false,
+      allowCalls: existingData.allowCalls ?? true, 
       // CRITICAL: Preserve the nested subscription object
       subscription: existingData.subscription ?? {},
       allowedPages: existingData.allowedPages ?? [],
@@ -30,6 +31,7 @@ export const saveUserProfile = async (user: any) => {
       ...userData,
       isAdmin: false,
       isPermitted: false,
+        allowCalls: true,
       subscription: {
         subscriptionInfinite: false,
         subscriptionDays: 0, // or whatever default

@@ -47,9 +47,7 @@ const ThemeWrapper: React.FC<WrapperProps> = ({ children }) => {
           showSidebar ? "pb-16 lg:pb-0" : "",
         ].join(" ")}
       >
-              <IncomingCallToast>
-        {children}
-        </IncomingCallToast>
+        <IncomingCallToast>{children}</IncomingCallToast>
       </div>
     </main>
   );

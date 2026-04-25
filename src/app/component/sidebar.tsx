@@ -10,7 +10,7 @@ import DarkModeToggle from "@/lib/components/dark-button";
 import { navItems, NavItem, UserRole } from "@/lib/types/adminTypes";
 import Image from "next/image";
 import Logo from "@/../public/Avexi.png";
-import { ref, onValue } from "firebase/database";
+import { ref, onValue, get, update } from "firebase/database";
 import { db } from "@/lib/firebase/firebase";
 
 /* ─────────────────────────────────────────────
@@ -40,7 +40,8 @@ function useMessageUnreadCount(userId: string | undefined): number {
       const unreadPerChat: Record<string, number> = {};
 
       chatIds.forEach((chatId) => {
-        const lastReadId: string | null = chatData[chatId]?.lastReadMessageId ?? null;
+        const lastReadId: string | null =
+          chatData[chatId]?.lastReadMessageId ?? null;
 
         const msgsRef = ref(db, `chats/${chatId}/messages`);
         const msgUnsub = onValue(msgsRef, (msgsSnap) => {
@@ -53,7 +54,7 @@ function useMessageUnreadCount(userId: string | undefined): number {
               ([msgId, msg]) =>
                 msg.senderId !== userId &&
                 !msg.isSystemMessage &&
-                (!lastReadId || msgId > lastReadId)
+                (!lastReadId || msgId > lastReadId),
             ).length;
           }
           setCount(Object.values(unreadPerChat).reduce((a, b) => a + b, 0));
@@ -75,8 +76,31 @@ function useMessageUnreadCount(userId: string | undefined): number {
 /* ─────────────────────────────────────────────
    SETTINGS MODAL
    ───────────────────────────────────────────── */
-const SettingsModal = ({ open, onClose }: { open: boolean; onClose: () => void }) => {
+const SettingsModal = ({
+  open,
+  onClose,
+}: {
+  open: boolean;
+  onClose: () => void;
+}) => {
   const ref2 = useRef<HTMLDivElement>(null);
+  const { user } = useAuth();
+  const [allowCalls, setAllowCalls] = useState(true);
+
+  // Load current value
+  useEffect(() => {
+    if (!user?.uid || !open) return;
+    get(ref(db, `users/${user.uid}/allowCalls`)).then((snap: any) => {
+      setAllowCalls(snap.val() ?? true);
+    });
+  }, [user?.uid, open]);
+
+  const toggleAllowCalls = async () => {
+    if (!user?.uid) return;
+    const next = !allowCalls;
+    setAllowCalls(next);
+    await update(ref(db, `users/${user.uid}`), { allowCalls: next });
+  };
 
   useEffect(() => {
     if (!open) return;
@@ -98,8 +122,33 @@ const SettingsModal = ({ open, onClose }: { open: boolean; onClose: () => void }
           border border-black/10 dark:border-white/10
           shadow-2xl"
       >
-        <p className="text-sm font-medium text-gray-800 dark:text-gray-100">Appearance</p>
+        <p className="text-sm font-medium text-gray-800 dark:text-gray-100">
+          Appearance
+        </p>
         <DarkModeToggle />
+        <div className="w-full flex items-center justify-between px-1">
+          <div>
+            <p className="text-xs font-medium text-gray-700 dark:text-white/70">
+              Allow Calls
+            </p>
+            <p className="text-[10px] text-gray-400 dark:text-white/30 mt-0.5">
+              {allowCalls ? "Others can call you" : "Chat only"}
+            </p>
+          </div>
+          <button
+            onClick={toggleAllowCalls}
+            className={`w-10 h-5 rounded-full relative transition-colors ${
+              allowCalls ? "bg-indigo-500" : "bg-gray-300 dark:bg-white/10"
+            }`}
+          >
+            <div
+              className={`absolute top-1 w-3 h-3 bg-white rounded-full transition-all ${
+                allowCalls ? "left-6" : "left-1"
+              }`}
+            />
+          </button>
+        </div>
+
         <button
           onClick={onClose}
           className="text-xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
@@ -114,7 +163,13 @@ const SettingsModal = ({ open, onClose }: { open: boolean; onClose: () => void }
 /* ─────────────────────────────────────────────
    UNREAD BADGE
    ───────────────────────────────────────────── */
-const UnreadBadge = ({ count, collapsed }: { count: number; collapsed?: boolean }) => {
+const UnreadBadge = ({
+  count,
+  collapsed,
+}: {
+  count: number;
+  collapsed?: boolean;
+}) => {
   if (count === 0) return null;
 
   const label = count > 99 ? "99+" : count.toString();
@@ -174,7 +229,11 @@ const SidebarNavItem = ({
       title={collapsed ? item.name : undefined}
       className={[
         "flex items-center gap-2.5 rounded-md text-[13px] transition-all duration-150 no-underline",
-        collapsed ? "justify-center p-2.5 relative" : isSublink ? "py-1.5 px-3 pl-7" : "py-1.5 px-2.5",
+        collapsed
+          ? "justify-center p-2.5 relative"
+          : isSublink
+            ? "py-1.5 px-3 pl-7"
+            : "py-1.5 px-2.5",
         "text-gray-500 hover:text-gray-800 hover:bg-gray-100",
         "dark:text-white/50 dark:hover:text-white/80 dark:hover:bg-white/5",
         isActive
@@ -219,7 +278,9 @@ const SidebarNavGroup = ({
   // Total unread for subs that include /message
   const groupHasMessage = subs.some((s) => s.href === "/message");
 
-  useEffect(() => { if (parentActive) setOpen(true); }, [parentActive]);
+  useEffect(() => {
+    if (parentActive) setOpen(true);
+  }, [parentActive]);
   if (subs.length === 0) return null;
 
   const handleClick = () => {
@@ -295,18 +356,26 @@ const UserPopup = ({
   onLogout: () => void;
   onClose: () => void;
 }) => (
-  <div className="absolute bottom-[calc(100%+4px)] left-2 right-2 z-60
+  <div
+    className="absolute bottom-[calc(100%+4px)] left-2 right-2 z-60
     rounded-xl overflow-hidden
     bg-white border border-gray-200
     dark:bg-[#13132b] dark:border-white/10
     shadow-[0_-8px_24px_rgba(0,0,0,0.15)] dark:shadow-[0_-8px_24px_rgba(0,0,0,0.4)]"
   >
     <div className="px-3 py-2.5 border-b border-gray-100 dark:border-white/[0.06]">
-      <p className="text-xs font-medium text-gray-800 dark:text-white/85 truncate">{user?.displayName}</p>
-      <p className="text-[10px] text-gray-400 dark:text-white/30 truncate">{user?.email}</p>
+      <p className="text-xs font-medium text-gray-800 dark:text-white/85 truncate">
+        {user?.displayName}
+      </p>
+      <p className="text-[10px] text-gray-400 dark:text-white/30 truncate">
+        {user?.email}
+      </p>
     </div>
     <button
-      onClick={() => { onClose(); onSettings(); }}
+      onClick={() => {
+        onClose();
+        onSettings();
+      }}
       className="flex items-center gap-2 w-full px-3 py-2 text-xs
         text-gray-500 hover:bg-gray-50
         dark:text-white/55 dark:hover:bg-white/5
@@ -316,7 +385,10 @@ const UserPopup = ({
     </button>
     <div className="mx-2 h-px bg-gray-100 dark:bg-white/[0.06]" />
     <button
-      onClick={() => { onClose(); onLogout(); }}
+      onClick={() => {
+        onClose();
+        onLogout();
+      }}
       className="flex items-center gap-2 w-full px-3 py-2 text-xs
         text-red-500 hover:bg-red-50
         dark:text-red-400 dark:hover:bg-red-500/8
@@ -353,20 +425,29 @@ const SidebarContent = ({
 
   const userRole: UserRole = user?.isAdmin ? "admin" : "standard";
   const allowedPages: string[] | null =
-    userRole === "admin" ? null
-      : (user?.allowedPages == null ? [] : user.allowedPages);
+    userRole === "admin"
+      ? null
+      : user?.allowedPages == null
+        ? []
+        : user.allowedPages;
 
-  const hasAccess = useCallback((item: NavItem): boolean => {
-    if (userRole !== "admin" && item.requiredRole === "admin") return false;
-    if (allowedPages === null) return true;
-    if (item.pagePermissionId === undefined) return false;
-    return allowedPages.includes(item.pagePermissionId);
-  }, [userRole, allowedPages]);
+  const hasAccess = useCallback(
+    (item: NavItem): boolean => {
+      if (userRole !== "admin" && item.requiredRole === "admin") return false;
+      if (allowedPages === null) return true;
+      if (item.pagePermissionId === undefined) return false;
+      return allowedPages.includes(item.pagePermissionId);
+    },
+    [userRole, allowedPages],
+  );
 
   useEffect(() => {
     if (!userMenuOpen) return;
     const h = (e: MouseEvent) => {
-      if (userMenuRef.current && !userMenuRef.current.contains(e.target as Node))
+      if (
+        userMenuRef.current &&
+        !userMenuRef.current.contains(e.target as Node)
+      )
         setUserMenuOpen(false);
     };
     document.addEventListener("mousedown", h);
@@ -374,7 +455,12 @@ const SidebarContent = ({
   }, [userMenuOpen]);
 
   const initials2 = user?.displayName
-    ? user.displayName.split(" ").map((n: string) => n[0]).join("").toUpperCase().slice(0, 2)
+    ? user.displayName
+        .split(" ")
+        .map((n: string) => n[0])
+        .join("")
+        .toUpperCase()
+        .slice(0, 2)
     : "?";
 
   return (
@@ -395,22 +481,29 @@ const SidebarContent = ({
         <Image src={Logo} alt={"Avexi"} width={36} />
         {!collapsed && (
           <>
-            <Link href={"/dashboard"} className="flex-1 text-[15px] font-semibold tracking-[-0.04em] text-gray-900 dark:text-white/90">
-              Avexi<span className="text-indigo-500 dark:text-indigo-400">.</span>
+            <Link
+              href={"/dashboard"}
+              className="flex-1 text-[15px] font-semibold tracking-[-0.04em] text-gray-900 dark:text-white/90"
+            >
+              Avexi
+              <span className="text-indigo-500 dark:text-indigo-400">.</span>
             </Link>
-            <span className="text-[9px] text-gray-300 dark:text-white/20 font-mono pr-0.5">←</span>
+            <span className="text-[9px] text-gray-300 dark:text-white/20 font-mono pr-0.5">
+              ←
+            </span>
           </>
         )}
       </button>
 
       {/* ── Nav ── */}
       <nav className="flex-1 overflow-y-auto overflow-x-hidden py-2.5 px-2 scrollbar-none">
-        {collapsed
-          ? <div className="h-px bg-gray-200 dark:bg-white/[0.08] mx-2.5 my-1.5" />
-          : <p className="text-[10px] font-medium tracking-[0.07em] uppercase text-gray-400 dark:text-white/20 px-2.5 pt-1 pb-1">
+        {collapsed ? (
+          <div className="h-px bg-gray-200 dark:bg-white/[0.08] mx-2.5 my-1.5" />
+        ) : (
+          <p className="text-[10px] font-medium tracking-[0.07em] uppercase text-gray-400 dark:text-white/20 px-2.5 pt-1 pb-1">
             Workspace
           </p>
-        }
+        )}
 
         <div className="space-y-0.5">
           {navItems.map((item) => {
@@ -462,7 +555,10 @@ const SidebarContent = ({
 
         <button
           onClick={() => {
-            if (collapsed) { onToggleCollapse?.(); return; }
+            if (collapsed) {
+              onToggleCollapse?.();
+              return;
+            }
             setUserMenuOpen((v) => !v);
           }}
           className={[
@@ -471,19 +567,28 @@ const SidebarContent = ({
             "overflow-hidden",
           ].join(" ")}
         >
-          <div className="w-7 h-7 rounded-full flex-shrink-0 flex items-center justify-center
+          <div
+            className="w-7 h-7 rounded-full flex-shrink-0 flex items-center justify-center
             text-[11px] font-semibold text-white overflow-hidden
             bg-gradient-to-br from-indigo-500 to-violet-600"
           >
-            {user?.photoURL
-              ? <img src={user.photoURL} alt="" className="w-full h-full object-cover rounded-full" />
-              : initials2}
+            {user?.photoURL ? (
+              <img
+                src={user.photoURL}
+                alt=""
+                className="w-full h-full object-cover rounded-full"
+              />
+            ) : (
+              initials2
+            )}
           </div>
 
           {!collapsed && (
             <>
               <div className="flex-1 text-left min-w-0">
-                <p className="text-xs font-medium text-gray-800 dark:text-white/85 truncate">{user?.displayName}</p>
+                <p className="text-xs font-medium text-gray-800 dark:text-white/85 truncate">
+                  {user?.displayName}
+                </p>
                 <p className="text-[10px] text-gray-400 dark:text-white/30 capitalize">
                   {user?.isAdmin ? "Administrator" : "User"}
                 </p>
@@ -494,7 +599,9 @@ const SidebarContent = ({
         </button>
 
         {!collapsed && (
-          <p className="text-center mt-1.5 text-[10px] text-gray-300 dark:text-white/10 font-mono">Avexi v5.0.0</p>
+          <p className="text-center mt-1.5 text-[10px] text-gray-300 dark:text-white/10 font-mono">
+            Avexi v5.0.0
+          </p>
         )}
       </div>
     </>
@@ -517,7 +624,9 @@ const SlideDrawer = ({
 }) => {
   useEffect(() => {
     document.body.style.overflow = open ? "hidden" : "";
-    return () => { document.body.style.overflow = ""; };
+    return () => {
+      document.body.style.overflow = "";
+    };
   }, [open]);
 
   return (
@@ -527,7 +636,9 @@ const SlideDrawer = ({
         className={[
           "fixed inset-0 z-[200] bg-black/40 dark:bg-black/60 backdrop-blur-sm",
           "transition-opacity duration-200",
-          open ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none",
+          open
+            ? "opacity-100 pointer-events-auto"
+            : "opacity-0 pointer-events-none",
         ].join(" ")}
       />
       <div
@@ -562,7 +673,8 @@ const BottomTabBar = ({ onMenuOpen }: { onMenuOpen: () => void }) => {
   const { user } = useAuth();
 
   const userRole: UserRole = user?.isAdmin ? "admin" : "standard";
-  const allowedPages: string[] | null = userRole === "admin" ? null : user?.allowedPages ?? [];
+  const allowedPages: string[] | null =
+    userRole === "admin" ? null : (user?.allowedPages ?? []);
   const unreadCount = useMessageUnreadCount(user?.uid);
 
   const hasAccess = (item: NavItem): boolean => {
@@ -575,7 +687,12 @@ const BottomTabBar = ({ onMenuOpen }: { onMenuOpen: () => void }) => {
   const tabItems = navItems.filter((i) => i.active && hasAccess(i)).slice(0, 3);
 
   const initials3 = user?.displayName
-    ? user.displayName.split(" ").map((n: string) => n[0]).join("").toUpperCase().slice(0, 2)
+    ? user.displayName
+        .split(" ")
+        .map((n: string) => n[0])
+        .join("")
+        .toUpperCase()
+        .slice(0, 2)
     : "?";
 
   return (
@@ -623,15 +740,19 @@ const BottomTabBar = ({ onMenuOpen }: { onMenuOpen: () => void }) => {
               <Icon className="w-[18px] h-[18px]" />
               {/* Unread dot on message icon in bottom tab */}
               {isMsg && unreadCount > 0 && (
-                <span className="absolute -top-1.5 -right-1.5 min-w-[14px] h-[14px] rounded-full
+                <span
+                  className="absolute -top-1.5 -right-1.5 min-w-[14px] h-[14px] rounded-full
                   bg-indigo-500 border border-white dark:border-[#0d0d1a]
                   flex items-center justify-center
-                  text-[8px] font-bold text-white leading-none px-0.5">
+                  text-[8px] font-bold text-white leading-none px-0.5"
+                >
                   {unreadCount > 9 ? "9+" : unreadCount}
                 </span>
               )}
             </div>
-            <span className={`text-[9px] tracking-[0.04em] max-w-[52px] truncate ${active ? "font-semibold" : "font-normal"}`}>
+            <span
+              className={`text-[9px] tracking-[0.04em] max-w-[52px] truncate ${active ? "font-semibold" : "font-normal"}`}
+            >
               {item.name}
             </span>
           </Link>
@@ -643,15 +764,24 @@ const BottomTabBar = ({ onMenuOpen }: { onMenuOpen: () => void }) => {
         onClick={onMenuOpen}
         className="flex-1 flex flex-col items-center justify-center gap-0.5"
       >
-        <div className="w-6 h-6 rounded-full overflow-hidden flex items-center justify-center
+        <div
+          className="w-6 h-6 rounded-full overflow-hidden flex items-center justify-center
           text-[9px] font-semibold text-white
           bg-gradient-to-br from-indigo-500 to-violet-600"
         >
-          {user?.photoURL
-            ? <img src={user.photoURL} alt="" className="w-full h-full object-cover" />
-            : initials3}
+          {user?.photoURL ? (
+            <img
+              src={user.photoURL}
+              alt=""
+              className="w-full h-full object-cover"
+            />
+          ) : (
+            initials3
+          )}
         </div>
-        <span className="text-[9px] text-gray-400 dark:text-white/40 tracking-[0.04em]">Profile</span>
+        <span className="text-[9px] text-gray-400 dark:text-white/40 tracking-[0.04em]">
+          Profile
+        </span>
       </button>
     </div>
   );
@@ -675,7 +805,8 @@ const Sidebar: React.FC = () => {
         style={{
           width: collapsed ? 72 : 240,
           minWidth: collapsed ? 72 : 240,
-          transition: "width 220ms cubic-bezier(0.4,0,0.2,1), min-width 220ms cubic-bezier(0.4,0,0.2,1)",
+          transition:
+            "width 220ms cubic-bezier(0.4,0,0.2,1), min-width 220ms cubic-bezier(0.4,0,0.2,1)",
         }}
       >
         <SidebarContent
@@ -694,7 +825,10 @@ const Sidebar: React.FC = () => {
       <SlideDrawer
         open={drawerOpen}
         onClose={() => setDrawerOpen(false)}
-        onSettings={() => { setDrawerOpen(false); setSettingsOpen(true); }}
+        onSettings={() => {
+          setDrawerOpen(false);
+          setSettingsOpen(true);
+        }}
         onLogout={logout}
       />
 

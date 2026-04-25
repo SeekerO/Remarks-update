@@ -5,7 +5,15 @@
 
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import Image from "next/image";
-import { ref, onValue, get, update, serverTimestamp } from "firebase/database";
+import {
+  ref,
+  onValue,
+  get,
+  update,
+  serverTimestamp,
+  remove,
+  set,
+} from "firebase/database";
 import { db } from "@/lib/firebase/firebase";
 import { useAuth } from "@/lib/auth/AuthContext";
 import { useUserChats } from "./lib/hooks/useUserChats";
@@ -29,7 +37,7 @@ import {
   AddMembersModal,
 } from "./lib/components/ChatModals";
 import VideoCallModal from "./lib/components/voiceCallModal";
-import { useWebRTC, type UseWebRTCReturn, type UseWebRTCCallState } from "./lib/hooks/useWebRTC";
+import { useWebRTC, type UseWebRTCCallState } from "./lib/hooks/useWebRTC";
 import type { CallType } from "./lib/call/callSignaling";
 
 import {
@@ -857,6 +865,60 @@ const ChatRoomPanel = ({
 
   const isGroup = usersInChat.length > 2;
 
+  const [otherUserAllowsCalls, setOtherUserAllowsCalls] = useState(true);
+
+  useEffect(() => {
+    if (!otherUserId) return;
+    const unsub = onValue(
+      ref(db, `users/${otherUserId}/allowCalls`),
+      (snap) => {
+        setOtherUserAllowsCalls(snap.val() ?? true);
+      },
+    );
+    return () => unsub();
+  }, [otherUserId]);
+
+  
+
+const toggleBlockCaller = async () => {
+  if (!user?.uid || !otherUserId) return;
+  if (iBlockedThem) {
+    await remove(ref(db, `users/${user.uid}/blockedCallers/${otherUserId}`));
+  } else {
+    await set(ref(db, `users/${user.uid}/blockedCallers/${otherUserId}`), true);
+  }
+};
+
+  const [iBlockedThem, setIBlockedThem] = useState(false);
+  const [theyBlockedMe, setTheyBlockedMe] = useState(false);
+
+  useEffect(() => {
+    if (!user?.uid || !otherUserId) return;
+
+    // Did I block them? (controls the menu toggle label)
+    const myBlockRef = ref(
+      db,
+      `users/${user.uid}/blockedCallers/${otherUserId}`,
+    );
+    const unsub1 = onValue(myBlockRef, (snap) => {
+      setIBlockedThem(snap.val() === true);
+    });
+
+    // Did they block me? (disables the call button)
+    const theirBlockRef = ref(
+      db,
+      `users/${otherUserId}/blockedCallers/${user.uid}`,
+    );
+    const unsub2 = onValue(theirBlockRef, (snap) => {
+      setTheyBlockedMe(snap.val() === true);
+    });
+
+    return () => {
+      unsub1();
+      unsub2();
+    };
+  }, [user?.uid, otherUserId]);
+
   return (
     <div className="flex flex-col h-full bg-[#0f0e17]">
       {/* Header */}
@@ -901,22 +963,39 @@ const ChatRoomPanel = ({
         </div>
 
         <div className="flex items-center gap-1.5">
-          <button
-            onClick={() => {
-              const name = otherUserId
-                ? nicknames[otherUserId]?.nickname ||
-                  userDetails[otherUserId]?.name ||
-                  "User"
-                : "Group Call";
-              const photo = otherUserId
-                ? userDetails[otherUserId]?.photoURL || null
-                : null;
-              onStartCall(name, photo, chatId);
-            }}
-            className="w-8 h-8 rounded-lg bg-white/[0.04] hover:bg-white/[0.07] flex items-center justify-center text-white/40 hover:text-white/70 transition-colors"
-          >
-            <Video className="w-4 h-4" />
-          </button>
+          {otherUserAllowsCalls && (
+            <button
+              onClick={() => {
+                const name = otherUserId
+                  ? nicknames[otherUserId]?.nickname ||
+                    userDetails[otherUserId]?.name ||
+                    "User"
+                  : "Group Call";
+                const photo = otherUserId
+                  ? userDetails[otherUserId]?.photoURL || null
+                  : null;
+                onStartCall(name, photo, chatId);
+              }}
+              disabled={theyBlockedMe}
+              title={
+                theyBlockedMe
+                  ? "This person has blocked your calls"
+                  : "Start video call"
+              }
+              className={`w-8 h-8 rounded-lg flex items-center justify-center transition-colors
+                ${
+                  theyBlockedMe
+                    ? "bg-white/[0.02] text-white/20 cursor-not-allowed"
+                    : "bg-white/[0.04] hover:bg-white/[0.07] text-white/40 hover:text-white/70"
+                }`}
+            >
+              {theyBlockedMe ? (
+                <PhoneOff className="w-4 h-4" />
+              ) : (
+                <Video className="w-4 h-4" />
+              )}
+            </button>
+          )}
 
           <div className="relative" ref={menuRef}>
             <button
@@ -939,6 +1018,31 @@ const ChatRoomPanel = ({
                     Add members
                   </button>
                 )}
+
+                {!isGroup && otherUserId && (
+                  <button
+                    onClick={() => {
+                      toggleBlockCaller();
+                      setShowMenu(false);
+                    }}
+                    className="flex items-center gap-2.5 w-full px-3.5 py-2.5 text-xs
+      border-t border-white/[0.06] transition-colors
+      text-amber-400 hover:bg-amber-500/10"
+                  >
+                    {iBlockedThem ? (
+                      <>
+                        <Phone className="w-3.5 h-3.5" />
+                        Allow calls from this person
+                      </>
+                    ) : (
+                      <>
+                        <PhoneOff className="w-3.5 h-3.5" />
+                        Block calls from this person
+                      </>
+                    )}
+                  </button>
+                )}
+
                 <button
                   onClick={() => {
                     setConfirmDelete(true);
@@ -1330,7 +1434,6 @@ export default function ChatPage() {
     // watchChatForIncomingCall is idempotent — safe to call on every render
   }, [user?.uid, userChatsForCalls, webRTC.watchChatForIncomingCall]);
 
-
   useEffect(() => {
     const activeStates: UseWebRTCCallState[] = [
       "calling",
@@ -1351,9 +1454,11 @@ export default function ChatPage() {
     }
   }, [webRTC.callState]);
 
-  // ── Start an outgoing call ────────────────────────────────────────
+  // ── Start an outgoing call ────────────────────────────────────────────────────────
+  const [callBlockedName, setCallBlockedName] = useState<string | null>(null);
+
   const handleStartCall = useCallback(
-    (
+    async (
       name: string,
       photo: string | null,
       chatId: string,
@@ -1362,15 +1467,41 @@ export default function ChatPage() {
       if (
         activeCallChatIdRef.current !== "" &&
         activeCallChatIdRef.current !== chatId
-      ) {
-        return; // already in a different call
-      }
+      )
+        return;
+
+      try {
+        const chatSnap = await get(ref(db, `chats/${chatId}/users`));
+        const users = chatSnap.val() || {};
+        const calleeId = Object.keys(users).find((id) => id !== user?.uid);
+
+        if (calleeId) {
+          // Check 1: callee has calls globally disabled
+          const allowSnap = await get(ref(db, `users/${calleeId}/allowCalls`));
+          if ((allowSnap.val() ?? true) === false) {
+            setCallBlockedName(name);
+            setTimeout(() => setCallBlockedName(null), 3000);
+            return;
+          }
+
+          // Check 2: callee has blocked ME from calling them
+          const blockedSnap = await get(
+            ref(db, `users/${calleeId}/blockedCallers/${user?.uid}`),
+          );
+          if (blockedSnap.val() === true) {
+            setCallBlockedName(name);
+            setTimeout(() => setCallBlockedName(null), 3000);
+            return;
+          }
+        }
+      } catch {}
+
       setCalleeDisplayName(name);
       setCalleeDisplayPhoto(photo);
       activeCallChatIdRef.current = chatId;
       webRTC.startCall(chatId, type);
     },
-    [webRTC],
+    [webRTC, user?.uid],
   );
 
   // ── Hang up — single entry point for both sides ───────────────────
@@ -1543,6 +1674,21 @@ export default function ChatPage() {
           <EmptyState onNew={() => {}} />
         )}
       </div>
+      {/* ── Call blocked toast ───────────────────────────────────── */}
+      {callBlockedName && (
+        <div
+          className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[9999]
+    flex items-center gap-2.5 px-5 py-3 rounded-2xl
+    bg-[#1a1a2e] border border-white/[0.08] text-xs text-white/70
+    shadow-2xl pointer-events-none"
+        >
+          <span className="text-lg">📵</span>
+          <span>
+            <span className="text-white/90 font-medium">{callBlockedName}</span>{" "}
+            has disabled incoming calls
+          </span>
+        </div>
+      )}
     </div>
   );
 }
