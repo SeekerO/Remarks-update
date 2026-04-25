@@ -5,6 +5,8 @@ import { useAuth } from "@/lib/auth/AuthContext";
 import { usePathname } from "next/navigation";
 import MessageNotification from "../messageNotification";
 import IncomingCallToast from "../callNotificationOverlay";
+
+
 interface WrapperProps {
   children: React.ReactNode;
 }
@@ -47,7 +49,9 @@ const ThemeWrapper: React.FC<WrapperProps> = ({ children }) => {
           showSidebar ? "pb-16 lg:pb-0" : "",
         ].join(" ")}
       >
-        <IncomingCallToast>{children}</IncomingCallToast>
+        
+          <IncomingCallToast>{children}</IncomingCallToast>
+        
       </div>
     </main>
   );

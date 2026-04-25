@@ -4,6 +4,7 @@ import UseGuard from "../lib/auth/withAuth";
 import ThemeWrapper from "./component/wrapper/night_mode_wrapper";
 import "./globals.css";
 import { AuthProvider } from "../lib/auth/AuthContext";
+import MaintenancePage from "./component/maintenance";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -113,9 +114,7 @@ export const metadata: Metadata = {
       { url: "/Avexi.png", type: "image/png", sizes: "192x192" },
       { url: "/Avexi.png", type: "image/png", sizes: "512x512" },
     ],
-    apple: [
-      { url: "/apple-icon.png", sizes: "180x180", type: "image/png" },
-    ],
+    apple: [{ url: "/apple-icon.png", sizes: "180x180", type: "image/png" }],
     shortcut: "/favicon.ico",
   },
 
@@ -182,11 +181,11 @@ export default function RootLayout({
               offers: {
                 "@type": "Offer",
                 price: "0",
-                priceCurrency: "USD",
+                priceCurrency: "PHP",
               },
               author: {
                 "@type": "Organization",
-                name: "Avexi Studio",
+                name: "Avexi",
                 url: APP_URL,
               },
               featureList: [
@@ -227,7 +226,9 @@ export default function RootLayout({
       >
         <AuthProvider>
           <UseGuard>
-            <ThemeWrapper>{children}</ThemeWrapper>
+            <MaintenancePage>
+              <ThemeWrapper>{children}</ThemeWrapper>
+            </MaintenancePage>
           </UseGuard>
         </AuthProvider>
       </body>
