@@ -582,11 +582,15 @@ const ChatRoomPanel = ({
   isPermitted,
   onDeleted,
   onStartCall,
+  handleCloseChatPanelforMobie,
+  mobileView,
 }: {
   chatId: string;
   isPermitted: boolean;
   onDeleted: () => void;
   onStartCall: (name: string, photo: string | null, chatId: string) => void;
+  handleCloseChatPanelforMobie: () => void;
+  mobileView: string;
 }) => {
   const { user } = useAuth();
   const messages = useChatMessages(chatId);
@@ -878,16 +882,17 @@ const ChatRoomPanel = ({
     return () => unsub();
   }, [otherUserId]);
 
-  
-
-const toggleBlockCaller = async () => {
-  if (!user?.uid || !otherUserId) return;
-  if (iBlockedThem) {
-    await remove(ref(db, `users/${user.uid}/blockedCallers/${otherUserId}`));
-  } else {
-    await set(ref(db, `users/${user.uid}/blockedCallers/${otherUserId}`), true);
-  }
-};
+  const toggleBlockCaller = async () => {
+    if (!user?.uid || !otherUserId) return;
+    if (iBlockedThem) {
+      await remove(ref(db, `users/${user.uid}/blockedCallers/${otherUserId}`));
+    } else {
+      await set(
+        ref(db, `users/${user.uid}/blockedCallers/${otherUserId}`),
+        true,
+      );
+    }
+  };
 
   const [iBlockedThem, setIBlockedThem] = useState(false);
   const [theyBlockedMe, setTheyBlockedMe] = useState(false);
@@ -923,6 +928,14 @@ const toggleBlockCaller = async () => {
     <div className="flex flex-col h-full bg-[#0f0e17]">
       {/* Header */}
       <div className="flex items-center gap-3 px-4 py-3.5 border-b border-white/[0.06] bg-[#0d0d1a] flex-shrink-0">
+        <div className="lg:hidden flex items-center px-3 py-2]">
+          <button
+            onClick={handleCloseChatPanelforMobie}
+            className="flex items-center gap-1.5 text-xs text-white/50 hover:text-white/80 transition-colors"
+          >
+            <ChevronLeft className="w-6 h-6" />
+          </button>
+        </div>
         <Avatar
           src={headerPic()}
           name={headerName()}
@@ -961,7 +974,6 @@ const toggleBlockCaller = async () => {
                 : "Offline"}
           </p>
         </div>
-
         <div className="flex items-center gap-1.5">
           {otherUserAllowsCalls && (
             <button
@@ -1530,6 +1542,11 @@ export default function ChatPage() {
 
   const isPermitted = user.isPermitted ?? false;
 
+  const handleCloseChatPanelforMobie = () => {
+    setMobileView("list");
+    setSelectedChatId(null);
+  };
+
   return (
     <div className="flex h-full w-full bg-[#0f0e17] overflow-hidden">
       {/* ── Global VideoCallModal ─────────────────────────────────── */}
@@ -1647,21 +1664,6 @@ export default function ChatPage() {
           mobileView === "list" ? "hidden lg:flex" : "flex"
         }`}
       >
-        {mobileView === "room" && selectedChatId && (
-          <div className="lg:hidden flex items-center px-3 py-2 border-b border-white/[0.06] bg-[#0d0d1a]">
-            <button
-              onClick={() => {
-                setMobileView("list");
-                setSelectedChatId(null);
-              }}
-              className="flex items-center gap-1.5 text-xs text-white/50 hover:text-white/80 transition-colors"
-            >
-              <ChevronLeft className="w-4 h-4" />
-              Back
-            </button>
-          </div>
-        )}
-
         {selectedChatId ? (
           <ChatRoomPanel
             chatId={selectedChatId}
@@ -1669,6 +1671,8 @@ export default function ChatPage() {
             onDeleted={handleDeleted}
             // Single prop — handleStartCall now calls webRTC.startCall internally
             onStartCall={handleStartCall}
+            handleCloseChatPanelforMobie={handleCloseChatPanelforMobie}
+            mobileView={mobileView}
           />
         ) : (
           <EmptyState onNew={() => {}} />
