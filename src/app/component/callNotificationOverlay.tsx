@@ -225,7 +225,6 @@ export default function CallNotificationOverlay({
               setCalleeOnline(ps.val()?.online === true);
             },
           );
-          // single read is enough for initial display — keep live for duration
           return presenceUnsub;
         }
       });
@@ -254,7 +253,6 @@ export default function CallNotificationOverlay({
 
       setCalleeDisplayName(name);
       setCalleeDisplayPhoto(photo);
-      
 
       // Resolve callee online status
       resolveCalleeOnline(chatId);
@@ -282,34 +280,52 @@ export default function CallNotificationOverlay({
     [webRTC, resolveCalleeOnline, clearRingTimer],
   );
 
-  // ── Ringtone logic based on call state + callee online status ─────────────
+  // ── Ringtone logic ────────────────────────────────────────────────────────
+  // ONLY play ringtone during the actual ringing states:
+  //   - "calling"  → outgoing, waiting for callee to pick up
+  //   - "incoming" → callee side, phone is ringing
+  // Stop immediately for ANY other state — this ensures the ringtone cuts off
+  // the moment the callee accepts ("requesting-media" / "connecting") or when
+  // the caller's call is answered ("connecting" / "connected").
   useEffect(() => {
     const { callState } = webRTC;
 
-    if (callState === "calling") {
-      // Outgoing call — ring mode depends on whether callee is online
-      if (calleeOnline === false) {
-        ringtone.play("offline");
-      } else {
-        // online or unknown — play standard online ring
-        ringtone.play("online");
-      }
-    } else if (callState === "incoming") {
-      ringtone.play("incoming");
-    } else {
-      ringtone.stop();
-    }
+    switch (callState) {
+      case "calling":
+        // Outgoing ring — tone depends on whether callee is online
+        if (calleeOnline === false) {
+          ringtone.play("offline");
+        } else {
+          ringtone.play("online");
+        }
+        break;
 
-    // When connected or idle — stop all ringtones and clear timer
-    if (
-      callState === "connected" ||
-      callState === "idle" ||
-      callState === "ended"
-    ) {
-      ringtone.stop();
+      case "incoming":
+        ringtone.play("incoming");
+        break;
+
+      default:
+        // covers: "requesting-media", "connecting", "connected", "idle", "ended", "error"
+        // Stop immediately so the ringtone never bleeds into the active call
+        ringtone.stop();
+        break;
+    }
+  }, [webRTC.callState, calleeOnline]); // intentionally exclude ringtone — it's stable
+
+  // ── Clear ring timer when call leaves ringing states ─────────────────────
+  useEffect(() => {
+    const nonRingingStates = [
+      "requesting-media",
+      "connecting",
+      "connected",
+      "idle",
+      "ended",
+      "error",
+    ];
+    if (nonRingingStates.includes(webRTC.callState)) {
       clearRingTimer();
     }
-  }, [webRTC.callState, calleeOnline, ringtone, clearRingTimer]);
+  }, [webRTC.callState, clearRingTimer]);
 
   // ── Open modal for active states ──────────────────────────────────────────
   useEffect(() => {
@@ -331,7 +347,6 @@ export default function CallNotificationOverlay({
       setCalleeOnline(null);
       calleeUidRef.current = null;
       clearRingTimer();
-      // ADD THESE LINES — reset outgoing call state so the toast disappears
       setCalleeDisplayName("User");
       setCalleeDisplayPhoto(null);
       setOutgoingChatId("");
@@ -385,7 +400,7 @@ export default function CallNotificationOverlay({
       {/* ── Outgoing call mini overlay (shown everywhere) ─────────── */}
       {(webRTC.callState === "calling" ||
         webRTC.callState === "requesting-media") &&
-        ringStartedAt > 0 && ( // ← add this check
+        ringStartedAt > 0 && (
           <OutgoingCallToast
             calleeName={calleeDisplayName}
             calleePhoto={calleeDisplayPhoto}

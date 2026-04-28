@@ -586,7 +586,7 @@ const ChatRoomPanel = ({
   chatId: string;
   isPermitted: boolean;
   onDeleted: () => void;
-  onStartCall: (name: string, photo: string | null, chatId: string) => void;
+  onStartCall: (name: string, photo: string | null, chatId: string, type?: CallType) => void;
 }) => {
   const { user } = useAuth();
   const messages = useChatMessages(chatId);
@@ -963,40 +963,71 @@ const toggleBlockCaller = async () => {
         </div>
 
         <div className="flex items-center gap-1.5">
-          {otherUserAllowsCalls && (
-            <button
-              onClick={() => {
-                const name = otherUserId
-                  ? nicknames[otherUserId]?.nickname ||
-                    userDetails[otherUserId]?.name ||
-                    "User"
-                  : "Group Call";
-                const photo = otherUserId
-                  ? userDetails[otherUserId]?.photoURL || null
-                  : null;
-                onStartCall(name, photo, chatId);
-              }}
-              disabled={theyBlockedMe}
-              title={
-                theyBlockedMe
-                  ? "This person has blocked your calls"
-                  : "Start video call"
-              }
-              className={`w-8 h-8 rounded-lg flex items-center justify-center transition-colors
-                ${
-                  theyBlockedMe
-                    ? "bg-white/[0.02] text-white/20 cursor-not-allowed"
-                    : "bg-white/[0.04] hover:bg-white/[0.07] text-white/40 hover:text-white/70"
-                }`}
-            >
-              {theyBlockedMe ? (
-                <PhoneOff className="w-4 h-4" />
-              ) : (
-                <Video className="w-4 h-4" />
-              )}
-            </button>
-          )}
-
+    {/* Audio call button */}
+  {otherUserAllowsCalls && !isGroup && (
+    <button
+      onClick={() => {
+        const name = otherUserId
+          ? nicknames[otherUserId]?.nickname ||
+            userDetails[otherUserId]?.name ||
+            "User"
+          : "User";
+        const photo = otherUserId
+          ? userDetails[otherUserId]?.photoURL || null
+          : null;
+        onStartCall(name, photo, chatId, "audio");
+      }}
+      disabled={theyBlockedMe}
+      title={
+        theyBlockedMe
+          ? "This person has blocked your calls"
+          : "Start audio call"
+      }
+      className={`w-8 h-8 rounded-lg flex items-center justify-center transition-colors
+        ${
+          theyBlockedMe
+            ? "bg-white/[0.02] text-white/20 cursor-not-allowed"
+            : "bg-white/[0.04] hover:bg-white/[0.07] text-white/40 hover:text-white/70"
+        }`}
+    >
+      <Phone className="w-4 h-4" />
+    </button>
+  )}
+ 
+  {/* Video call button */}
+  {otherUserAllowsCalls && (
+    <button
+      onClick={() => {
+        const name = otherUserId
+          ? nicknames[otherUserId]?.nickname ||
+            userDetails[otherUserId]?.name ||
+            "User"
+          : "Group Call";
+        const photo = otherUserId
+          ? userDetails[otherUserId]?.photoURL || null
+          : null;
+        onStartCall(name, photo, chatId, "video");
+      }}
+      disabled={theyBlockedMe}
+      title={
+        theyBlockedMe
+          ? "This person has blocked your calls"
+          : "Start video call"
+      }
+      className={`w-8 h-8 rounded-lg flex items-center justify-center transition-colors
+        ${
+          theyBlockedMe
+            ? "bg-white/[0.02] text-white/20 cursor-not-allowed"
+            : "bg-white/[0.04] hover:bg-white/[0.07] text-white/40 hover:text-white/70"
+        }`}
+    >
+      {theyBlockedMe ? (
+        <PhoneOff className="w-4 h-4" />
+      ) : (
+        <Video className="w-4 h-4" />
+      )}
+    </button>
+  )}
           <div className="relative" ref={menuRef}>
             <button
               onClick={() => setShowMenu((v) => !v)}
