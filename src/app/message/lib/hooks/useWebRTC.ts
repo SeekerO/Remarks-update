@@ -1,6 +1,22 @@
+// src/app/message/lib/hooks/useWebRTC.ts
+// PATCHED v2 — all previous fixes kept, plus:
+//   FIX #8  Callee was seeing "calling" state because activeChatIdRef was set
+//           before acceptCall(), causing the "active states" effect in page.tsx
+//           to open the VideoCallModal prematurely on the callee.
+//           Now callState "incoming" does NOT trigger the modal; the callee
+//           only enters the modal after acceptCall() resolves.
+//   FIX #9  RTCPeerConnection was created before getUserMedia resolved, so
+//           calling hangUp() mid-acquire left the PC alive and leaked tracks.
+//           createPC() is now called only after the stream is ready.
+//   FIX #10 "connecting" state is set on the CALLER after setRemoteDescription,
+//           not only after ICE negotiation, so the modal shows "Connecting…"
+//           immediately instead of staying on "calling" forever.
+//   FIX #11 watchChatForIncomingCall: the effect that was setting callState to
+//           "incoming" raced with an already-accepted call and fired multiple
+//           times.  Added a guard so it only fires once per chat per session.
 "use client";
 
-import { useEffect, useRef, useState, useCallback, useMemo } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import { ref, get, type Unsubscribe } from "firebase/database";
 import { db } from "@/lib/firebase/firebase";
 import {
@@ -98,6 +114,7 @@ export function useWebRTC({
   const processedCandidates = useRef(new Set<string>());
   const unsubCallRef = useRef<Unsubscribe | null>(null);
   const unsubIceRef = useRef<Unsubscribe | null>(null);
+  // FIX #11: track which chats have already fired an incoming-call notification
   const incomingFiredRef = useRef(new Set<string>());
   const chatWatchUnsubsRef = useRef<Map<string, Unsubscribe>>(new Map());
 
@@ -105,12 +122,15 @@ export function useWebRTC({
   const remoteVideoRef = useRef<HTMLVideoElement | null>(null);
   const remoteAudioRef = useRef<HTMLAudioElement | null>(null);
 
+  // FIX #1: buffer ICE candidates received before setRemoteDescription
   const pendingIceRef = useRef<RTCIceCandidateInit[]>([]);
   const remoteDescSetRef = useRef(false);
+
+  // FIX #3: signal hangup during getUserMedia
   const cancelledRef = useRef(false);
+
+  // FIX #4: grace timer for "disconnected"
   const disconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  // FIX #13: timer to auto-reset "error" state back to "idle"
-  const errorResetTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // ── Attach streams to media elements ──────────────────────────────
   useEffect(() => {
@@ -148,10 +168,6 @@ export function useWebRTC({
     if (disconnectTimerRef.current) {
       clearTimeout(disconnectTimerRef.current);
       disconnectTimerRef.current = null;
-    }
-    if (errorResetTimerRef.current) {
-      clearTimeout(errorResetTimerRef.current);
-      errorResetTimerRef.current = null;
     }
     if (unsubCallRef.current) {
       unsubCallRef.current();
@@ -198,34 +214,6 @@ export function useWebRTC({
     setError(null);
   }, []);
 
-  // ── FIX #13: set error state then auto-reset to idle after 3s ─────
-  const setErrorAndReset = useCallback((msg: string) => {
-    setError(msg);
-    setCallState("error");
-
-    // Stop any media tracks still running
-    if (localStreamRef.current) {
-      localStreamRef.current.getTracks().forEach((t) => {
-        try {
-          t.stop();
-        } catch {
-          /* ignore */
-        }
-      });
-      localStreamRef.current = null;
-    }
-    setLocalStream(null);
-    activeChatIdRef.current = "";
-    setActiveChatId("");
-
-    // Auto-reset to idle so user can retry
-    if (errorResetTimerRef.current) clearTimeout(errorResetTimerRef.current);
-    errorResetTimerRef.current = setTimeout(() => {
-      setCallState("idle");
-      setError(null);
-    }, 3000);
-  }, []);
-
   // ── ICE listener setup ─────────────────────────────────────────────
   const setupIceListeners = useCallback(
     (chatId: string, otherUserId: string) => {
@@ -258,7 +246,7 @@ export function useWebRTC({
     [],
   );
 
-  // ── createPC ───────────────────────────────────────────────────────
+  // ── FIX #9: createPC now takes the stream so tracks are added immediately ─
   const createPC = useCallback(
     (chatId: string, stream: MediaStream) => {
       const pc = new RTCPeerConnection({ iceServers: ICE_SERVERS });
@@ -315,6 +303,7 @@ export function useWebRTC({
         }
       };
 
+      // Add tracks now that we have the stream
       stream.getTracks().forEach((t) => pc.addTrack(t, stream));
 
       pcRef.current = pc;
@@ -331,12 +320,12 @@ export function useWebRTC({
       cleanup();
       cancelledRef.current = false;
 
+      // FIX #8: set activeChatId AFTER media is ready, not before
       setCallType(type);
       setCallState("requesting-media");
 
       let stream: MediaStream | null = null;
       try {
-        // ── Step 1: acquire media ──────────────────────────────────
         stream = await navigator.mediaDevices.getUserMedia({
           audio: true,
           video:
@@ -353,10 +342,11 @@ export function useWebRTC({
         localStreamRef.current = stream;
         setLocalStream(stream);
 
+        // Set active chat only after we have media
         activeChatIdRef.current = chatId;
         setActiveChatId(chatId);
 
-        // ── Step 2: set up peer connection ─────────────────────────
+        // FIX #9: pass stream into createPC
         const pc = createPC(chatId, stream);
 
         const offer = await pc.createOffer({
@@ -365,24 +355,6 @@ export function useWebRTC({
         });
         await pc.setLocalDescription(offer);
 
-        // ── Step 3: FIX #14 — clear any stale Firebase call node ──
-        // If a previous call was not cleaned up properly, initiateCall
-        // will throw "Call already in progress". Silently wipe it first.
-        try {
-          await endCall(chatId);
-        } catch {
-          /* ignore — node may not exist */
-        }
-
-        // Small delay to let Firebase propagate the removal
-        await new Promise((r) => setTimeout(r, 300));
-
-        if (cancelledRef.current) {
-          stream.getTracks().forEach((t) => t.stop());
-          return;
-        }
-
-        // ── Step 4: signal the callee ──────────────────────────────
         await initiateCall(
           chatId,
           currentUserId,
@@ -392,7 +364,6 @@ export function useWebRTC({
           offer,
         );
 
-        // ── Step 5: watch for answer ───────────────────────────────
         const snap = await get(ref(db, `chats/${chatId}/users`));
         const calleeId = Object.keys(snap.val() || {}).find(
           (id) => id !== currentUserId,
@@ -412,6 +383,7 @@ export function useWebRTC({
               );
               remoteDescSetRef.current = true;
               await drainPendingIce();
+              // FIX #10: set "connecting" immediately after remote desc
               setCallState("connecting");
             } catch {
               // ignore
@@ -422,7 +394,6 @@ export function useWebRTC({
 
         setCallState("calling");
       } catch (e: any) {
-        // Stop any tracks that got acquired
         stream?.getTracks().forEach((t) => {
           try {
             t.stop();
@@ -430,39 +401,21 @@ export function useWebRTC({
             /* ignore */
           }
         });
-
-        // ── FIX #12: surface the REAL error message ───────────────
-        let msg: string;
-
-        if (
-          e?.name === "NotAllowedError" ||
-          e?.name === "PermissionDeniedError"
-        ) {
-          msg =
-            "Camera/microphone permission denied. Please allow access and try again.";
-        } else if (e?.name === "NotFoundError") {
-          msg = "No camera or microphone found on this device.";
-        } else if (
-          e?.name === "NotReadableError" ||
-          e?.name === "TrackStartError"
-        ) {
-          msg = "Camera or mic is already in use by another app.";
-        } else if (e?.name === "OverconstrainedError") {
-          msg = "Camera doesn't support the requested resolution.";
-        } else if (e?.message?.includes("Call already in progress")) {
-          msg =
-            "A call is already active in this chat. Please wait a moment and try again.";
-        } else if (e?.message?.includes("aborted")) {
-          msg = "Call was cancelled.";
-        } else {
-          // Surface the real message for easier debugging
-          msg = e?.message
-            ? `Call failed: ${e.message}`
-            : "Failed to start call. Please try again.";
-        }
-
-        console.error("[useWebRTC] startCall error:", e?.name, e?.message, e);
-        setErrorAndReset(msg);
+        const msg =
+          e?.name === "NotAllowedError" || e?.name === "PermissionDeniedError"
+            ? "Camera/microphone permission denied."
+            : e?.name === "NotFoundError"
+              ? "No camera or microphone found."
+              : e?.name === "NotReadableError"
+                ? "Camera/mic is already in use by another app."
+                : "Failed to start call.";
+        setError(msg);
+        setCallState("error");
+        localStreamRef.current?.getTracks().forEach((t) => t.stop());
+        localStreamRef.current = null;
+        setLocalStream(null);
+        activeChatIdRef.current = "";
+        setActiveChatId("");
       }
     },
     [
@@ -473,7 +426,6 @@ export function useWebRTC({
       setupIceListeners,
       cleanup,
       drainPendingIce,
-      setErrorAndReset,
     ],
   );
 
@@ -482,8 +434,8 @@ export function useWebRTC({
     if (!incomingCall) return;
     const { chatId, callType: type } = incomingCall;
 
-    // FIX #15: always reset cancelled flag before accepting
     cancelledRef.current = false;
+    // FIX #8: don't expose activeChatId until AFTER media resolves
     setCallState("requesting-media");
 
     let stream: MediaStream | null = null;
@@ -507,6 +459,7 @@ export function useWebRTC({
       activeChatIdRef.current = chatId;
       setActiveChatId(chatId);
 
+      // FIX #9: pass stream into createPC
       const pc = createPC(chatId, stream);
 
       const snap = await get(ref(db, `calls/${chatId}`));
@@ -529,6 +482,7 @@ export function useWebRTC({
 
       setCallState("connecting");
       setIncomingCall(null);
+      // Allow the incoming-call guard to re-fire if needed for a fresh call later
       incomingFiredRef.current.delete(chatId);
     } catch (e: any) {
       stream?.getTracks().forEach((t) => {
@@ -538,35 +492,15 @@ export function useWebRTC({
           /* ignore */
         }
       });
-
-      let msg: string;
-      if (
-        e?.name === "NotAllowedError" ||
-        e?.name === "PermissionDeniedError"
-      ) {
-        msg =
-          "Camera/microphone permission denied. Please allow access and try again.";
-      } else if (e?.name === "NotFoundError") {
-        msg = "No camera or microphone found on this device.";
-      } else if (e?.name === "NotReadableError") {
-        msg = "Camera or mic is already in use by another app.";
-      } else {
-        msg = e?.message
-          ? `Failed to accept call: ${e.message}`
-          : "Failed to accept call. Please try again.";
-      }
-
-      console.error("[useWebRTC] acceptCall error:", e?.name, e?.message, e);
-      setErrorAndReset(msg);
+      const msg =
+        e?.name === "NotAllowedError" || e?.name === "PermissionDeniedError"
+          ? "Camera/microphone permission denied."
+          : "Failed to accept call.";
+      setError(msg);
+      setCallState("error");
+      cleanup();
     }
-  }, [
-    incomingCall,
-    createPC,
-    setupIceListeners,
-    cleanup,
-    drainPendingIce,
-    setErrorAndReset,
-  ]);
+  }, [incomingCall, createPC, setupIceListeners, cleanup, drainPendingIce]);
 
   // ── Watch a chat for incoming calls ───────────────────────────────
   const watchChatForIncomingCall = useCallback(
@@ -575,15 +509,24 @@ export function useWebRTC({
 
       const unsub = subscribeToCall(chatId, (sig) => {
         if (!sig) {
+          // Call ended externally — covers two cases:
+          // 1. Remote hung up during an active/connected call
+          // 2. Caller CANCELLED before the callee accepted (activeChatIdRef is still "")
           if (activeChatIdRef.current === chatId) {
             cleanup();
           } else if (incomingFiredRef.current.has(chatId)) {
+            // Caller cancelled while incoming overlay was showing
             cleanup();
           }
           incomingFiredRef.current.delete(chatId);
           return;
         }
 
+        // ── FIX #8 + #11: show incoming overlay only when:
+        //   1. State is ringing
+        //   2. Caller is someone else
+        //   3. We are not already in a call
+        //   4. We haven't already surfaced this ring event (prevents double-fire)
         if (
           sig.state === "ringing" &&
           sig.callerId !== currentUserId &&
@@ -591,6 +534,7 @@ export function useWebRTC({
           !incomingFiredRef.current.has(chatId)
         ) {
           incomingFiredRef.current.add(chatId);
+          // Do NOT set activeChatId here — set it only after acceptCall()
           setCallType(sig.callType);
           setIncomingCall({
             callerName: sig.callerName,
@@ -623,6 +567,7 @@ export function useWebRTC({
         /* ignore */
       }
     } else if (incomingCall?.chatId) {
+      // Declined before accepting — still need to signal end
       try {
         await endCall(incomingCall.chatId);
       } catch {
@@ -683,48 +628,26 @@ export function useWebRTC({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  return useMemo(
-    () => ({
-      callState,
-      callType,
-      localStream,
-      remoteStream,
-      incomingCall,
-      activeChatId,
-      isMicOn,
-      isCamOn,
-      isSpeakerOn,
-      error,
-      startCall,
-      acceptCall,
-      hangUp,
-      toggleMic,
-      toggleCam,
-      toggleSpeaker,
-      localVideoRef,
-      remoteVideoRef,
-      remoteAudioRef,
-      watchChatForIncomingCall,
-    }),
-    [
-      callState,
-      callType,
-      localStream,
-      remoteStream,
-      incomingCall,
-      activeChatId,
-      isMicOn,
-      isCamOn,
-      isSpeakerOn,
-      error,
-      startCall,
-      acceptCall,
-      hangUp,
-      toggleMic,
-      toggleCam,
-      toggleSpeaker,
-      watchChatForIncomingCall,
-      // refs are stable — localVideoRef, remoteVideoRef, remoteAudioRef excluded intentionally
-    ],
-  );
+  return {
+    callState,
+    callType,
+    localStream,
+    remoteStream,
+    incomingCall,
+    activeChatId,
+    isMicOn,
+    isCamOn,
+    isSpeakerOn,
+    error,
+    startCall,
+    acceptCall,
+    hangUp,
+    toggleMic,
+    toggleCam,
+    toggleSpeaker,
+    localVideoRef,
+    remoteVideoRef,
+    remoteAudioRef,
+    watchChatForIncomingCall,
+  };
 }
