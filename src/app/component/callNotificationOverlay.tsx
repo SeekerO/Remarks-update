@@ -5,17 +5,29 @@
 //  - Incoming call notifications (shown everywhere except the message page)
 //  - Outgoing call status with 15-second ring timeout
 //  - Online/offline awareness during calls
+//
+// FIX: The overlay no longer owns its own useWebRTC instance.
+//      Instead it exposes a GlobalCallContext that page.tsx populates
+//      by calling GlobalCallContext's `register` method with its own
+//      webRTC hook return value. This guarantees a single source of
+//      truth for callState, so the ringtone stops the moment the
+//      callee accepts — regardless of which page/component accepted.
 
-import React, { useEffect, useState, useRef, useCallback } from "react";
+import React, {
+  useEffect,
+  useState,
+  useRef,
+  useCallback,
+  useMemo,
+} from "react";
 import { useAuth } from "@/lib/auth/AuthContext";
 import { usePathname } from "next/navigation";
-import { useWebRTC } from "@/app/message/lib/hooks/useWebRTC";
 import { useCallRingtone } from "@/app/message/lib/hooks/useCallRingTone";
 import { ref, onValue } from "firebase/database";
 import { db } from "@/lib/firebase/firebase";
-import { useUserChats } from "@/app/message/lib/hooks/useUserChats";
 import VideoCallModal from "@/app/message/lib/components/voiceCallModal";
 import type { CallType } from "@/app/message/lib/call/callSignaling";
+import type { UseWebRTCReturn } from "@/app/message/lib/hooks/useWebRTC";
 import {
   Phone,
   PhoneOff,
@@ -134,15 +146,22 @@ const CallAvatar = ({
   );
 };
 
-// ── EXPORTED CONTEXT so message/page.tsx can reach into this ─────────────────
+// ── EXPORTED CONTEXT ──────────────────────────────────────────────────────────
+// page.tsx calls `registerWebRTC(webRTC)` on mount so this overlay
+// shares the exact same hook instance — no second Firebase subscription,
+// no separate callState that can diverge.
 export interface GlobalCallContextValue {
+  /** Called by page.tsx to hand its webRTC instance to the overlay */
+  registerWebRTC: (webRTC: UseWebRTCReturn) => void;
+  /** Called by page.tsx to start an outgoing call (keeps startCall logic here) */
   startCall: (
     name: string,
     photo: string | null,
     chatId: string,
     type?: CallType,
   ) => void;
-  webRTC: ReturnType<typeof useWebRTC> | null;
+  /** The shared webRTC instance (null until page.tsx registers it) */
+  webRTC: UseWebRTCReturn | null;
 }
 
 export const GlobalCallContext =
@@ -158,32 +177,20 @@ export default function CallNotificationOverlay({
   const pathname = usePathname();
   const ringtone = useCallRingtone();
 
-  // User details cache
-  const [currentUserName, setCurrentUserName] = useState("You");
-  const [currentUserPhoto, setCurrentUserPhoto] = useState<string | null>(null);
+  // ── Shared WebRTC ref — populated by page.tsx via registerWebRTC ──────────
+  // We store it in a ref AND mirror it to state so renders fire when it changes.
+  const webRTCRef = useRef<UseWebRTCReturn | null>(null);
+  const [webRTC, setWebRTC] = useState<UseWebRTCReturn | null>(null);
 
-  useEffect(() => {
-    if (!user?.uid) return;
-    const unsub = onValue(ref(db, `users/${user.uid}`), (snap) => {
-      const d = snap.val();
-      if (d) {
-        setCurrentUserName(d.name || d.displayName || d.email || "You");
-        setCurrentUserPhoto(d.photoURL || null);
-      }
-    });
-    return () => unsub();
-  }, [user?.uid]);
-
-  // ── WebRTC ────────────────────────────────────────────────────────────────
-  const webRTC = useWebRTC({
-    currentUserId: user?.uid || "",
-    currentUserName,
-    currentUserPhoto,
-  });
+  const registerWebRTC = useCallback((instance: UseWebRTCReturn) => {
+    if (webRTCRef.current === instance) return; // ← ADD THIS GUARD
+    webRTCRef.current = instance;
+    setWebRTC(instance);
+  }, []);
 
   // ── Online status of callee ───────────────────────────────────────────────
   const [calleeOnline, setCalleeOnline] = useState<boolean | null>(null);
-  const calleeUidRef = useRef<string | null>(null);
+  const calleeOnlineUnsubRef = useRef<(() => void) | null>(null);
 
   // ── Ring timeout for outgoing calls ──────────────────────────────────────
   const ringTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -197,26 +204,20 @@ export default function CallNotificationOverlay({
     null,
   );
 
-  // ── Outgoing: callee info for display ────────────────────────────────────
-  const [outgoingChatId, setOutgoingChatId] = useState("");
-
-  // ── Watch all user chats for incoming calls ───────────────────────────────
-  const userChats = useUserChats(user?.uid || "");
-  useEffect(() => {
-    if (!user?.uid || userChats.length === 0) return;
-    userChats.forEach((chat) => {
-      webRTC.watchChatForIncomingCall(chat.id);
-    });
-  }, [user?.uid, userChats, webRTC.watchChatForIncomingCall]);
-
   // ── Resolve callee online status when a call starts ──────────────────────
   const resolveCalleeOnline = useCallback(
     (chatId: string) => {
       if (!user?.uid || !chatId) return;
+
+      // Clean up any previous subscription
+      if (calleeOnlineUnsubRef.current) {
+        calleeOnlineUnsubRef.current();
+        calleeOnlineUnsubRef.current = null;
+      }
+
       const unsub = onValue(ref(db, `chats/${chatId}/users`), (snap) => {
         const users = snap.val() || {};
         const otherId = Object.keys(users).find((id) => id !== user.uid);
-        calleeUidRef.current = otherId || null;
 
         if (otherId) {
           const presenceUnsub = onValue(
@@ -225,10 +226,18 @@ export default function CallNotificationOverlay({
               setCalleeOnline(ps.val()?.online === true);
             },
           );
-          return presenceUnsub;
+          // Store the inner unsub so we can clean up both
+          calleeOnlineUnsubRef.current = () => {
+            presenceUnsub();
+            unsub();
+          };
         }
       });
-      return unsub;
+
+      // If the chat sub fires without an otherId, store outer unsub
+      if (!calleeOnlineUnsubRef.current) {
+        calleeOnlineUnsubRef.current = unsub;
+      }
     },
     [user?.uid],
   );
@@ -242,6 +251,8 @@ export default function CallNotificationOverlay({
   }, []);
 
   // ── Start outgoing call ───────────────────────────────────────────────────
+  // This is the method page.tsx calls (via context) so that the overlay
+  // can start the ring timer and track callee display info.
   const startCall = useCallback(
     (
       name: string,
@@ -249,16 +260,15 @@ export default function CallNotificationOverlay({
       chatId: string,
       type: CallType = "video",
     ) => {
-      if (webRTC.callState !== "idle") return;
+      const rtc = webRTCRef.current;
+      if (!rtc || rtc.callState !== "idle") return;
 
       setCalleeDisplayName(name);
       setCalleeDisplayPhoto(photo);
-
-      // Resolve callee online status
       resolveCalleeOnline(chatId);
 
-      // Start WebRTC call
-      webRTC.startCall(chatId, type);
+      // Delegate to the shared WebRTC instance
+      rtc.startCall(chatId, type);
 
       // Start 15-second ring timeout
       const now = Date.now();
@@ -267,54 +277,46 @@ export default function CallNotificationOverlay({
 
       clearRingTimer();
       ringTimerRef.current = setTimeout(async () => {
-        // Auto hang-up after 15 seconds of ringing
+        const currentRtc = webRTCRef.current;
         if (
-          webRTC.callState === "calling" ||
-          webRTC.callState === "requesting-media"
+          currentRtc &&
+          (currentRtc.callState === "calling" ||
+            currentRtc.callState === "requesting-media")
         ) {
-          await webRTC.hangUp();
+          await currentRtc.hangUp();
         }
         clearRingTimer();
       }, RING_TIMEOUT_MS);
     },
-    [webRTC, resolveCalleeOnline, clearRingTimer],
+    [resolveCalleeOnline, clearRingTimer],
   );
 
   // ── Ringtone logic ────────────────────────────────────────────────────────
-  // ONLY play ringtone during the actual ringing states:
-  //   - "calling"  → outgoing, waiting for callee to pick up
-  //   - "incoming" → callee side, phone is ringing
-  // Stop immediately for ANY other state — this ensures the ringtone cuts off
-  // the moment the callee accepts ("requesting-media" / "connecting") or when
-  // the caller's call is answered ("connecting" / "connected").
+  // Driven entirely by the shared webRTC.callState.
+  // "calling"  → outgoing ring
+  // "incoming" → incoming ring
+  // anything else → STOP immediately (covers accepting, connecting, connected, etc.)
   useEffect(() => {
-    const { callState } = webRTC;
+    if (!webRTC) return;
 
-    switch (callState) {
+    switch (webRTC.callState) {
       case "calling":
-        // Outgoing ring — tone depends on whether callee is online
-        if (calleeOnline === false) {
-          ringtone.play("offline");
-        } else {
-          ringtone.play("online");
-        }
+        ringtone.play(calleeOnline === false ? "offline" : "online");
         break;
-
       case "incoming":
         ringtone.play("incoming");
         break;
-
       default:
-        // covers: "requesting-media", "connecting", "connected", "idle", "ended", "error"
-        // Stop immediately so the ringtone never bleeds into the active call
+        // requesting-media, connecting, connected, idle, ended, error
         ringtone.stop();
         break;
     }
-  }, [webRTC.callState, calleeOnline]); // intentionally exclude ringtone — it's stable
+  }, [webRTC?.callState, calleeOnline]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Clear ring timer when call leaves ringing states ─────────────────────
   useEffect(() => {
-    const nonRingingStates = [
+    if (!webRTC) return;
+    const nonRinging = [
       "requesting-media",
       "connecting",
       "connected",
@@ -322,68 +324,72 @@ export default function CallNotificationOverlay({
       "ended",
       "error",
     ];
-    if (nonRingingStates.includes(webRTC.callState)) {
+    if (nonRinging.includes(webRTC.callState)) {
       clearRingTimer();
     }
-  }, [webRTC.callState, clearRingTimer]);
+  }, [webRTC?.callState, clearRingTimer]);
 
   // ── Open modal for active states ──────────────────────────────────────────
   useEffect(() => {
-    const activeStates = [
-      "calling",
-      "requesting-media",
-      "connecting",
-      "connected",
-    ];
-    if (activeStates.includes(webRTC.callState)) {
+    if (!webRTC) return;
+    const active = ["calling", "requesting-media", "connecting", "connected"];
+    if (active.includes(webRTC.callState)) {
       setCallModalOpen(true);
     }
-  }, [webRTC.callState]);
+  }, [webRTC?.callState]);
 
-  // ── Close modal when terminal state ──────────────────────────────────────
+  // ── Close modal + reset when terminal state ───────────────────────────────
   useEffect(() => {
+    if (!webRTC) return;
     if (webRTC.callState === "idle" || webRTC.callState === "ended") {
       setCallModalOpen(false);
       setCalleeOnline(null);
-      calleeUidRef.current = null;
       clearRingTimer();
       setCalleeDisplayName("User");
       setCalleeDisplayPhoto(null);
-      setOutgoingChatId("");
       setRingStartedAt(0);
+      ringStartedAtRef.current = 0;
+
+      // Clean up presence subscription
+      if (calleeOnlineUnsubRef.current) {
+        calleeOnlineUnsubRef.current();
+        calleeOnlineUnsubRef.current = null;
+      }
     }
-  }, [webRTC.callState, clearRingTimer]);
+  }, [webRTC?.callState, clearRingTimer]);
 
   const handleHangUp = useCallback(async () => {
     clearRingTimer();
-    await webRTC.hangUp();
-  }, [webRTC, clearRingTimer]);
+    await webRTCRef.current?.hangUp();
+  }, [clearRingTimer]);
 
   // ── Suppress incoming overlay if on message page (handled there) ──────────
   const isOnMessagePage = pathname.startsWith("/message");
 
-  // ── Context value for child pages ─────────────────────────────────────────
-  const contextValue: GlobalCallContextValue = {
-    startCall,
-    webRTC,
-  };
+  // ── Context value ─────────────────────────────────────────────────────────
+  const contextValue = useMemo<GlobalCallContextValue>(
+    () => ({ registerWebRTC, startCall, webRTC }),
+    [registerWebRTC, startCall, webRTC],
+  );
 
   return (
     <GlobalCallContext.Provider value={contextValue}>
       {children}
 
-      {/* ── Global call modal ─────────────────────────────────────── */}
-      <VideoCallModal
-        isOpen={callModalOpen}
-        onClose={handleHangUp}
-        webRTC={webRTC}
-        calleeName={webRTC.incomingCall?.callerName || calleeDisplayName}
-        calleePhoto={webRTC.incomingCall?.callerPhoto || calleeDisplayPhoto}
-      />
+      {/* ── Global call modal (shown on non-message pages) ─────── */}
+      {!isOnMessagePage && webRTC && (
+        <VideoCallModal
+          isOpen={callModalOpen}
+          onClose={handleHangUp}
+          webRTC={webRTC}
+          calleeName={webRTC.incomingCall?.callerName || calleeDisplayName}
+          calleePhoto={webRTC.incomingCall?.callerPhoto || calleeDisplayPhoto}
+        />
+      )}
 
       {/* ── Incoming call overlay (shown outside /message) ──────── */}
       {!isOnMessagePage &&
-        webRTC.callState === "incoming" &&
+        webRTC?.callState === "incoming" &&
         webRTC.incomingCall && (
           <IncomingCallToast
             callerName={webRTC.incomingCall.callerName}
@@ -397,9 +403,11 @@ export default function CallNotificationOverlay({
           />
         )}
 
-      {/* ── Outgoing call mini overlay (shown everywhere) ─────────── */}
-      {(webRTC.callState === "calling" ||
-        webRTC.callState === "requesting-media") &&
+      {/* ── Outgoing call mini overlay (shown outside /message) ─── */}
+      {!isOnMessagePage &&
+        webRTC &&
+        (webRTC.callState === "calling" ||
+          webRTC.callState === "requesting-media") &&
         ringStartedAt > 0 && (
           <OutgoingCallToast
             calleeName={calleeDisplayName}
@@ -461,7 +469,6 @@ function IncomingCallToast({
               "0 24px 64px rgba(0,0,0,0.7), 0 0 0 0.5px rgba(255,255,255,0.05)",
           }}
         >
-          {/* Top accent */}
           <div
             className="h-px w-full rounded-full"
             style={{
@@ -602,7 +609,6 @@ function OutgoingCallToast({
             </div>
           </div>
 
-          {/* Countdown */}
           {callState === "calling" && ringStartedAt > 0 && (
             <div className="flex items-center gap-2">
               <Clock className="w-3 h-3 text-white/25 flex-shrink-0" />
@@ -618,7 +624,6 @@ function OutgoingCallToast({
             </div>
           )}
 
-          {/* Cancel */}
           <button
             onClick={onCancel}
             className="flex items-center justify-center gap-1.5 py-2 rounded-xl text-[11px] font-semibold

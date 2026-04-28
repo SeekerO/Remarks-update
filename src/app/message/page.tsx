@@ -3,7 +3,13 @@
 //  Full-page Chat — src/app/message/page.tsx
 // ─────────────────────────────────────────────────────────────────
 
-import React, { useState, useEffect, useRef, useCallback } from "react";
+import React, {
+  useState,
+  useEffect,
+  useRef,
+  useCallback,
+  useContext,
+} from "react";
 import Image from "next/image";
 import {
   ref,
@@ -39,6 +45,7 @@ import {
 import VideoCallModal from "./lib/components/voiceCallModal";
 import { useWebRTC, type UseWebRTCCallState } from "./lib/hooks/useWebRTC";
 import type { CallType } from "./lib/call/callSignaling";
+import { GlobalCallContext } from "@/app/component/callNotificationOverlay";
 
 import {
   Search,
@@ -586,7 +593,12 @@ const ChatRoomPanel = ({
   chatId: string;
   isPermitted: boolean;
   onDeleted: () => void;
-  onStartCall: (name: string, photo: string | null, chatId: string, type?: CallType) => void;
+  onStartCall: (
+    name: string,
+    photo: string | null,
+    chatId: string,
+    type?: CallType,
+  ) => void;
 }) => {
   const { user } = useAuth();
   const messages = useChatMessages(chatId);
@@ -878,16 +890,17 @@ const ChatRoomPanel = ({
     return () => unsub();
   }, [otherUserId]);
 
-  
-
-const toggleBlockCaller = async () => {
-  if (!user?.uid || !otherUserId) return;
-  if (iBlockedThem) {
-    await remove(ref(db, `users/${user.uid}/blockedCallers/${otherUserId}`));
-  } else {
-    await set(ref(db, `users/${user.uid}/blockedCallers/${otherUserId}`), true);
-  }
-};
+  const toggleBlockCaller = async () => {
+    if (!user?.uid || !otherUserId) return;
+    if (iBlockedThem) {
+      await remove(ref(db, `users/${user.uid}/blockedCallers/${otherUserId}`));
+    } else {
+      await set(
+        ref(db, `users/${user.uid}/blockedCallers/${otherUserId}`),
+        true,
+      );
+    }
+  };
 
   const [iBlockedThem, setIBlockedThem] = useState(false);
   const [theyBlockedMe, setTheyBlockedMe] = useState(false);
@@ -895,7 +908,6 @@ const toggleBlockCaller = async () => {
   useEffect(() => {
     if (!user?.uid || !otherUserId) return;
 
-    // Did I block them? (controls the menu toggle label)
     const myBlockRef = ref(
       db,
       `users/${user.uid}/blockedCallers/${otherUserId}`,
@@ -904,7 +916,6 @@ const toggleBlockCaller = async () => {
       setIBlockedThem(snap.val() === true);
     });
 
-    // Did they block me? (disables the call button)
     const theirBlockRef = ref(
       db,
       `users/${otherUserId}/blockedCallers/${user.uid}`,
@@ -963,71 +974,72 @@ const toggleBlockCaller = async () => {
         </div>
 
         <div className="flex items-center gap-1.5">
-    {/* Audio call button */}
-  {otherUserAllowsCalls && !isGroup && (
-    <button
-      onClick={() => {
-        const name = otherUserId
-          ? nicknames[otherUserId]?.nickname ||
-            userDetails[otherUserId]?.name ||
-            "User"
-          : "User";
-        const photo = otherUserId
-          ? userDetails[otherUserId]?.photoURL || null
-          : null;
-        onStartCall(name, photo, chatId, "audio");
-      }}
-      disabled={theyBlockedMe}
-      title={
-        theyBlockedMe
-          ? "This person has blocked your calls"
-          : "Start audio call"
-      }
-      className={`w-8 h-8 rounded-lg flex items-center justify-center transition-colors
-        ${
-          theyBlockedMe
-            ? "bg-white/[0.02] text-white/20 cursor-not-allowed"
-            : "bg-white/[0.04] hover:bg-white/[0.07] text-white/40 hover:text-white/70"
-        }`}
-    >
-      <Phone className="w-4 h-4" />
-    </button>
-  )}
- 
-  {/* Video call button */}
-  {otherUserAllowsCalls && (
-    <button
-      onClick={() => {
-        const name = otherUserId
-          ? nicknames[otherUserId]?.nickname ||
-            userDetails[otherUserId]?.name ||
-            "User"
-          : "Group Call";
-        const photo = otherUserId
-          ? userDetails[otherUserId]?.photoURL || null
-          : null;
-        onStartCall(name, photo, chatId, "video");
-      }}
-      disabled={theyBlockedMe}
-      title={
-        theyBlockedMe
-          ? "This person has blocked your calls"
-          : "Start video call"
-      }
-      className={`w-8 h-8 rounded-lg flex items-center justify-center transition-colors
-        ${
-          theyBlockedMe
-            ? "bg-white/[0.02] text-white/20 cursor-not-allowed"
-            : "bg-white/[0.04] hover:bg-white/[0.07] text-white/40 hover:text-white/70"
-        }`}
-    >
-      {theyBlockedMe ? (
-        <PhoneOff className="w-4 h-4" />
-      ) : (
-        <Video className="w-4 h-4" />
-      )}
-    </button>
-  )}
+          {/* Audio call button */}
+          {otherUserAllowsCalls && !isGroup && (
+            <button
+              onClick={() => {
+                const name = otherUserId
+                  ? nicknames[otherUserId]?.nickname ||
+                    userDetails[otherUserId]?.name ||
+                    "User"
+                  : "User";
+                const photo = otherUserId
+                  ? userDetails[otherUserId]?.photoURL || null
+                  : null;
+                onStartCall(name, photo, chatId, "audio");
+              }}
+              disabled={theyBlockedMe}
+              title={
+                theyBlockedMe
+                  ? "This person has blocked your calls"
+                  : "Start audio call"
+              }
+              className={`w-8 h-8 rounded-lg flex items-center justify-center transition-colors
+                ${
+                  theyBlockedMe
+                    ? "bg-white/[0.02] text-white/20 cursor-not-allowed"
+                    : "bg-white/[0.04] hover:bg-white/[0.07] text-white/40 hover:text-white/70"
+                }`}
+            >
+              <Phone className="w-4 h-4" />
+            </button>
+          )}
+
+          {/* Video call button */}
+          {otherUserAllowsCalls && (
+            <button
+              onClick={() => {
+                const name = otherUserId
+                  ? nicknames[otherUserId]?.nickname ||
+                    userDetails[otherUserId]?.name ||
+                    "User"
+                  : "Group Call";
+                const photo = otherUserId
+                  ? userDetails[otherUserId]?.photoURL || null
+                  : null;
+                onStartCall(name, photo, chatId, "video");
+              }}
+              disabled={theyBlockedMe}
+              title={
+                theyBlockedMe
+                  ? "This person has blocked your calls"
+                  : "Start video call"
+              }
+              className={`w-8 h-8 rounded-lg flex items-center justify-center transition-colors
+                ${
+                  theyBlockedMe
+                    ? "bg-white/[0.02] text-white/20 cursor-not-allowed"
+                    : "bg-white/[0.04] hover:bg-white/[0.07] text-white/40 hover:text-white/70"
+                }`}
+            >
+              {theyBlockedMe ? (
+                <PhoneOff className="w-4 h-4" />
+              ) : (
+                <Video className="w-4 h-4" />
+              )}
+            </button>
+          )}
+
           <div className="relative" ref={menuRef}>
             <button
               onClick={() => setShowMenu((v) => !v)}
@@ -1057,8 +1069,8 @@ const toggleBlockCaller = async () => {
                       setShowMenu(false);
                     }}
                     className="flex items-center gap-2.5 w-full px-3.5 py-2.5 text-xs
-      border-t border-white/[0.06] transition-colors
-      text-amber-400 hover:bg-amber-500/10"
+                      border-t border-white/[0.06] transition-colors
+                      text-amber-400 hover:bg-amber-500/10"
                   >
                     {iBlockedThem ? (
                       <>
@@ -1422,8 +1434,6 @@ export default function ChatPage() {
 
   const activeCallChatIdRef = useRef<string>("");
 
-  // FIX #8: callModalOpen must NOT open for "incoming" state.
-  // The incoming overlay is separate and handled by callState === "incoming".
   const [callModalOpen, setCallModalOpen] = useState(false);
   const [calleeDisplayName, setCalleeDisplayName] = useState("User");
   const [calleeDisplayPhoto, setCalleeDisplayPhoto] = useState<string | null>(
@@ -1452,19 +1462,27 @@ export default function ChatPage() {
     currentUserPhoto,
   });
 
+  // ── KEY FIX: Register this webRTC instance with the global overlay ─
+  // This ensures the overlay's ringtone logic reads from the same
+  // callState as this page — preventing the ringtone from continuing
+  // after the callee accepts the call here.
+  const globalCallCtx = useContext(GlobalCallContext);
+  useEffect(() => {
+    if (globalCallCtx) {
+      globalCallCtx.registerWebRTC(webRTC);
+    }
+  }, [webRTC]);
+
   // ── Register all user chats with watchChatForIncomingCall ─────────
-  // This is the ONLY place that sets up incoming-call detection.
-  // The old page-level Firebase onValue loop has been removed to prevent
-  // duplicate/racing state updates.
   const userChatsForCalls = useUserChats(user?.uid || "");
   useEffect(() => {
     if (!user?.uid || userChatsForCalls.length === 0) return;
     userChatsForCalls.forEach((chat) => {
       webRTC.watchChatForIncomingCall(chat.id);
     });
-    // watchChatForIncomingCall is idempotent — safe to call on every render
   }, [user?.uid, userChatsForCalls, webRTC.watchChatForIncomingCall]);
 
+  // ── Open modal for active call states ─────────────────────────────
   useEffect(() => {
     const activeStates: UseWebRTCCallState[] = [
       "calling",
@@ -1485,9 +1503,10 @@ export default function ChatPage() {
     }
   }, [webRTC.callState]);
 
-  // ── Start an outgoing call ────────────────────────────────────────────────────────
+  // ── Call blocked toast ────────────────────────────────────────────
   const [callBlockedName, setCallBlockedName] = useState<string | null>(null);
 
+  // ── Start an outgoing call ────────────────────────────────────────
   const handleStartCall = useCallback(
     async (
       name: string,
@@ -1530,15 +1549,24 @@ export default function ChatPage() {
       setCalleeDisplayName(name);
       setCalleeDisplayPhoto(photo);
       activeCallChatIdRef.current = chatId;
-      webRTC.startCall(chatId, type);
+
+      // ── KEY FIX: Delegate to the overlay's startCall so the ring
+      //    timer and ringtone are owned and stopped by a single place.
+      //    The overlay's startCall internally calls webRTC.startCall
+      //    (which is the same instance we registered above).
+      if (globalCallCtx) {
+        globalCallCtx.startCall(name, photo, chatId, type);
+      } else {
+        // Fallback if context isn't mounted (e.g. in tests)
+        webRTC.startCall(chatId, type);
+      }
     },
-    [webRTC, user?.uid],
+    [webRTC, user?.uid, globalCallCtx],
   );
 
-  // ── Hang up — single entry point for both sides ───────────────────
+  // ── Hang up ───────────────────────────────────────────────────────
   const handleHangUp = useCallback(async () => {
     await webRTC.hangUp();
-    // callState → "idle" triggers the effect above to close modal and clear ref
   }, [webRTC]);
 
   const handleSelectChat = (id: string) => {
@@ -1564,8 +1592,6 @@ export default function ChatPage() {
   return (
     <div className="flex h-full w-full bg-[#0f0e17] overflow-hidden">
       {/* ── Global VideoCallModal ─────────────────────────────────── */}
-      {/* onClose only closes the modal UI — actual hangup goes through
-          handleHangUp to avoid the double-hangup loop */}
       <VideoCallModal
         isOpen={callModalOpen}
         onClose={handleHangUp}
@@ -1596,21 +1622,36 @@ export default function ChatPage() {
                 className="absolute w-24 h-24 rounded-full border border-indigo-400/10 animate-ping"
                 style={{ animationDuration: "1.8s", animationDelay: "0.6s" }}
               />
-              <div
-                className="w-20 h-20 rounded-full flex items-center justify-center text-white font-bold text-2xl relative z-10"
-                style={{
-                  background: "linear-gradient(135deg,#6366f1,#8b5cf6)",
-                }}
-              >
-                {webRTC.incomingCall.callerName.slice(0, 2).toUpperCase()}
-              </div>
+              {webRTC.incomingCall.callerPhoto ? (
+                <img
+                  src={webRTC.incomingCall.callerPhoto}
+                  alt={webRTC.incomingCall.callerName}
+                  className="w-20 h-20 rounded-full object-cover relative z-10"
+                  style={{ boxShadow: "0 0 0 3px rgba(99,102,241,0.35)" }}
+                />
+              ) : (
+                <div
+                  className="w-20 h-20 rounded-full flex items-center justify-center text-white font-bold text-2xl relative z-10"
+                  style={{
+                    background: "linear-gradient(135deg,#6366f1,#8b5cf6)",
+                    boxShadow: "0 0 0 3px rgba(99,102,241,0.35)",
+                  }}
+                >
+                  {webRTC.incomingCall.callerName.slice(0, 2).toUpperCase()}
+                </div>
+              )}
             </div>
 
             <div className="text-center">
               <p className="text-white font-semibold text-lg tracking-tight">
                 {webRTC.incomingCall.callerName}
               </p>
-              <p className="text-white/40 text-xs mt-1">
+              <p className="text-white/40 text-xs mt-1 flex items-center justify-center gap-1.5">
+                {webRTC.incomingCall.callType === "video" ? (
+                  <Video className="w-3.5 h-3.5" />
+                ) : (
+                  <Phone className="w-3.5 h-3.5" />
+                )}
                 Incoming {webRTC.incomingCall.callType} call…
               </p>
             </div>
@@ -1628,7 +1669,7 @@ export default function ChatPage() {
                 <span className="text-[10px] text-white/35">Decline</span>
               </div>
 
-              {/* Accept — opens modal after accepting */}
+              {/* Accept */}
               <div className="flex flex-col items-center gap-2">
                 <button
                   onClick={async () => {
@@ -1698,20 +1739,20 @@ export default function ChatPage() {
             chatId={selectedChatId}
             isPermitted={isPermitted}
             onDeleted={handleDeleted}
-            // Single prop — handleStartCall now calls webRTC.startCall internally
             onStartCall={handleStartCall}
           />
         ) : (
           <EmptyState onNew={() => {}} />
         )}
       </div>
+
       {/* ── Call blocked toast ───────────────────────────────────── */}
       {callBlockedName && (
         <div
           className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[9999]
-    flex items-center gap-2.5 px-5 py-3 rounded-2xl
-    bg-[#1a1a2e] border border-white/[0.08] text-xs text-white/70
-    shadow-2xl pointer-events-none"
+            flex items-center gap-2.5 px-5 py-3 rounded-2xl
+            bg-[#1a1a2e] border border-white/[0.08] text-xs text-white/70
+            shadow-2xl pointer-events-none"
         >
           <span className="text-lg">📵</span>
           <span>
