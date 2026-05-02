@@ -283,7 +283,7 @@ export const navItems: NavItem[] = [
         href: "/dtrextractor",
         icon: FileCog,
         active: true,
-        pagePermissionId: "dtrextractor",
+        requiredRole: "admin",
         sublinks: [],
       },
     ],
