@@ -4,6 +4,7 @@ import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { FileCog } from "lucide-react"
 import { useAuth } from '@/lib/auth/AuthContext';
 import { logActivity } from "@/lib/firebase/firebase.actions.firestore/offlineLogger";
+
 // ─── Types ────────────────────────────────────────────────────────────────────
 interface DtrRow { day: number; morningIn: string; lunchOut: string; afternoonOut: string; }
 interface Employee {
@@ -16,6 +17,9 @@ interface Employee {
     data: DtrRow[];
     rawText: string;
 }
+
+type TimeMode = '24h' | '12h';
+type TimePattern = 'hh:mm' | 'hh:mm:ss';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 const toBase64 = (file: File): Promise<{ base64: string; mediaType: string }> =>
@@ -31,17 +35,45 @@ const toBase64 = (file: File): Promise<{ base64: string; mediaType: string }> =>
         reader.readAsDataURL(file);
     });
 
-const ensure24Hour = (t: string): string => {
-    if (!t || !t.includes(':')) return t;
-    const match = t.match(/(\d{1,2}):(\d{2})\s*(AM|PM)?/i);
-    if (!match) return t;
-    let [, hours, minutes, modifier] = match;
-    let h = parseInt(hours, 10);
-    if (modifier) {
-        if (modifier.toUpperCase() === 'PM' && h < 12) h += 12;
-        if (modifier.toUpperCase() === 'AM' && h === 12) h = 0;
+/** Parse any time string into { h, m } in 24-hour values, or null if invalid */
+const parseTimeTo24 = (t: string): { h: number; m: number } | null => {
+    if (!t || !t.trim()) return null;
+    const match = t.trim().match(/(\d{1,2}):(\d{2})(?::\d{2})?\s*(AM|PM)?/i);
+    if (!match) return null;
+    let h = parseInt(match[1], 10);
+    const m = parseInt(match[2], 10);
+    const modifier = match[3]?.toUpperCase();
+    if (modifier === 'PM' && h < 12) h += 12;
+    if (modifier === 'AM' && h === 12) h = 0;
+    return { h, m };
+};
+
+/**
+ * Format a time string according to user-selected mode & pattern.
+ * Input can be any format (12h or 24h, with or without seconds/AM-PM).
+ */
+const formatTime = (t: string, mode: TimeMode, pattern: TimePattern): string => {
+    if (!t || !t.trim()) return '';
+    const parsed = parseTimeTo24(t);
+    if (!parsed) return t; // return as-is if unparseable
+
+    const { h, m } = parsed;
+
+    if (mode === '24h') {
+        const hStr = String(h).padStart(2, '0');
+        const mStr = String(m).padStart(2, '0');
+        if (pattern === 'hh:mm:ss') return `${hStr}:${mStr}:00`;
+        return `${hStr}:${mStr}`; // hh:mm
     }
-    return `${h.toString().padStart(2, '0')}:${minutes}`;
+
+    // 12-hour — AM/PM is always appended; pattern controls hh:mm vs hh:mm:ss
+    const period = h >= 12 ? 'PM' : 'AM';
+    const h12 = h % 12 === 0 ? 12 : h % 12;
+    const hStr = String(h12).padStart(2, '0');
+    const mStr = String(m).padStart(2, '0');
+
+    if (pattern === 'hh:mm:ss') return `${hStr}:${mStr}:00 ${period}`;
+    return `${hStr}:${mStr} ${period}`;
 };
 
 const uid = () => Math.random().toString(36).slice(2, 9);
@@ -53,6 +85,100 @@ const parseRows = (text: string): DtrRow[] | null => {
     if (!parsed) { const m = cleaned.match(/\[[\s\S]*\]/); if (m) { try { parsed = JSON.parse(m[0]); } catch { } } }
     if (!parsed) { const objs = cleaned.match(/\{[\s\S]*?\}/g); if (objs) { try { parsed = JSON.parse('[' + objs.join(',') + ']'); } catch { } } }
     return parsed;
+};
+
+// ─── TimeFormatPicker ─────────────────────────────────────────────────────────
+interface TimeFormatPickerProps {
+    mode: TimeMode;
+    pattern: TimePattern;
+    onModeChange: (m: TimeMode) => void;
+    onPatternChange: (p: TimePattern) => void;
+}
+
+const PATTERNS: TimePattern[] = ['hh:mm', 'hh:mm:ss'];
+
+const TimeFormatPicker: React.FC<TimeFormatPickerProps> = ({ mode, pattern, onModeChange, onPatternChange }) => {
+    // Preview example: show what hh:mm and hh:mm:ss look like for current mode
+    const previewTimes = ['08:30', '12:00', '17:45'];
+
+    return (
+        <div className="rounded-xl border overflow-hidden border-slate-200 dark:border-white/[0.08]">
+            <div className="px-4 py-2.5 border-b border-slate-100 dark:border-white/[0.06]">
+                <span className="font-dm-mono text-[10px] uppercase tracking-widest text-slate-400 dark:text-slate-500">
+                    Time Format
+                </span>
+            </div>
+            <div className="p-4 flex flex-col gap-3">
+
+                {/* 12h / 24h toggle */}
+                <div>
+                    <label className="font-dm-mono block text-[10px] uppercase tracking-widest text-slate-400 dark:text-slate-500 mb-1.5">
+                        Hour System
+                    </label>
+                    <div className="inline-flex rounded-lg border border-slate-200 dark:border-white/[0.1] overflow-hidden">
+                        {(['24h', '12h'] as TimeMode[]).map(m => (
+                            <button
+                                key={m}
+                                onClick={() => onModeChange(m)}
+                                className={`font-dm-mono px-4 py-1.5 text-xs transition-colors ${mode === m
+                                    ? 'bg-indigo-500 text-white'
+                                    : 'bg-white dark:bg-white/[0.03] text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-white/[0.07]'
+                                    }`}
+                            >
+                                {m === '24h' ? '24-Hour' : '12-Hour'}
+                            </button>
+                        ))}
+                    </div>
+                </div>
+
+                {/* Pattern selector — same two choices for both modes */}
+                <div>
+                    <label className="font-dm-mono block text-[10px] uppercase tracking-widest text-slate-400 dark:text-slate-500 mb-1.5">
+                        Pattern
+                    </label>
+                    <div className="flex flex-col gap-1.5">
+                        {PATTERNS.map(p => {
+                            const suffix = mode === '12h' ? ' AM/PM' : '';
+                            const label = p === 'hh:mm'
+                                ? `HH:MM${suffix}  (e.g. ${formatTime('08:30', mode, p)})`
+                                : `HH:MM:SS${suffix}  (e.g. ${formatTime('08:30', mode, p)})`;
+                            return (
+                                <label
+                                    key={p}
+                                    className={`font-dm-mono flex items-center gap-2.5 px-3 py-2 rounded-lg border cursor-pointer transition-colors text-xs ${pattern === p
+                                        ? 'border-indigo-300 bg-indigo-50 text-indigo-700 dark:border-indigo-500/40 dark:bg-indigo-500/10 dark:text-indigo-300'
+                                        : 'border-slate-200 dark:border-white/[0.07] text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-white/[0.04]'
+                                        }`}
+                                >
+                                    <input
+                                        type="radio"
+                                        name="time-pattern"
+                                        value={p}
+                                        checked={pattern === p}
+                                        onChange={() => onPatternChange(p)}
+                                        className="accent-indigo-500"
+                                    />
+                                    {label}
+                                </label>
+                            );
+                        })}
+                    </div>
+                </div>
+
+                {/* Live preview */}
+                <div className="rounded-lg bg-slate-50 dark:bg-white/[0.03] border border-slate-100 dark:border-white/[0.06] px-3 py-2">
+                    <p className="font-dm-mono text-[10px] text-slate-400 dark:text-slate-500 mb-1 uppercase tracking-widest">Preview</p>
+                    <div className="flex items-center gap-3 flex-wrap">
+                        {previewTimes.map(t => (
+                            <span key={t} className="font-dm-mono text-xs text-indigo-600 dark:text-indigo-300 tabular-nums">
+                                {formatTime(t, mode, pattern)}
+                            </span>
+                        ))}
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
 };
 
 // ─── StatusBadge ─────────────────────────────────────────────────────────────
@@ -90,10 +216,18 @@ const TimeCardExtractor: React.FC = () => {
         return `${n.getFullYear()}-${String(n.getMonth() + 1).padStart(2, '0')}`;
     });
     const [supervisorName, setSupervisorName] = useState('');
+
+    // ── Time format state ──
+    const [timeMode, setTimeMode] = useState<TimeMode>('24h');
+    const [timePattern, setTimePattern] = useState<TimePattern>('hh:mm');
+
     const dropRef = useRef<HTMLDivElement>(null);
-    const { user } = useAuth()
+    const { user } = useAuth();
 
     const active = employees.find(e => e.id === activeId) ?? null;
+
+    // Shorthand: apply current format settings to a raw time string
+    const fmt = useCallback((t: string) => formatTime(t, timeMode, timePattern), [timeMode, timePattern]);
 
     useEffect(() => {
         try {
@@ -103,12 +237,17 @@ const TimeCardExtractor: React.FC = () => {
                 setSheetId(p.sheetId ?? '');
                 setSheetName(p.sheetName ?? 'Sheet1');
                 setSupervisorName(p.supervisor ?? '');
+                if (p.timeMode) setTimeMode(p.timeMode);
+                if (p.timePattern && ['hh:mm', 'hh:mm:ss'].includes(p.timePattern)) setTimePattern(p.timePattern);
             }
         } catch { }
     }, []);
 
     const savePreset = () => {
-        localStorage.setItem('dtr-preset', JSON.stringify({ sheetId, sheetName, supervisor: supervisorName }));
+        localStorage.setItem('dtr-preset', JSON.stringify({
+            sheetId, sheetName, supervisor: supervisorName,
+            timeMode, timePattern,
+        }));
         alert('✅ Preset saved!');
     };
 
@@ -169,7 +308,6 @@ const TimeCardExtractor: React.FC = () => {
             update({ status: 'done', statusMsg: `✓ Extracted ${parsed.length} entries`, data: parsed, rawText: text });
 
             if (!user) return;
-
             await logActivity({
                 userName: user.displayName ?? "Unknown",
                 userEmail: user.email ?? "unknown@email.com",
@@ -203,14 +341,25 @@ const TimeCardExtractor: React.FC = () => {
         }));
     };
 
-    // ── Exports ─────────────────────────────────────────────────────────────────
-    const exportCSV = (emp: Employee) => {
-        const rows = Array.from({ length: 31 }, (_, i) => {
+    // ── Build export rows using current format ──────────────────────────────────
+    const buildExportRows = (emp: Employee) =>
+        Array.from({ length: 31 }, (_, i) => {
             const day = i + 1;
             const row = emp.data.find(r => Number(r.day) === day);
-            return [String(day).padStart(2, '0'), ensure24Hour(row?.morningIn ?? ''), ensure24Hour(row?.lunchOut ?? ''), ensure24Hour(row?.afternoonOut ?? '')];
+            return {
+                day: String(day).padStart(2, '0'),
+                morningIn: fmt(row?.morningIn ?? ''),
+                lunchOut: fmt(row?.lunchOut ?? ''),
+                afternoonOut: fmt(row?.afternoonOut ?? ''),
+            };
         });
-        const csv = ['Day,Morning In,Lunch,Afternoon Out', ...rows.map(r => r.join(','))].join('\n');
+
+    // ── Exports ─────────────────────────────────────────────────────────────────
+    const exportCSV = (emp: Employee) => {
+        const rows = buildExportRows(emp);
+        const csv = ['Day,Morning In,Lunch,Afternoon Out',
+            ...rows.map(r => `${r.day},${r.morningIn},${r.lunchOut},${r.afternoonOut}`)
+        ].join('\n');
         const a = document.createElement('a');
         a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv' }));
         a.download = `DTR_${emp.name}.csv`;
@@ -220,11 +369,9 @@ const TimeCardExtractor: React.FC = () => {
     const exportAllCSV = () => {
         const header = 'Employee,Day,Morning In,Lunch,Afternoon Out';
         const lines = employees.flatMap(emp =>
-            Array.from({ length: 31 }, (_, i) => {
-                const day = i + 1;
-                const row = emp.data.find(r => Number(r.day) === day);
-                return [emp.name, String(day).padStart(2, '0'), ensure24Hour(row?.morningIn ?? ''), ensure24Hour(row?.lunchOut ?? ''), ensure24Hour(row?.afternoonOut ?? '')].join(',');
-            })
+            buildExportRows(emp).map(r =>
+                `${emp.name},${r.day},${r.morningIn},${r.lunchOut},${r.afternoonOut}`
+            )
         );
         const a = document.createElement('a');
         a.href = URL.createObjectURL(new Blob([[header, ...lines].join('\n')], { type: 'text/csv' }));
@@ -234,13 +381,14 @@ const TimeCardExtractor: React.FC = () => {
 
     const exportXLSX = async (emp: Employee) => {
         const XLSX = await import('xlsx');
-        const rows = Array.from({ length: 31 }, (_, i) => {
-            const day = i + 1;
-            const row = emp.data.find(r => Number(r.day) === day);
-            return { Day: String(day).padStart(2, '0'), 'Morning In': ensure24Hour(row?.morningIn ?? ''), 'Lunch': ensure24Hour(row?.lunchOut ?? ''), 'Afternoon Out': ensure24Hour(row?.afternoonOut ?? '') };
-        });
+        const rows = buildExportRows(emp).map(r => ({
+            Day: r.day,
+            'Morning In': r.morningIn,
+            'Lunch': r.lunchOut,
+            'Afternoon Out': r.afternoonOut,
+        }));
         const ws = XLSX.utils.json_to_sheet(rows);
-        ws['!cols'] = [{ wch: 6 }, { wch: 12 }, { wch: 12 }, { wch: 14 }];
+        ws['!cols'] = [{ wch: 6 }, { wch: 16 }, { wch: 16 }, { wch: 18 }];
         const wb = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(wb, ws, 'DTR');
         XLSX.writeFile(wb, `DTR_${emp.name}.xlsx`);
@@ -253,10 +401,22 @@ const TimeCardExtractor: React.FC = () => {
         if (!sheetName) { setTransferMsg('❌ Please enter a Sheet name.'); return; }
         setTransferring(true); setTransferMsg('📤 Sending…');
         try {
+            // Format rows before sending
+            const formattedRows = active.data.map(r => ({
+                ...r,
+                morningIn: fmt(r.morningIn),
+                lunchOut: fmt(r.lunchOut),
+                afternoonOut: fmt(r.afternoonOut),
+            }));
             const res = await fetch('/api/dtr/transfer', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ rows: active.data, sheetId, sheetName, date, name: active.name, supervisor: supervisorName }),
+                body: JSON.stringify({
+                    rows: formattedRows,
+                    sheetId, sheetName, date,
+                    name: active.name,
+                    supervisor: supervisorName,
+                }),
             });
             const result = await res.json();
             if (!res.ok) throw new Error(result.error ?? 'Unknown error');
@@ -286,10 +446,7 @@ const TimeCardExtractor: React.FC = () => {
 
     return (
         <>
-
-
-            <div className="font-syne min-h-screen w-full  text-slate-800 dark:text-slate-100 relative overflow-x-hidden transition-colors duration-300 bg-gray-50 dark:bg-[#0f0e17] ">
-
+            <div className="font-syne min-h-screen w-full text-slate-800 dark:text-slate-100 relative overflow-x-hidden transition-colors duration-300 bg-gray-50 dark:bg-[#0f0e17]">
                 <div className="relative z-10 max-w-6xl mx-auto px-4 sm:px-6 py-8 pb-24">
 
                     {/* ── Header ── */}
@@ -298,9 +455,8 @@ const TimeCardExtractor: React.FC = () => {
                             <div className="w-8 h-8 rounded-lg bg-indigo-600/20 border border-indigo-500/30 flex items-center justify-center">
                                 <FileCog className="w-4 h-4 text-indigo-400" />
                             </div>
-
                             <div>
-                                <h1 className="font-syne text-2xl font-extrabold tracking-tight text-white dark:text-slate-800 ">
+                                <h1 className="font-syne text-2xl font-extrabold tracking-tight text-white dark:text-slate-800">
                                     DTR Extractor
                                 </h1>
                                 <p className="font-dm-mono text-xs text-slate-400 dark:text-slate-500">
@@ -308,7 +464,6 @@ const TimeCardExtractor: React.FC = () => {
                                 </p>
                             </div>
                         </div>
-
                     </div>
 
                     {/* ── Drag & Drop Zone ── */}
@@ -430,6 +585,14 @@ const TimeCardExtractor: React.FC = () => {
                                             </div>
                                         )}
 
+                                        {/* ── Time Format Picker ── */}
+                                        <TimeFormatPicker
+                                            mode={timeMode}
+                                            pattern={timePattern}
+                                            onModeChange={setTimeMode}
+                                            onPatternChange={setTimePattern}
+                                        />
+
                                         {/* Google Sheets config */}
                                         {active.data.length > 0 && (
                                             <div className="rounded-xl border overflow-hidden border-slate-200 dark:border-white/[0.08]">
@@ -532,7 +695,7 @@ const TimeCardExtractor: React.FC = () => {
 
                                                 {/* Edit hint */}
                                                 <p className="font-dm-mono text-[10px] px-5 py-2 border-b border-slate-100 dark:border-white/[0.06] text-slate-400 dark:text-slate-600">
-                                                    ✏ Click any cell to edit
+                                                    ✏ Click any cell to edit · Times shown in selected format
                                                 </p>
 
                                                 {/* Table */}
@@ -573,10 +736,10 @@ const TimeCardExtractor: React.FC = () => {
                                                                             <td key={field} className="px-4 py-1 tabular-nums">
                                                                                 <input
                                                                                     type="text"
-                                                                                    value={row?.[field] ?? ''}
+                                                                                    value={row?.[field] ? fmt(row[field]) : ''}
                                                                                     onChange={e => editCell(active.id, day, field, e.target.value)}
                                                                                     placeholder="—"
-                                                                                    className={`editable-cell font-dm-mono w-20 bg-transparent border-0 text-xs tabular-nums transition-colors ${row?.[field]
+                                                                                    className={`editable-cell font-dm-mono w-24 bg-transparent border-0 text-xs tabular-nums transition-colors ${row?.[field]
                                                                                         ? fi === 0 ? 'text-blue-600 dark:text-blue-300'
                                                                                             : fi === 1 ? 'text-violet-600 dark:text-violet-300'
                                                                                                 : 'text-orange-600 dark:text-orange-300'
