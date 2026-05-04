@@ -12,6 +12,7 @@ import { useUserPresence } from "@/lib/hooks/useUserPresence";
 import PermissionsModal from "./component/PermissionsModal";
 import UserCard from "./component/UserCard";
 import UserRolesModal, { UserSubscription } from "./component/userRolesModal";
+import CreditsModal from "./creditComponent/creditModal"; // ← NEW
 import RequestAccessModal from "@/app/login/requestLoginModal";
 
 type UserWithSub = UserProfile & { subscription?: UserSubscription };
@@ -26,6 +27,8 @@ export default function AdminPanel() {
   const [selectedUserForRoles, setSelectedUserForRoles] =
     useState<UserWithSub | null>(null);
   const [selectedUserForRequest, setSelectedUserForRequest] =
+    useState<UserProfile | null>(null);
+  const [selectedUserForCredits, setSelectedUserForCredits] = // ← NEW
     useState<UserProfile | null>(null);
 
   const currentUserId = user?.uid ?? "";
@@ -51,7 +54,7 @@ export default function AdminPanel() {
                 : true,
             allowedPages: data[uid].allowedPages || undefined,
             subscription: data[uid].subscription || undefined,
-            allowedPresets: data[uid].allowedPresets || [], // ← ADD THIS
+            allowedPresets: data[uid].allowedPresets || [],
           })),
         );
       } else {
@@ -93,7 +96,7 @@ export default function AdminPanel() {
     async (userId: string, subscription: UserSubscription) => {
       const presetsToSave =
         subscription.allowedPresets.length === 0
-          ? ["__none__"] // sentinel so Firebase doesn't drop the field
+          ? ["__none__"]
           : subscription.allowedPresets;
 
       await update(ref(db, `users/${userId}`), {
@@ -241,6 +244,7 @@ export default function AdminPanel() {
                         handleToggleAdmin={handleToggleAdmin}
                         handleOpenPermissions={setSelectedUserForPermissions}
                         handleOpenRoles={setSelectedUserForRoles}
+                        handleOpenCredits={setSelectedUserForCredits}
                         handleRequestAccess={setSelectedUserForRequest}
                         formatLastOnline={formatLastOnline}
                       />
@@ -276,6 +280,13 @@ export default function AdminPanel() {
           user={selectedUserForRoles}
           onClose={() => setSelectedUserForRoles(null)}
           onSave={handleSaveRoles}
+        />
+      )}
+
+      {selectedUserForCredits && (
+        <CreditsModal
+          user={selectedUserForCredits}
+          onClose={() => setSelectedUserForCredits(null)}
         />
       )}
 

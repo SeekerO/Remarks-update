@@ -16,7 +16,7 @@ import {
   Building2,
   Clock,
   Infinity,
-  Mail,
+  Zap,        // ← NEW
 } from "lucide-react";
 import { motion } from "framer-motion";
 
@@ -112,6 +112,7 @@ const UserCard = React.memo(
     handleToggleAdmin,
     handleOpenPermissions,
     handleOpenRoles,
+    handleOpenCredits,   // ← NEW prop
     handleRequestAccess,
     formatLastOnline,
   }: {
@@ -125,6 +126,7 @@ const UserCard = React.memo(
     handleOpenRoles: (
       user: UserProfile & { subscription?: UserSubscription },
     ) => void;
+    handleOpenCredits: (user: UserProfile) => void;   // ← NEW prop type
     handleRequestAccess: (user: UserProfile) => void;
     formatLastOnline: (ts: number) => string;
   }) => {
@@ -274,9 +276,8 @@ const UserCard = React.memo(
           </button>
         </div>
 
-        {/* Action buttons row 2 */}
+        {/* Action buttons row 2 — Roles / Pages */}
         <div className="flex gap-2">
-          {/* Roles & Subscription */}
           {user.isAdmin !== true && (
             <button
               onClick={() => handleOpenRoles(user)}
@@ -290,7 +291,6 @@ const UserCard = React.memo(
             </button>
           )}
 
-          {/* Permissions */}
           {!user.isAdmin && (
             <button
               onClick={() => handleOpenPermissions(user)}
@@ -305,6 +305,18 @@ const UserCard = React.memo(
             </button>
           )}
         </div>
+
+        {/* Action buttons row 3 — Credits (always visible) */}
+        <button
+          onClick={() => handleOpenCredits(user)}
+          title="Manage tool credits"
+          className="w-full flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-[11px] font-medium
+            border border-indigo-200 dark:border-indigo-500/20
+            bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400
+            hover:bg-indigo-100 dark:hover:bg-indigo-500/15 transition-all"
+        >
+          <Zap className="w-3 h-3" /> Credits
+        </button>
       </motion.div>
     );
   },
