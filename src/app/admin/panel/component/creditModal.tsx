@@ -20,7 +20,7 @@ import {
   ToolCreditEntry,
   UserToolCredits,
   getDefaultEntry,
-} from "./creditsConfig";
+} from "../../../../lib/creditComponent/creditsConfig";
 import { UserProfile } from "@/lib/types/adminTypes";
 
 // ── Types ─────────────────────────────────────────────────────────────────────

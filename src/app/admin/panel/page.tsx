@@ -11,7 +11,7 @@ import { PageId, UserProfile, AVAILABLE_PAGES } from "@/lib/types/adminTypes";
 import { useUserPresence } from "@/lib/hooks/useUserPresence";
 import PermissionsModal from "./component/PermissionsModal";
 import UserCard from "./component/UserCard";
-import CreditsModal from "./creditComponent/creditModal";
+import CreditsModal from "./component/creditModal";
 import NotesModal from "./component/notesModal";
 
 export default function AdminPanel() {

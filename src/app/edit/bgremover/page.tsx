@@ -16,6 +16,7 @@ import {
 import { IoIosColorWand } from "react-icons/io";
 import { logActivity } from "@/lib/firebase/firebase.actions.firestore/offlineLogger";
 import { useAuth } from "@/lib/auth/AuthContext";
+import { CreditGate, CreditBadge } from "@/lib/creditComponent/CreditGate";
 
 /* ─────────────────────────────────────────────
    Types
@@ -29,6 +30,8 @@ interface Credits {
   paygCredits: number;
   freeCalls: number;
 }
+
+const TOOL_ID = "bgremover";
 
 /* ─────────────────────────────────────────────
    Helpers
@@ -56,33 +59,6 @@ export default function BackgroundRemover() {
   const [dragActive, setDragActive] = useState(false);
 
   const { user } = useAuth();
-
-  /* ── Credits (API engine only) ── */
-  const [credits, setCredits] = useState<Credits | null>(null);
-  const [creditsLoading, setCreditsLoading] = useState(true);
-
-  const refreshCredits = useCallback(() => {
-    fetch("/api/remove-bg/credits")
-      .then((r) => (r.ok ? r.json() : null))
-      .then((data) => {
-        if (data) setCredits(data);
-      })
-      .catch(() => {});
-  }, []);
-
-  useEffect(() => {
-    const fetchCredits = async () => {
-      try {
-        const res = await fetch("/api/remove-bg/credits");
-        if (res.ok) setCredits(await res.json());
-      } catch (err) {
-        console.error("Failed to fetch credits:", err);
-      } finally {
-        setCreditsLoading(false);
-      }
-    };
-    fetchCredits();
-  }, []);
 
   /* ── MediaPipe (local engine) ── */
   const segmentationRef = useRef<any>(null);
@@ -201,7 +177,6 @@ export default function BackgroundRemover() {
       const blob = await res.blob();
       setProcessedImage(URL.createObjectURL(blob));
       setStage("done");
-      refreshCredits();
     } catch (err: any) {
       console.error(err);
       setErrorMsg(err.message ?? "Something went wrong.");
@@ -361,50 +336,7 @@ export default function BackgroundRemover() {
               </button>
             </div>
 
-            {/* API credit badges */}
-            {engine === "api" && (
-              <>
-                <div
-                  className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-medium border transition-colors
-                                    ${
-                                      creditsLoading
-                                        ? "bg-gray-500/10 text-gray-400 border-gray-500/20"
-                                        : credits !== null &&
-                                            credits.freeCalls <= 5
-                                          ? "bg-red-500/10 text-red-500 dark:text-red-400 border-red-500/20"
-                                          : credits !== null &&
-                                              credits.freeCalls <= 15
-                                            ? "bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20"
-                                            : "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20"
-                                    }`}
-                >
-                  <Sparkles className="w-3 h-3" />
-                  {creditsLoading
-                    ? "Loading…"
-                    : credits !== null
-                      ? `${credits.freeCalls} free`
-                      : "—"}
-                </div>
-
-                {!creditsLoading &&
-                  credits !== null &&
-                  credits.totalCredits > 0 && (
-                    <div
-                      className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-medium border transition-colors
-                                        ${
-                                          credits.totalCredits <= 5
-                                            ? "bg-red-500/10 text-red-500 dark:text-red-400 border-red-500/20"
-                                            : credits.totalCredits <= 20
-                                              ? "bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20"
-                                              : "bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border-indigo-500/20"
-                                        }`}
-                    >
-                      <Coins className="w-3 h-3" />
-                      {`${credits.totalCredits} paid`}
-                    </div>
-                  )}
-              </>
-            )}
+            <CreditBadge toolId={TOOL_ID} />
 
             {/* Local model status badge */}
             {engine === "local" && (
@@ -592,6 +524,33 @@ export default function BackgroundRemover() {
                     )}
                   </div>
                 )}
+
+                <CreditGate toolId={TOOL_ID}>
+                  {({ onAction, hasCredits, isUnlimited, loading }) => (
+                    <button
+                      onClick={() => onAction(removeBackground)} // Changed this line
+                      disabled={
+                        (engine === "local" && !modelLoaded) ||
+                        (!hasCredits && !isUnlimited)
+                      }
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium
+                      bg-indigo-500 hover:bg-indigo-600 text-white transition-colors"
+                    >
+                      <Download className="w-3.5 h-3.5" />
+                      {loading ? (
+                        "Loading…"
+                      ) : !hasCredits && !isUnlimited ? (
+                        "No Credits Left"
+                      ) : (
+                        <>
+                          {engine === "local" && !modelLoaded
+                            ? "Loading AI…"
+                            : "Remove Background"}
+                        </>
+                      )}
+                    </button>
+                  )}
+                </CreditGate>
 
                 {stage === "error" && (
                   <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 px-6 bg-white/60 dark:bg-black/30">

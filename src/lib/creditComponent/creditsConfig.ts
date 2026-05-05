@@ -30,7 +30,7 @@ export const TOOL_CREDIT_CONFIGS: ToolCreditConfig[] = [
   },
   {
     toolId: "logoeditor",
-    label: "Logo Maker",
+    label: "Logo Editor",
     icon: "🔷",
     defaultFreeCredits: 10,
     urlPath: "/edit/logoeditor",
@@ -69,27 +69,6 @@ export const TOOL_CREDIT_CONFIGS: ToolCreditConfig[] = [
     icon: "🔍",
     defaultFreeCredits: 10,
     urlPath: "/matcher",
-  },
-  {
-    toolId: "faq",
-    label: "FAQ Tool",
-    icon: "📋",
-    defaultFreeCredits: 10,
-    urlPath: "/document/faq",
-  },
-  {
-    toolId: "remarks",
-    label: "Remarks Assistant",
-    icon: "📝",
-    defaultFreeCredits: 10,
-    urlPath: "/document/remarks",
-  },
-  {
-    toolId: "message",
-    label: "Message Generator",
-    icon: "💬",
-    defaultFreeCredits: 10,
-    urlPath: "/tools/message",
   },
 ];
 

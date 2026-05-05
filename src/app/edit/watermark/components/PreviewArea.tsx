@@ -22,6 +22,9 @@ import { useImageKeyNav } from "./hooks/useImageKeyNav";
 import { useInView } from "../lib/hooks/useInView";
 import { useAuth } from "@/lib/auth/AuthContext";
 import { logActivity } from "@/lib/firebase/firebase.actions.firestore/offlineLogger";
+import { CreditGate, CreditBadge } from "@/lib/creditComponent/CreditGate";
+
+const TOOL_ID = "watermark";
 
 type GridSize = 1 | 2 | 3;
 
@@ -525,6 +528,7 @@ export default function PreviewArea({ metadata }: { metadata: any }) {
               )}
             </span>
           )}
+          <CreditBadge toolId={TOOL_ID} />
         </h2>
 
         {images.length > 0 && (
@@ -616,19 +620,47 @@ export default function PreviewArea({ metadata }: { metadata: any }) {
               )}
             </button>
 
-            <button
-              onClick={downloadAll}
-              disabled={processing}
-              className="flex items-center gap-1.5 px-3 sm:px-5 py-2 sm:py-3 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold rounded-lg shadow transition-all hover:scale-105 text-sm relative"
-            >
-              <HiOutlineFolderDownload className="text-lg flex-shrink-0" />
-              <span>ZIP</span>
-              {estimatedSize && (
-                <span className="hidden sm:inline text-[10px] font-normal opacity-75 ml-0.5">
-                  ~{estimatedSize}
-                </span>
+            <CreditGate toolId={TOOL_ID}>
+              {({ onAction, hasCredits, isUnlimited, loading }) => (
+                <button
+                  onClick={() => onAction(downloadAll)}
+                  disabled={processing || (!hasCredits && !isUnlimited)}
+                  className="flex items-center gap-1.5 px-3 sm:px-5 py-2 sm:py-3 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold rounded-lg shadow transition-all hover:scale-105 text-sm relative"
+                >
+                  {loading ? (
+                    "Loading…"
+                  ) : !hasCredits && !isUnlimited ? (
+                    "No Credits Left"
+                  ) : (
+                    <>
+                      <HiOutlineFolderDownload className="text-lg flex-shrink-0" />
+                      <span>ZIP</span>
+                      {estimatedSize && (
+                        <span className="hidden sm:inline text-[10px] font-normal opacity-75 ml-0.5">
+                          ~{estimatedSize}
+                        </span>
+                      )}
+                    </>
+                  )}
+                </button>
+                // <button
+                //   onClick={() => onAction(performDownload)}
+                //   disabled={loading || (!hasCredits && !isUnlimited)}
+                //   className="flex items-center justify-center gap-2 w-full py-2.5 rounded-xl
+                //     bg-indigo-500 hover:bg-indigo-600 active:bg-indigo-700
+                //     text-white text-sm font-medium
+                //     transition-colors mt-2
+                //     disabled:opacity-50 disabled:cursor-not-allowed"
+                // >
+                //   <Download className="w-4 h-4" />
+                //   {loading
+                //     ? "Loading…"
+                //     : !hasCredits && !isUnlimited
+                //       ? "No Credits Left"
+                //       : "Download image"}
+                // </button>
               )}
-            </button>
+            </CreditGate>
           </div>
 
           {showExportPanel && (

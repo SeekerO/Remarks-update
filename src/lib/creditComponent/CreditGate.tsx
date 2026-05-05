@@ -176,7 +176,7 @@ export function CreditBadge({ toolId, className = "" }: CreditBadgeProps) {
 
   return (
     <div
-      className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold ${className}`}
+      className={`inline-flex items-center gap-1.5 px-2.5 h-7 rounded-full text-[10px] font-bold ${className}`}
       style={{
         background: isEmpty
           ? "rgba(239,68,68,0.1)"
