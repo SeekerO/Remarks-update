@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "../lib/auth/AuthContext";
 import { Loader2, LogOut } from "lucide-react";
 
-// ── Landing page components (inline or imported from @/components/landing/*)
 import Navbar from "@/app/component/landing/Navbar";
 import Hero from "@/app/component/landing/Hero";
 import Features from "@/app/component/landing/Features";
@@ -20,12 +19,14 @@ export default function RootPage() {
 
   useEffect(() => {
     if (isLoading) return;
-    if (!user) return; // ← stay here, show landing
-    if (user.isPermitted === false) return; // ← stay here, show denied UI
-    router.replace("/dashboard"); // ← only redirect when authed + permitted
+    if (!user) return; // Stay on landing page
+    // Users with isPermitted === false stay here (blocked)
+    if (user.isPermitted === false) return;
+    // All authenticated + permitted users go to dashboard
+    router.replace("/dashboard");
   }, [user, isLoading, router]);
 
-  // ── 1. Auth resolving or about to redirect to dashboard
+  // Loading or about to redirect
   if (isLoading || (user && user.isPermitted !== false)) {
     return (
       <div className="flex h-screen w-screen items-center justify-center bg-[var(--nexus-sidebar-bg)]">
@@ -57,7 +58,7 @@ export default function RootPage() {
     );
   }
 
-  // ── 2. Logged in but not permitted
+  // Logged in but access was explicitly revoked by admin
   if (user && user.isPermitted === false) {
     return (
       <div className="flex h-screen w-screen items-center justify-center bg-[var(--nexus-sidebar-bg)]">
@@ -85,11 +86,11 @@ export default function RootPage() {
           </div>
           <div>
             <p className="text-sm font-medium text-white/70">
-              Access restricted
+              Access revoked
             </p>
             <p className="text-xs text-white/30 mt-1 leading-relaxed">
-              Your account doesn't have permission to access Nexus yet. Contact
-              your administrator to request access.
+              Your account access has been disabled by an administrator.
+              Please contact them for assistance.
             </p>
           </div>
           <button
@@ -107,7 +108,7 @@ export default function RootPage() {
     );
   }
 
-  // ── 3. No user → show landing page
+  // No user → show landing page
   return (
     <div className="min-h-screen w-full bg-[#080b14] overflow-y-auto">
       <Navbar />

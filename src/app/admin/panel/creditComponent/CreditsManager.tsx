@@ -1,4 +1,4 @@
-// src/app/admin/panel/component/CreditsManager.tsx
+// src/app/admin/panel/creditComponent/CreditsManager.tsx
 "use client";
 
 import React, { useState, useEffect, useCallback } from "react";
@@ -9,18 +9,11 @@ import {
   ToolCreditEntry,
   UserToolCredits,
   getDefaultEntry,
+  userCreditsPath,
+  creditPath,
 } from "./creditsConfig";
 import {
-  Zap,
-  X,
-  Infinity,
-  RotateCcw,
-  ChevronDown,
-  ChevronUp,
-  Sparkles,
-  AlertCircle,
-  Check,
-  Coins,
+  Zap, X, Infinity, RotateCcw, Sparkles, Check, Coins,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -61,22 +54,16 @@ function ToolCreditRow({ config, entry, onUpdate }: ToolCreditRowProps) {
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-2 min-w-0">
           <span className="text-base leading-none">{config.icon}</span>
-          <span className="text-xs font-semibold text-white/70 truncate">
-            {config.label}
-          </span>
+          <span className="text-xs font-semibold text-white/70 truncate">{config.label}</span>
         </div>
 
         {/* Unlimited toggle */}
         <button
-          onClick={() =>
-            onUpdate(config.toolId, { ...entry, unlimited: !entry.unlimited })
-          }
+          onClick={() => onUpdate(config.toolId, { ...entry, unlimited: !entry.unlimited })}
           title={entry.unlimited ? "Switch to limited" : "Set unlimited"}
           className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold transition-all"
           style={{
-            background: entry.unlimited
-              ? "rgba(52,211,153,0.12)"
-              : "rgba(255,255,255,0.04)",
+            background: entry.unlimited ? "rgba(52,211,153,0.12)" : "rgba(255,255,255,0.04)",
             border: `1px solid ${entry.unlimited ? "rgba(52,211,153,0.25)" : "rgba(255,255,255,0.08)"}`,
             color: entry.unlimited ? "#34d399" : "rgba(255,255,255,0.3)",
           }}
@@ -99,7 +86,7 @@ function ToolCreditRow({ config, entry, onUpdate }: ToolCreditRowProps) {
                   ? "#ef4444"
                   : isLow
                     ? "#f59e0b"
-                    : `linear-gradient(90deg, #6366f1, #8b5cf6)`,
+                    : "linear-gradient(90deg, #6366f1, #8b5cf6)",
             }}
           />
         </div>
@@ -113,10 +100,9 @@ function ToolCreditRow({ config, entry, onUpdate }: ToolCreditRowProps) {
         )}
       </div>
 
-      {/* Controls — only shown when not unlimited */}
+      {/* Controls — only when not unlimited */}
       {!entry.unlimited && (
         <div className="flex items-center gap-2">
-          {/* Remaining input */}
           <div className="flex-1 space-y-0.5">
             <label className="text-[9px] uppercase tracking-widest text-white/25 font-bold">
               Remaining
@@ -132,15 +118,10 @@ function ToolCreditRow({ config, entry, onUpdate }: ToolCreditRowProps) {
                   remaining: Math.max(0, parseInt(e.target.value) || 0),
                 })
               }
-              className="w-full px-2 py-1.5 rounded-lg text-xs font-mono text-white/80 focus:outline-none transition-colors"
-              style={{
-                background: "rgba(255,255,255,0.04)",
-                border: "1px solid rgba(255,255,255,0.08)",
-              }}
+              className="w-full px-2 py-1.5 rounded-lg text-xs font-mono text-white/80 focus:outline-none"
+              style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)" }}
             />
           </div>
-
-          {/* Total (cap) input */}
           <div className="flex-1 space-y-0.5">
             <label className="text-[9px] uppercase tracking-widest text-white/25 font-bold">
               Total Cap
@@ -156,20 +137,12 @@ function ToolCreditRow({ config, entry, onUpdate }: ToolCreditRowProps) {
                   total: Math.max(1, parseInt(e.target.value) || 1),
                 })
               }
-              className="w-full px-2 py-1.5 rounded-lg text-xs font-mono text-white/80 focus:outline-none transition-colors"
-              style={{
-                background: "rgba(255,255,255,0.04)",
-                border: "1px solid rgba(255,255,255,0.08)",
-              }}
+              className="w-full px-2 py-1.5 rounded-lg text-xs font-mono text-white/80 focus:outline-none"
+              style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)" }}
             />
           </div>
-
-          {/* Reset to default */}
           <button
-            onClick={() => {
-              const def = getDefaultEntry(config);
-              onUpdate(config.toolId, def);
-            }}
+            onClick={() => onUpdate(config.toolId, getDefaultEntry(config))}
             title="Reset to default"
             className="mt-4 p-1.5 rounded-lg text-white/25 hover:text-amber-400 transition-colors"
             style={{ background: "rgba(255,255,255,0.03)" }}
@@ -182,7 +155,7 @@ function ToolCreditRow({ config, entry, onUpdate }: ToolCreditRowProps) {
   );
 }
 
-// ── Main Modal ───────────────────────────────────────────────────────────────
+// ── Credits Modal ────────────────────────────────────────────────────────────
 
 interface CreditsModalProps {
   uid: string;
@@ -196,16 +169,14 @@ export function CreditsModal({ uid, displayName, onClose }: CreditsModalProps) {
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
 
-  // Load live from Firebase
+  // Load live from Firebase — NEW PATH: user_credits/{uid}
   useEffect(() => {
-    const r = ref(db, `users/${uid}/toolCredits`);
+    const r = ref(db, userCreditsPath(uid));
     const unsub = onValue(r, (snap) => {
       const stored: UserToolCredits = snap.exists() ? snap.val() : {};
-      // Merge with defaults for any missing tools
       const merged: UserToolCredits = {};
       for (const config of TOOL_CREDIT_CONFIGS) {
-        merged[config.toolId] =
-          stored[config.toolId] ?? getDefaultEntry(config);
+        merged[config.toolId] = stored[config.toolId] ?? getDefaultEntry(config);
       }
       setEntries(merged);
       setLoading(false);
@@ -220,9 +191,7 @@ export function CreditsModal({ uid, displayName, onClose }: CreditsModalProps) {
   const handleSetAllUnlimited = () => {
     setEntries((prev) => {
       const next = { ...prev };
-      for (const k of Object.keys(next)) {
-        next[k] = { ...next[k], unlimited: true };
-      }
+      for (const k of Object.keys(next)) next[k] = { ...next[k], unlimited: true };
       return next;
     });
   };
@@ -238,7 +207,8 @@ export function CreditsModal({ uid, displayName, onClose }: CreditsModalProps) {
   const handleSave = async () => {
     setSaving(true);
     try {
-      await set(ref(db, `users/${uid}/toolCredits`), entries);
+      // ── NEW PATH: user_credits/{uid} ──
+      await set(ref(db, userCreditsPath(uid)), entries);
       setSaved(true);
       setTimeout(() => {
         setSaved(false);
@@ -251,19 +221,12 @@ export function CreditsModal({ uid, displayName, onClose }: CreditsModalProps) {
     }
   };
 
-  const totalRemaining = Object.values(entries).reduce(
-    (sum: any, e: any) => sum + (e.unlimited ? Infinity : e.remaining),
-    0,
-  );
   const hasUnlimited = Object.values(entries).some((e) => e.unlimited);
   const allUnlimited = Object.values(entries).every((e) => e.unlimited);
 
   return (
     <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
-      <div
-        className="absolute inset-0 bg-black/70 backdrop-blur-sm"
-        onClick={onClose}
-      />
+      <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={onClose} />
 
       <motion.div
         initial={{ opacity: 0, scale: 0.96, y: 8 }}
@@ -277,12 +240,9 @@ export function CreditsModal({ uid, displayName, onClose }: CreditsModalProps) {
           maxHeight: "90vh",
         }}
       >
-        {/* Top gradient bar */}
         <div
           className="h-[2px] w-full flex-shrink-0"
-          style={{
-            background: "linear-gradient(90deg, #6366f1, #8b5cf6, #ec4899)",
-          }}
+          style={{ background: "linear-gradient(90deg, #6366f1, #8b5cf6, #ec4899)" }}
         />
 
         {/* Header */}
@@ -292,10 +252,7 @@ export function CreditsModal({ uid, displayName, onClose }: CreditsModalProps) {
         >
           <div
             className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
-            style={{
-              background: "rgba(99,102,241,0.12)",
-              border: "1px solid rgba(99,102,241,0.2)",
-            }}
+            style={{ background: "rgba(99,102,241,0.12)", border: "1px solid rgba(99,102,241,0.2)" }}
           >
             <Coins className="w-4 h-4 text-indigo-400" />
           </div>
@@ -384,9 +341,7 @@ export function CreditsModal({ uid, displayName, onClose }: CreditsModalProps) {
             disabled={saving || loading}
             className="flex-1 py-2.5 rounded-xl text-sm font-bold text-white transition-all disabled:opacity-40 flex items-center justify-center gap-2"
             style={{
-              background: saved
-                ? "rgba(52,211,153,0.2)"
-                : "linear-gradient(135deg, #6366f1, #8b5cf6)",
+              background: saved ? "rgba(52,211,153,0.2)" : "linear-gradient(135deg, #6366f1, #8b5cf6)",
               border: saved ? "1px solid rgba(52,211,153,0.3)" : "none",
               boxShadow: saved ? "none" : "0 4px 20px rgba(99,102,241,0.3)",
             }}
@@ -418,10 +373,7 @@ interface CreditsManagerButtonProps {
   displayName: string;
 }
 
-export function CreditsManagerButton({
-  uid,
-  displayName,
-}: CreditsManagerButtonProps) {
+export function CreditsManagerButton({ uid, displayName }: CreditsManagerButtonProps) {
   const [open, setOpen] = useState(false);
   const [summary, setSummary] = useState<{
     totalRemaining: number;
@@ -430,23 +382,17 @@ export function CreditsManagerButton({
   } | null>(null);
 
   useEffect(() => {
-    const r = ref(db, `users/${uid}/toolCredits`);
+    // ── NEW PATH: user_credits/{uid} ──
+    const r = ref(db, userCreditsPath(uid));
     const unsub = onValue(r, (snap) => {
       if (!snap.exists()) {
-        setSummary({
-          totalRemaining: 0,
-          hasUnlimited: false,
-          allUnlimited: false,
-        });
+        setSummary({ totalRemaining: 0, hasUnlimited: false, allUnlimited: false });
         return;
       }
       const data: UserToolCredits = snap.val();
       const vals = Object.values(data);
       setSummary({
-        totalRemaining: vals.reduce(
-          (s, e) => s + (e.unlimited ? 0 : e.remaining),
-          0,
-        ),
+        totalRemaining: vals.reduce((s, e) => s + (e.unlimited ? 0 : e.remaining), 0),
         hasUnlimited: vals.some((e) => e.unlimited),
         allUnlimited: vals.every((e) => e.unlimited),
       });
@@ -472,9 +418,7 @@ export function CreditsManagerButton({
           <span
             className="ml-0.5 px-1.5 py-0.5 rounded-full text-[9px] font-bold"
             style={{
-              background: summary.allUnlimited
-                ? "rgba(52,211,153,0.15)"
-                : "rgba(99,102,241,0.15)",
+              background: summary.allUnlimited ? "rgba(52,211,153,0.15)" : "rgba(99,102,241,0.15)",
               color: summary.allUnlimited ? "#34d399" : "#818cf8",
             }}
           >
@@ -489,11 +433,7 @@ export function CreditsManagerButton({
 
       <AnimatePresence>
         {open && (
-          <CreditsModal
-            uid={uid}
-            displayName={displayName}
-            onClose={() => setOpen(false)}
-          />
+          <CreditsModal uid={uid} displayName={displayName} onClose={() => setOpen(false)} />
         )}
       </AnimatePresence>
     </>

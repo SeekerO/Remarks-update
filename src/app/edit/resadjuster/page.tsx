@@ -5,6 +5,7 @@ import { Upload, Download, RefreshCcw, ImageIcon, Maximize2 } from 'lucide-react
 import { MdOpacity } from "react-icons/md";
 import { useAuth } from '@/lib/auth/AuthContext';
 import { logActivity } from "@/lib/firebase/firebase.actions.firestore/offlineLogger";
+import { CreditGate, CreditBadge } from "@/app/admin/panel/creditComponent/CreditGate";
 
 interface ImageMeta {
     name: string;
@@ -12,6 +13,8 @@ interface ImageMeta {
     newSize: string;
     dimensions: { w: number; h: number };
 }
+
+const TOOL_ID = "res_adjuster";
 
 /* ── Format bytes helper ── */
 const fmt = (bytes: number) => {
@@ -25,7 +28,7 @@ export default function ResolutionAdjuster() {
     const [quality, setQuality] = useState(0.5);
     const [meta, setMeta] = useState<ImageMeta | null>(null);
     const [isDragging, setIsDragging] = useState(false);
-    const { user } = useAuth()
+    const { user } = useAuth();
 
     const canvasRef = useRef<HTMLCanvasElement>(null);
 
@@ -51,27 +54,18 @@ export default function ResolutionAdjuster() {
             const head = result.indexOf(',') + 1;
             const newBytes = Math.round((result.length - head) * 0.75);
 
-
             setPreviews({ original: src, processed: result });
             setMeta({ name: fileName, originalSize: fmt(originalSize), newSize: fmt(newBytes), dimensions: { w, h } });
         };
         img.src = src;
     }, [quality]);
 
-    /* ── File handler ── */
-    const handleFile = async (file: File) => {
+    /* ── File handler — reading the file does NOT cost a credit.
+          Only the Download action costs a credit. ── */
+    const handleFile = (file: File) => {
         if (!file.type.startsWith('image/')) return;
         const reader = new FileReader();
         reader.onload = (e) => processImage(e.target?.result as string, file.name, file.size);
-        if (!user) return
-
-        await logActivity({
-            userName: user.displayName ?? "Unknown",
-            userEmail: user.email ?? "unknown@email.com",
-            function: "downloadImageBackgroundRemoved",
-            urlPath: "/Edit/Backgroundremoverr",
-        });
-
         reader.readAsDataURL(file);
     };
 
@@ -91,11 +85,27 @@ export default function ResolutionAdjuster() {
         if (previews) processImage(previews.original, meta!.name, 0);
     };
 
-    const pct = Math.round(quality * 100);
+    /* ── The actual download action, fired inside CreditGate ── */
+    const performDownload = async () => {
+        if (!previews || !meta) return;
 
-    /* ════════════════════════════════════════════
-       RENDER
-       ════════════════════════════════════════════ */
+        if (user) {
+            await logActivity({
+                userName: user.displayName ?? "Unknown",
+                userEmail: user.email ?? "unknown@email.com",
+                function: "downloadResolutionAdjusted",
+                urlPath: "/edit/resadjuster",
+            });
+        }
+
+        // Trigger browser download programmatically
+        const a = document.createElement('a');
+        a.href = previews.processed;
+        a.download = `optimised-${meta.name}`;
+        a.click();
+    };
+
+    const pct = Math.round(quality * 100);
 
     return (
         <div className="min-h-full w-full bg-gray-50 dark:bg-[#0f0e17] overflow-y-auto">
@@ -109,24 +119,32 @@ export default function ResolutionAdjuster() {
                             <MdOpacity className="w-4 h-4 text-indigo-400" />
                         </div>
                         <div>
-                            <h1 className="font-syne text-lg font-extrabold text-slate-800 dark:text-slate-100 dark:bg-clip-text">Resolution Adjuster</h1>
-                            <p className="text-xs text-gray-400 dark:text-white/30 mt-0.5">Client-side image downsampling · no upload required</p>
+                            <h1 className="font-syne text-lg font-extrabold text-slate-800 dark:text-slate-100">
+                                Resolution Adjuster
+                            </h1>
+                            <p className="text-xs text-gray-400 dark:text-white/30 mt-0.5">
+                                Client-side image downsampling · no upload required
+                            </p>
                         </div>
                     </div>
 
+                    <div className="flex items-center gap-3">
+                        {/* Live credit badge in header */}
+                        <CreditBadge toolId={TOOL_ID} />
 
-                    {previews && (
-                        <button
-                            onClick={() => { setPreviews(null); setMeta(null); }}
-                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium
-                text-gray-500 dark:text-white/40
-                hover:bg-gray-100 dark:hover:bg-white/[0.05]
-                transition-colors"
-                        >
-                            <RefreshCcw className="w-3 h-3" />
-                            New image
-                        </button>
-                    )}
+                        {previews && (
+                            <button
+                                onClick={() => { setPreviews(null); setMeta(null); }}
+                                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium
+                  text-gray-500 dark:text-white/40
+                  hover:bg-gray-100 dark:hover:bg-white/[0.05]
+                  transition-colors"
+                            >
+                                <RefreshCcw className="w-3 h-3" />
+                                New image
+                            </button>
+                        )}
+                    </div>
                 </div>
             </div>
 
@@ -136,7 +154,7 @@ export default function ResolutionAdjuster() {
                     {/* ── Left: controls ── */}
                     <div className="space-y-4">
 
-                        {/* Quality slider card */}
+                        {/* Quality slider */}
                         <div className="rounded-xl bg-white dark:bg-white/[0.03] border border-black/[0.07] dark:border-white/[0.07] p-5">
                             <div className="flex items-center justify-between mb-4">
                                 <p className="text-xs font-medium uppercase tracking-[0.07em] text-gray-400 dark:text-white/30">
@@ -147,7 +165,6 @@ export default function ResolutionAdjuster() {
                                 </span>
                             </div>
 
-                            {/* Custom slider */}
                             <div className="relative">
                                 <input
                                     type="range"
@@ -156,9 +173,7 @@ export default function ResolutionAdjuster() {
                                     step="0.05"
                                     value={quality}
                                     onChange={(e) => handleQualityChange(parseFloat(e.target.value))}
-                                    className="w-full h-1.5 appearance-none rounded-full cursor-pointer
-                    bg-gray-200 dark:bg-white/10
-                    accent-indigo-500"
+                                    className="w-full h-1.5 appearance-none rounded-full cursor-pointer accent-indigo-500"
                                     style={{
                                         background: `linear-gradient(to right, #6366f1 0%, #6366f1 ${pct}%, transparent ${pct}%, transparent 100%)`,
                                     }}
@@ -170,7 +185,6 @@ export default function ResolutionAdjuster() {
                                 <span className="text-[10px] text-gray-300 dark:text-white/20">100%</span>
                             </div>
 
-                            {/* Scale presets */}
                             <div className="grid grid-cols-4 gap-1.5 mt-4">
                                 {[25, 50, 75, 100].map((v) => (
                                     <button
@@ -188,7 +202,7 @@ export default function ResolutionAdjuster() {
                             </div>
                         </div>
 
-                        {/* Export details card — only when image is loaded */}
+                        {/* Export details + credit-gated download button */}
                         {meta && (
                             <div className="rounded-xl bg-white dark:bg-white/[0.03] border border-black/[0.07] dark:border-white/[0.07] p-5 space-y-3">
                                 <p className="text-xs font-medium uppercase tracking-[0.07em] text-gray-400 dark:text-white/30 mb-1">
@@ -200,7 +214,10 @@ export default function ResolutionAdjuster() {
                                     { label: 'Original', value: meta.originalSize, muted: true },
                                     { label: 'Optimised', value: meta.newSize },
                                 ].map(({ label, value, muted }) => (
-                                    <div key={label} className="flex items-center justify-between py-2 border-b border-black/[0.05] dark:border-white/[0.05] last:border-0">
+                                    <div
+                                        key={label}
+                                        className="flex items-center justify-between py-2 border-b border-black/[0.05] dark:border-white/[0.05] last:border-0"
+                                    >
                                         <span className="text-xs text-gray-400 dark:text-white/30">{label}</span>
                                         <span className={`text-xs font-mono font-medium ${muted ? 'line-through text-gray-300 dark:text-white/20' : 'text-gray-700 dark:text-white/70'}`}>
                                             {value}
@@ -208,17 +225,32 @@ export default function ResolutionAdjuster() {
                                     </div>
                                 ))}
 
-                                <a
-                                    href={previews?.processed}
-                                    download={`optimised-${meta.name}`}
-                                    className="flex items-center justify-center gap-2 w-full py-2.5 rounded-xl
-                    bg-indigo-500 hover:bg-indigo-600 active:bg-indigo-700
-                    text-white text-sm font-medium
-                    transition-colors no-underline mt-2"
-                                >
-                                    <Download className="w-4 h-4" />
-                                    Download image
-                                </a>
+                                {/*
+                                 * CreditGate wraps the download button.
+                                 * Each successful download deducts 1 credit from
+                                 * user_credits/{uid}/res_adjuster in Firebase.
+                                 * If credits are exhausted, the UpgradeModal is shown instead.
+                                 */}
+                                <CreditGate toolId={TOOL_ID}>
+                                    {({ onAction, hasCredits, isUnlimited, loading }) => (
+                                        <button
+                                            onClick={() => onAction(performDownload)}
+                                            disabled={loading || (!hasCredits && !isUnlimited)}
+                                            className="flex items-center justify-center gap-2 w-full py-2.5 rounded-xl
+                        bg-indigo-500 hover:bg-indigo-600 active:bg-indigo-700
+                        text-white text-sm font-medium
+                        transition-colors mt-2
+                        disabled:opacity-50 disabled:cursor-not-allowed"
+                                        >
+                                            <Download className="w-4 h-4" />
+                                            {loading
+                                                ? "Loading…"
+                                                : !hasCredits && !isUnlimited
+                                                    ? "No Credits Left"
+                                                    : "Download image"}
+                                        </button>
+                                    )}
+                                </CreditGate>
                             </div>
                         )}
                     </div>
@@ -226,7 +258,6 @@ export default function ResolutionAdjuster() {
                     {/* ── Right: preview / upload ── */}
                     <div>
                         {!previews ? (
-                            /* Drop zone */
                             <div
                                 onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
                                 onDragLeave={() => setIsDragging(false)}
@@ -246,8 +277,7 @@ export default function ResolutionAdjuster() {
                                 />
                                 <div className="flex flex-col items-center gap-4 pointer-events-none select-none">
                                     <div className={`w-16 h-16 rounded-2xl flex items-center justify-center transition-colors
-                    ${isDragging ? 'bg-indigo-500/15' : 'bg-gray-100 dark:bg-white/[0.05]'}`}
-                                    >
+                    ${isDragging ? 'bg-indigo-500/15' : 'bg-gray-100 dark:bg-white/[0.05]'}`}>
                                         <Upload className={`w-7 h-7 transition-colors ${isDragging ? 'text-indigo-400' : 'text-gray-400 dark:text-white/25'}`} />
                                     </div>
                                     <div className="text-center">
@@ -261,9 +291,7 @@ export default function ResolutionAdjuster() {
                                 </div>
                             </div>
                         ) : (
-                            /* Preview */
                             <div className="rounded-2xl overflow-hidden border border-black/[0.07] dark:border-white/[0.07] bg-white dark:bg-white/[0.02]">
-                                {/* Toolbar */}
                                 <div className="flex items-center justify-between px-4 py-3 border-b border-black/[0.06] dark:border-white/[0.06]">
                                     <div className="flex items-center gap-2">
                                         <ImageIcon className="w-4 h-4 text-gray-300 dark:text-white/20" />
@@ -282,7 +310,6 @@ export default function ResolutionAdjuster() {
                                     </button>
                                 </div>
 
-                                {/* Image preview on checkerboard */}
                                 <div
                                     className="relative flex items-center justify-center p-6 min-h-[340px]"
                                     style={{
@@ -313,7 +340,7 @@ export default function ResolutionAdjuster() {
                     </div>
                 </div>
 
-                {/* ── Info strip ── */}
+                {/* Info strip */}
                 <div className="mt-6 flex flex-wrap items-center gap-4 px-4 py-3 rounded-xl
           bg-white dark:bg-white/[0.02]
           border border-black/[0.06] dark:border-white/[0.06]">
@@ -321,6 +348,7 @@ export default function ResolutionAdjuster() {
                         { label: 'Method', value: 'Canvas 2D downsampling' },
                         { label: 'Privacy', value: 'No server upload — runs in browser' },
                         { label: 'Output', value: 'JPEG at 85% quality' },
+                        { label: 'Credits', value: '1 credit per download' },
                     ].map(({ label, value }) => (
                         <div key={label} className="flex items-center gap-2">
                             <span className="text-[10px] font-medium uppercase tracking-[0.06em] text-gray-300 dark:text-white/20">

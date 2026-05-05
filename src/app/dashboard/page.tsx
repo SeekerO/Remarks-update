@@ -142,7 +142,7 @@ export default function DashboardPage() {
     const docTools = allTools.filter((t) => ["FAQ", "Remarks", "PDF"].includes(t.name));
     const mainTools = allTools.filter((t) => ["Matcher", "CSC Reveiwer", "DTR Extractor"].includes(t.name));
     const adminTools = allTools.filter((t) => ["Admin Panel", "Time Log", "User Log", "Test Page"].includes(t.name));
-    const directoryTools = allTools.filter((t) => ["COMELEC Offices", "DTR Extractor"].includes(t.name));
+    const directoryTools = allTools.filter((t) => ["COMELEC Offices"].includes(t.name));
 
     const firstName = user?.displayName?.split(" ")[0] ?? "there";
 

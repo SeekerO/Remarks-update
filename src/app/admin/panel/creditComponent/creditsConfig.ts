@@ -1,6 +1,8 @@
 // src/lib/credits/creditsConfig.ts
 // Central registry of all tools that consume credits.
 // toolId must be unique and stable — it's used as the Firebase key.
+//
+// Firebase path: user_credits/{uid}/{toolId}
 
 export interface ToolCreditConfig {
   toolId: string;
@@ -10,6 +12,7 @@ export interface ToolCreditConfig {
   urlPath: string; // used to match current route
 }
 
+// 11 Tools
 export const TOOL_CREDIT_CONFIGS: ToolCreditConfig[] = [
   {
     toolId: "watermark",
@@ -19,46 +22,53 @@ export const TOOL_CREDIT_CONFIGS: ToolCreditConfig[] = [
     urlPath: "/edit/watermark",
   },
   {
-    toolId: "bg_remover",
+    toolId: "bgremover",
     label: "Background Remover",
     icon: "✂️",
     defaultFreeCredits: 10,
     urlPath: "/edit/bgremover",
   },
   {
-    toolId: "logo_maker",
+    toolId: "logoeditor",
     label: "Logo Maker",
     icon: "🔷",
     defaultFreeCredits: 10,
     urlPath: "/edit/logoeditor",
   },
   {
-    toolId: "res_adjuster",
+    toolId: "resadjuster",
     label: "Resolution Adjuster",
     icon: "📐",
     defaultFreeCredits: 10,
     urlPath: "/edit/resadjuster",
   },
   {
-    toolId: "file_converter",
-    label: "File Converter",
+    toolId: "pdfconverter",
+    label: "PDF Converter",
+    icon: "🔄",
+    defaultFreeCredits: 10,
+    urlPath: "/document/pdfconverter",
+  },
+  {
+    toolId: "pdf",
+    label: "PDF Editor",
     icon: "📄",
     defaultFreeCredits: 10,
     urlPath: "/document/pdf",
+  },
+  {
+    toolId: "dtrextractor",
+    label: "DTR Extractor",
+    icon: "📊",
+    defaultFreeCredits: 10,
+    urlPath: "/dtrextractor",
   },
   {
     toolId: "matcher",
     label: "Data Matcher",
     icon: "🔍",
     defaultFreeCredits: 10,
-    urlPath: "/Matcher",
-  },
-  {
-    toolId: "dtr_extractor",
-    label: "DTR Extractor",
-    icon: "📊",
-    defaultFreeCredits: 10,
-    urlPath: "/dtrextractor",
+    urlPath: "/matcher",
   },
   {
     toolId: "faq",
@@ -67,16 +77,30 @@ export const TOOL_CREDIT_CONFIGS: ToolCreditConfig[] = [
     defaultFreeCredits: 10,
     urlPath: "/document/faq",
   },
+  {
+    toolId: "remarks",
+    label: "Remarks Assistant",
+    icon: "📝",
+    defaultFreeCredits: 10,
+    urlPath: "/document/remarks",
+  },
+  {
+    toolId: "message",
+    label: "Message Generator",
+    icon: "💬",
+    defaultFreeCredits: 10,
+    urlPath: "/tools/message",
+  },
 ];
 
-// Shape stored in Firebase under users/{uid}/toolCredits/{toolId}
+// Shape stored in Firebase under user_credits/{uid}/{toolId}
 export interface ToolCreditEntry {
   remaining: number;
   total: number; // the cap set by admin (or default)
   unlimited: boolean; // admin can flip this per tool
 }
 
-// Full credits object stored in Firebase
+// Full credits object for a user
 export type UserToolCredits = Record<string, ToolCreditEntry>;
 
 export function getDefaultEntry(config: ToolCreditConfig): ToolCreditEntry {
@@ -85,4 +109,24 @@ export function getDefaultEntry(config: ToolCreditConfig): ToolCreditEntry {
     total: config.defaultFreeCredits,
     unlimited: false,
   };
+}
+
+// ── Firebase path helpers ─────────────────────────────────────────────────────
+// All credit reads/writes must go through these helpers so the path is
+// consistent across the entire codebase.
+
+/**
+ * Path to a single tool's credit entry for a user.
+ * user_credits/{uid}/{toolId}
+ */
+export function creditPath(uid: string, toolId: string): string {
+  return `users/${uid}/toolCredits/${toolId}`;
+}
+
+/**
+ * Path to all tool credits for a user.
+ * user_credits/{uid}
+ */
+export function userCreditsPath(uid: string): string {
+  return `users/${uid}/toolCredits`;
 }

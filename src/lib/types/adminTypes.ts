@@ -1,4 +1,5 @@
-// --- Type Definitions ---\r\n
+// --- Type Definitions ---
+
 export const AVAILABLE_PAGES = [
   { id: "dashboard", name: "Dashboard", category: "Dashboard" },
   { id: "watermark", name: "Watermark", category: "Edit" },
@@ -9,10 +10,10 @@ export const AVAILABLE_PAGES = [
   { id: "remarks", name: "Remarks", category: "Document" },
   { id: "pdf", name: "PDF", category: "Document" },
   { id: "matcher", name: "Matcher", category: "Main" },
+  { id: "message", name: "Message", category: "Main" },
   { id: "comelecoffices", name: "COMELEC Offices", category: "Directory" },
-  { id: "message", name: "Messsage", category: "Main" },
-  { id: "csc", name: "CSC Reveiwer", category: "Other Tool" },
-  { id: "dtrexporter", name: "DTR Exporter", category: "Other Tool" },
+  { id: "csc", name: "CSC Reviewer", category: "Other Tool" },
+  { id: "dtrextractor", name: "DTR Extractor", category: "Other Tool" },
 ] as const;
 
 export const TOOL_META: Record<
@@ -82,10 +83,7 @@ export const TOOL_META: Record<
   },
 };
 
-// Export the types as well for external consumption
 export type PageId = (typeof AVAILABLE_PAGES)[number]["id"];
-
-// Note: Do NOT include 'use client'; in this file.
 
 export interface UserProfile {
   uid: string;
@@ -95,6 +93,7 @@ export interface UserProfile {
   photoURL: string;
   displayName: string;
   allowedPages: PageId[] | undefined;
+  notes?: string;
 }
 
 export interface UserCardProps {
@@ -146,7 +145,7 @@ export interface NavItem {
   icon: React.ElementType;
   active: boolean;
   requiredRole?: UserRole;
-  pagePermissionId?: string; // Links to permission system
+  pagePermissionId?: string;
   sublinks: NavItem[];
 }
 
@@ -283,7 +282,7 @@ export const navItems: NavItem[] = [
         href: "/dtrextractor",
         icon: FileCog,
         active: true,
-        pagePermissionId: "csc",
+        pagePermissionId: "dtrextractor",
         sublinks: [],
       },
     ],

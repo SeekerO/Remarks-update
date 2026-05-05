@@ -1,11 +1,11 @@
-// src/lib/credits/CreditGate.tsx
+// src/app/admin/panel/creditComponent/CreditGate.tsx
 "use client";
 
 import React, { useState, useCallback } from "react";
 import { useAuth } from "@/lib/auth/AuthContext";
 import { useCredits } from "./useCredits";
 import { TOOL_CREDIT_CONFIGS } from "./creditsConfig";
-import { Zap, Lock, Mail, RefreshCw, Sparkles, X, ChevronRight } from "lucide-react";
+import { Zap, Lock, Mail, Sparkles, X } from "lucide-react";
 
 // ── Upgrade Modal ────────────────────────────────────────────────────────────
 
@@ -20,13 +20,8 @@ function UpgradeModal({ toolId, onClose }: UpgradeModalProps) {
 
   return (
     <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
-      {/* Backdrop */}
-      <div
-        className="absolute inset-0 bg-black/70 backdrop-blur-sm"
-        onClick={onClose}
-      />
+      <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={onClose} />
 
-      {/* Modal */}
       <div
         className="relative w-full max-w-sm flex flex-col rounded-2xl overflow-hidden shadow-2xl"
         style={{
@@ -34,15 +29,11 @@ function UpgradeModal({ toolId, onClose }: UpgradeModalProps) {
           border: "1px solid rgba(99,102,241,0.2)",
         }}
       >
-        {/* Top accent bar */}
         <div
           className="h-[3px] w-full"
-          style={{
-            background: "linear-gradient(90deg, #6366f1, #8b5cf6, #ec4899)",
-          }}
+          style={{ background: "linear-gradient(90deg, #6366f1, #8b5cf6, #ec4899)" }}
         />
 
-        {/* Close */}
         <button
           onClick={onClose}
           className="absolute top-4 right-4 p-1.5 rounded-lg text-white/30 hover:text-white/70 hover:bg-white/[0.06] transition-colors z-10"
@@ -70,19 +61,13 @@ function UpgradeModal({ toolId, onClose }: UpgradeModalProps) {
 
           {/* Heading */}
           <div className="text-center space-y-1.5">
-            <h2 className="text-base font-bold text-white tracking-tight">
-              Free Trial Exhausted
-            </h2>
+            <h2 className="text-base font-bold text-white tracking-tight">Free Trial Exhausted</h2>
             <p className="text-xs text-white/40 leading-relaxed max-w-[240px]">
               You've used all{" "}
-              <span className="text-white/60 font-medium">
-                {config?.defaultFreeCredits ?? 10} free credits
-              </span>{" "}
+              <span className="text-white/60 font-medium">{config?.defaultFreeCredits ?? 10} free credits</span>{" "}
               for{" "}
-              <span className="text-indigo-300 font-medium">
-                {config?.label ?? "this tool"}
-              </span>
-              . Contact your administrator for full access.
+              <span className="text-indigo-300 font-medium">{config?.label ?? "this tool"}</span>.
+              Contact your administrator for full access.
             </p>
           </div>
 
@@ -99,35 +84,27 @@ function UpgradeModal({ toolId, onClose }: UpgradeModalProps) {
             <div className="h-1.5 w-full rounded-full bg-white/[0.06] overflow-hidden">
               <div
                 className="h-full rounded-full"
-                style={{
-                  width: "100%",
-                  background: "linear-gradient(90deg, #ef4444, #f97316)",
-                }}
+                style={{ width: "100%", background: "linear-gradient(90deg, #ef4444, #f97316)" }}
               />
             </div>
           </div>
 
-          {/* What you get with full access */}
+          {/* Full access perks */}
           <div
             className="w-full rounded-xl p-4 space-y-2.5"
-            style={{
-              background: "rgba(99,102,241,0.07)",
-              border: "1px solid rgba(99,102,241,0.15)",
-            }}
+            style={{ background: "rgba(99,102,241,0.07)", border: "1px solid rgba(99,102,241,0.15)" }}
           >
             <p className="text-[10px] font-bold uppercase tracking-widest text-indigo-400/70">
               Full Access Includes
             </p>
-            {[
-              "Unlimited credits for this tool",
-              "Access to all workspace tools",
-              "Priority processing",
-            ].map((item) => (
-              <div key={item} className="flex items-center gap-2">
-                <Sparkles className="w-3 h-3 text-indigo-400 flex-shrink-0" />
-                <span className="text-[11px] text-white/50">{item}</span>
-              </div>
-            ))}
+            {["Unlimited credits for this tool", "Access to all workspace tools", "Priority processing"].map(
+              (item) => (
+                <div key={item} className="flex items-center gap-2">
+                  <Sparkles className="w-3 h-3 text-indigo-400 flex-shrink-0" />
+                  <span className="text-[11px] text-white/50">{item}</span>
+                </div>
+              )
+            )}
           </div>
 
           {/* CTA */}
@@ -146,14 +123,9 @@ function UpgradeModal({ toolId, onClose }: UpgradeModalProps) {
           ) : (
             <div
               className="w-full py-3 rounded-xl text-center"
-              style={{
-                background: "rgba(16,185,129,0.1)",
-                border: "1px solid rgba(16,185,129,0.2)",
-              }}
+              style={{ background: "rgba(16,185,129,0.1)", border: "1px solid rgba(16,185,129,0.2)" }}
             >
-              <p className="text-sm font-semibold text-emerald-400">
-                ✓ Request sent to administrator
-              </p>
+              <p className="text-sm font-semibold text-emerald-400">✓ Request sent to administrator</p>
             </div>
           )}
 
@@ -169,7 +141,7 @@ function UpgradeModal({ toolId, onClose }: UpgradeModalProps) {
   );
 }
 
-// ── Credit Badge (small display) ────────────────────────────────────────────
+// ── Credit Badge ─────────────────────────────────────────────────────────────
 
 interface CreditBadgeProps {
   toolId: string;
@@ -209,14 +181,14 @@ export function CreditBadge({ toolId, className = "" }: CreditBadgeProps) {
         background: isEmpty
           ? "rgba(239,68,68,0.1)"
           : isLow
-          ? "rgba(245,158,11,0.1)"
-          : "rgba(99,102,241,0.1)",
+            ? "rgba(245,158,11,0.1)"
+            : "rgba(99,102,241,0.1)",
         border: `1px solid ${
           isEmpty
             ? "rgba(239,68,68,0.2)"
             : isLow
-            ? "rgba(245,158,11,0.2)"
-            : "rgba(99,102,241,0.2)"
+              ? "rgba(245,158,11,0.2)"
+              : "rgba(99,102,241,0.2)"
         }`,
         color: isEmpty ? "#f87171" : isLow ? "#fbbf24" : "#a5b4fc",
       }}
@@ -227,11 +199,10 @@ export function CreditBadge({ toolId, className = "" }: CreditBadgeProps) {
   );
 }
 
-// ── CreditGate — wrap any "action" button ───────────────────────────────────
+// ── CreditGate — render-prop wrapper ─────────────────────────────────────────
 
 interface CreditGateProps {
   toolId: string;
-  /** The child receives onAction — call it instead of your original onClick */
   children: (props: {
     onAction: (originalAction: () => void | Promise<void>) => Promise<void>;
     hasCredits: boolean;
@@ -275,7 +246,7 @@ export function CreditGate({ toolId, children }: CreditGateProps) {
   );
 }
 
-// ── CreditGateButton — simple drop-in replacement for a button ──────────────
+// ── CreditGateButton — drop-in button replacement ────────────────────────────
 
 interface CreditGateButtonProps {
   toolId: string;

@@ -1,105 +1,22 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import {
   Shield,
   Globe,
   MessageSquare,
   Ban,
   Key,
-  UserPlus,
   CheckCircle2,
   X,
-  Crown,
-  Pencil,
-  Users,
-  Building2,
-  Clock,
-  Infinity,
-  Zap,        // ← NEW
+  Zap,
+  StickyNote,
+  UserPlus,
 } from "lucide-react";
 import { motion } from "framer-motion";
 
 import { UserProfile } from "@/lib/types/adminTypes";
-import { UserSubscription, UserRole } from "./userRolesModal";
 import UserAvatar from "./avatarUI";
-
-// ── Role badge config ─────────────────────────────────────────────────────────
-const ROLE_BADGE: Record<
-  UserRole,
-  { label: string; color: string; icon: React.ElementType }
-> = {
-  editor: {
-    label: "Editor",
-    color:
-      "bg-indigo-100 dark:bg-indigo-500/20 text-indigo-700 dark:text-indigo-300 border-indigo-200 dark:border-indigo-500/20",
-    icon: Pencil,
-  },
-  user: {
-    label: "User",
-    color:
-      "bg-emerald-100 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-500/20",
-    icon: Users,
-  },
-  comelec: {
-    label: "COMELEC",
-    color:
-      "bg-violet-100 dark:bg-violet-500/20 text-violet-700 dark:text-violet-300 border-violet-200 dark:border-violet-500/20",
-    icon: Building2,
-  },
-};
-
-// ── Subscription status helper ────────────────────────────────────────────────
-function getSubStatus(sub?: UserSubscription): {
-  label: string;
-  color: string;
-  expired: boolean;
-} {
-  if (!sub)
-    return {
-      label: "No subscription",
-      color: "text-gray-400 dark:text-white/25",
-      expired: false,
-    };
-  if (sub.subscriptionInfinite)
-    return {
-      label: "∞ Infinite",
-      color: "text-sky-600 dark:text-sky-400",
-      expired: false,
-    };
-  if (!sub.subscriptionStartDate || !sub.subscriptionDays)
-    return {
-      label: "Not set",
-      color: "text-gray-400 dark:text-white/25",
-      expired: false,
-    };
-
-  const start = new Date(sub.subscriptionStartDate);
-  const expiry = new Date(start);
-  expiry.setDate(expiry.getDate() + sub.subscriptionDays);
-  const now = new Date();
-  const daysLeft = Math.ceil(
-    (expiry.getTime() - now.getTime()) / (1000 * 60 * 60 * 24),
-  );
-
-  if (daysLeft <= 0)
-    return {
-      label: "Expired",
-      color: "text-red-500 dark:text-red-400",
-      expired: true,
-    };
-  if (daysLeft <= 7)
-    return {
-      label: `${daysLeft}d left`,
-      color: "text-amber-600 dark:text-amber-400",
-      expired: false,
-    };
-  return {
-    label: `${daysLeft}d left`,
-    color: "text-emerald-600 dark:text-emerald-400",
-    expired: false,
-  };
-}
 
 // ── UserCard ──────────────────────────────────────────────────────────────────
 const UserCard = React.memo(
@@ -111,28 +28,23 @@ const UserCard = React.memo(
     handleToggleCanChat,
     handleToggleAdmin,
     handleOpenPermissions,
-    handleOpenRoles,
-    handleOpenCredits,   // ← NEW prop
-    handleRequestAccess,
+    handleOpenCredits,
+    handleOpenNotes,
     formatLastOnline,
   }: {
-    user: UserProfile & { subscription?: UserSubscription };
+    user: UserProfile;
     isOnline: boolean;
     lastOnlineTimestamp: number | null;
     currentUserId: string;
     handleToggleCanChat: (uid: string, isPermitted: boolean) => void;
     handleToggleAdmin: (uid: string, isAdmin: boolean) => void;
     handleOpenPermissions: (user: UserProfile) => void;
-    handleOpenRoles: (
-      user: UserProfile & { subscription?: UserSubscription },
-    ) => void;
-    handleOpenCredits: (user: UserProfile) => void;   // ← NEW prop type
-    handleRequestAccess: (user: UserProfile) => void;
+    handleOpenCredits: (user: UserProfile) => void;
+    handleOpenNotes: (user: UserProfile) => void;
     formatLastOnline: (ts: number) => string;
   }) => {
     const isSelf = user.uid === currentUserId;
-    const subStatus = getSubStatus(user.subscription);
-    const roles = user.subscription?.roles ?? [];
+    const hasNotes = !!(user.notes && user.notes.trim().length > 0);
 
     return (
       <motion.div
@@ -168,22 +80,12 @@ const UserCard = React.memo(
           </div>
         </div>
 
-        {/* Role badges */}
-        {roles.length > 0 && (
-          <div className="flex flex-wrap gap-1">
-            {!user.isAdmin && user.subscription?.roles?.map((role) => {
-              const cfg = ROLE_BADGE[role];
-              if (!cfg) return null;
-              const Icon = cfg.icon;
-              return (
-                <span
-                  key={role}
-                  className={`flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[10px] font-medium border ${cfg.color}`}
-                >
-                  <Icon className="w-2.5 h-2.5" /> {cfg.label}
-                </span>
-              );
-            })}
+        {/* Notes preview */}
+        {hasNotes && (
+          <div className="px-2.5 py-2 rounded-lg bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/20">
+            <p className="text-[10px] text-amber-700 dark:text-amber-300 line-clamp-2 leading-relaxed">
+              {user.notes}
+            </p>
           </div>
         )}
 
@@ -205,18 +107,8 @@ const UserCard = React.memo(
                   : "Offline"}
             </span>
           </div>
-          <div className="flex items-center gap-1.5">
-            {user.subscription?.subscriptionInfinite ? (
-              <Infinity className="w-3 h-3 text-sky-400" />
-            ) : (
-              <Clock className="w-3 h-3 text-gray-400 dark:text-white/25" />
-            )}
-            <span className={subStatus.color}>{subStatus.label}</span>
-          </div>
-        </div>
 
-        {/* Permission status */}
-        <div className="flex items-center justify-between text-[11px]">
+          {/* Permission status */}
           <span
             className={`flex items-center gap-1 font-medium
           ${user.isPermitted ? "text-emerald-600 dark:text-emerald-400" : "text-red-500 dark:text-red-400"}`}
@@ -226,17 +118,14 @@ const UserCard = React.memo(
             ) : (
               <X className="w-3 h-3" />
             )}
-            {user.isPermitted ? "Permission on" : "Permission off"}
-          </span>
-          <span className="text-gray-400 dark:text-white/20 text-[10px]">
-            {user.subscription?.allowedPresets?.length ?? 0} presets
+            {user.isPermitted ? "Access on" : "Access off"}
           </span>
         </div>
 
         {/* Divider */}
         <div className="h-px bg-black/[0.05] dark:bg-white/[0.05]" />
 
-        {/* Action buttons row 1 */}
+        {/* Action buttons row 1 — Access / Admin */}
         <div className="flex gap-2">
           <button
             onClick={() => handleToggleCanChat(user.uid, user.isPermitted)}
@@ -276,21 +165,8 @@ const UserCard = React.memo(
           </button>
         </div>
 
-        {/* Action buttons row 2 — Roles / Pages */}
+        {/* Action buttons row 2 — Pages / Credits / Notes */}
         <div className="flex gap-2">
-          {user.isAdmin !== true && (
-            <button
-              onClick={() => handleOpenRoles(user)}
-              title="Edit roles & subscription"
-              className="flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-[11px] font-medium
-            border border-violet-200 dark:border-violet-500/20
-            bg-violet-50 dark:bg-violet-500/10 text-violet-600 dark:text-violet-400
-            hover:bg-violet-100 dark:hover:bg-violet-500/15 transition-all"
-            >
-              <Crown className="w-3 h-3" /> Roles
-            </button>
-          )}
-
           {!user.isAdmin && (
             <button
               onClick={() => handleOpenPermissions(user)}
@@ -304,19 +180,32 @@ const UserCard = React.memo(
               <Key className="w-3 h-3" /> Pages
             </button>
           )}
-        </div>
 
-        {/* Action buttons row 3 — Credits (always visible) */}
-        <button
-          onClick={() => handleOpenCredits(user)}
-          title="Manage tool credits"
-          className="w-full flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-[11px] font-medium
-            border border-indigo-200 dark:border-indigo-500/20
-            bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400
-            hover:bg-indigo-100 dark:hover:bg-indigo-500/15 transition-all"
-        >
-          <Zap className="w-3 h-3" /> Credits
-        </button>
+          <button
+            onClick={() => handleOpenCredits(user)}
+            title="Manage tool credits"
+            className="flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-[11px] font-medium
+              border border-indigo-200 dark:border-indigo-500/20
+              bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400
+              hover:bg-indigo-100 dark:hover:bg-indigo-500/15 transition-all"
+          >
+            <Zap className="w-3 h-3" /> Credits
+          </button>
+
+          <button
+            onClick={() => handleOpenNotes(user)}
+            title="Admin notes"
+            className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-[11px] font-medium
+              border transition-all
+              ${hasNotes
+                ? "border-amber-200 dark:border-amber-500/20 bg-amber-50 dark:bg-amber-500/10 text-amber-600 dark:text-amber-400 hover:bg-amber-100 dark:hover:bg-amber-500/15"
+                : "border-black/[0.07] dark:border-white/[0.07] bg-white dark:bg-white/[0.03] text-gray-500 dark:text-white/40 hover:border-amber-300 dark:hover:border-amber-500/40 hover:text-amber-500 dark:hover:text-amber-400"
+              }`}
+          >
+            <StickyNote className="w-3 h-3" />
+            {hasNotes ? "Notes" : "Note"}
+          </button>
+        </div>
       </motion.div>
     );
   },

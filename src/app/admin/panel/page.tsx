@@ -11,24 +11,19 @@ import { PageId, UserProfile, AVAILABLE_PAGES } from "@/lib/types/adminTypes";
 import { useUserPresence } from "@/lib/hooks/useUserPresence";
 import PermissionsModal from "./component/PermissionsModal";
 import UserCard from "./component/UserCard";
-import UserRolesModal, { UserSubscription } from "./component/userRolesModal";
-import CreditsModal from "./creditComponent/creditModal"; // ← NEW
-import RequestAccessModal from "@/app/login/requestLoginModal";
-
-type UserWithSub = UserProfile & { subscription?: UserSubscription };
+import CreditsModal from "./creditComponent/creditModal";
+import NotesModal from "./component/notesModal";
 
 export default function AdminPanel() {
   const { user } = useAuth();
-  const [allUsers, setAllUsers] = useState<UserWithSub[]>([]);
+  const [allUsers, setAllUsers] = useState<UserProfile[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [isLoadingUsers, setIsLoadingUsers] = useState(true);
   const [selectedUserForPermissions, setSelectedUserForPermissions] =
     useState<UserProfile | null>(null);
-  const [selectedUserForRoles, setSelectedUserForRoles] =
-    useState<UserWithSub | null>(null);
-  const [selectedUserForRequest, setSelectedUserForRequest] =
+  const [selectedUserForCredits, setSelectedUserForCredits] =
     useState<UserProfile | null>(null);
-  const [selectedUserForCredits, setSelectedUserForCredits] = // ← NEW
+  const [selectedUserForNotes, setSelectedUserForNotes] =
     useState<UserProfile | null>(null);
 
   const currentUserId = user?.uid ?? "";
@@ -53,8 +48,7 @@ export default function AdminPanel() {
                 ? data[uid].isPermitted
                 : true,
             allowedPages: data[uid].allowedPages || undefined,
-            subscription: data[uid].subscription || undefined,
-            allowedPresets: data[uid].allowedPresets || [],
+            notes: data[uid].notes || "",
           })),
         );
       } else {
@@ -92,17 +86,9 @@ export default function AdminPanel() {
     [],
   );
 
-  const handleSaveRoles = useCallback(
-    async (userId: string, subscription: UserSubscription) => {
-      const presetsToSave =
-        subscription.allowedPresets.length === 0
-          ? ["__none__"]
-          : subscription.allowedPresets;
-
-      await update(ref(db, `users/${userId}`), {
-        subscription,
-        allowedPresets: presetsToSave,
-      });
+  const handleSaveNotes = useCallback(
+    async (userId: string, notes: string) => {
+      await update(ref(db, `users/${userId}`), { notes });
     },
     [],
   );
@@ -124,6 +110,7 @@ export default function AdminPanel() {
     (u) => onlineUsers[u.uid] === true,
   ).length;
   const adminCount = allUsers.filter((u) => u.isAdmin).length;
+  const permittedCount = allUsers.filter((u) => u.isPermitted).length;
 
   return (
     <>
@@ -184,8 +171,8 @@ export default function AdminPanel() {
                 color: "text-indigo-600 dark:text-indigo-400",
               },
               {
-                label: "Permissions on",
-                value: allUsers.filter((u) => u.isPermitted).length,
+                label: "Access on",
+                value: permittedCount,
                 color: "text-amber-600 dark:text-amber-400",
               },
             ].map(({ label, value, color }) => (
@@ -243,9 +230,8 @@ export default function AdminPanel() {
                         handleToggleCanChat={handleToggleCanChat}
                         handleToggleAdmin={handleToggleAdmin}
                         handleOpenPermissions={setSelectedUserForPermissions}
-                        handleOpenRoles={setSelectedUserForRoles}
                         handleOpenCredits={setSelectedUserForCredits}
-                        handleRequestAccess={setSelectedUserForRequest}
+                        handleOpenNotes={setSelectedUserForNotes}
                         formatLastOnline={formatLastOnline}
                       />
                     ))}
@@ -275,14 +261,6 @@ export default function AdminPanel() {
         />
       )}
 
-      {selectedUserForRoles && (
-        <UserRolesModal
-          user={selectedUserForRoles}
-          onClose={() => setSelectedUserForRoles(null)}
-          onSave={handleSaveRoles}
-        />
-      )}
-
       {selectedUserForCredits && (
         <CreditsModal
           user={selectedUserForCredits}
@@ -290,10 +268,11 @@ export default function AdminPanel() {
         />
       )}
 
-      {selectedUserForRequest && (
-        <RequestAccessModal
-          user={selectedUserForRequest}
-          onClose={() => setSelectedUserForRequest(null)}
+      {selectedUserForNotes && (
+        <NotesModal
+          user={selectedUserForNotes}
+          onClose={() => setSelectedUserForNotes(null)}
+          onSave={handleSaveNotes}
         />
       )}
     </>

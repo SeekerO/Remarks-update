@@ -5,21 +5,7 @@ import { useEffect, ReactNode, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { useAuth } from "../auth/AuthContext";
 import { navItems, type NavItem, type PageId } from "@/lib/types/adminTypes";
-import { Loader2, ShieldOff, Clock, Shield } from "lucide-react";
-import RequestAccessModal from "@/app/login/requestLoginModal";
-
-function checkSubscription(user: any): { isExpired: boolean } {
-  if (!user || user.isAdmin === true || user.subscriptionInfinite === true) {
-    return { isExpired: false };
-  }
-  if (!user.subscriptionStartDate || !user.subscriptionDays) {
-    return { isExpired: true };
-  }
-  const start = new Date(user.subscriptionStartDate);
-  const expiryDate = new Date(start);
-  expiryDate.setDate(start.getDate() + Number(user.subscriptionDays));
-  return { isExpired: Date.now() > expiryDate.getTime() };
-}
+import { Loader2, ShieldOff } from "lucide-react";
 
 function getAccessibleHrefs(allowedPages: PageId[] | null): string[] {
   const hrefs: string[] = [];
@@ -40,23 +26,16 @@ function getAccessibleHrefs(allowedPages: PageId[] | null): string[] {
   return hrefs;
 }
 
-// Replace BlockedCard's "Switch account" anchor with a button:
 const BlockedCard = ({
   icon,
   iconStyle,
   title,
   description,
-  buttonLabel,
-  buttonStyle,
-  onAction,
 }: {
   icon: ReactNode;
   iconStyle: React.CSSProperties;
   title: string;
   description: string;
-  buttonLabel: string;
-  buttonStyle?: string;
-  onAction: () => void;
 }) => {
   const { logout } = useAuth();
   const router = useRouter();
@@ -97,23 +76,12 @@ const BlockedCard = ({
           </p>
         </div>
 
-        <div className="w-full flex flex-col gap-2 mt-1">
-          <button
-            onClick={onAction}
-            className={`w-full py-2.5 rounded-[10px] text-[13px] font-semibold tracking-wide transition-colors ${buttonStyle ?? "bg-indigo-600 hover:bg-indigo-500 text-white"}`}
-          >
-            {buttonLabel}
-          </button>
-
-          {/* ✅ Now properly logs out before switching */}
-          <button
-            onClick={handleSwitchAccount}
-            className="text-[11px] mt-1"
-            style={{ color: "rgba(255,255,255,0.2)" }}
-          >
-            Switch account
-          </button>
-        </div>
+        <button
+          onClick={handleSwitchAccount}
+          className="text-[11px] mt-1 text-indigo-400 hover:text-indigo-300 transition-colors"
+        >
+          Sign in with a different account
+        </button>
       </div>
     </div>
   );
@@ -128,29 +96,15 @@ const AuthGuard = ({
 }) => {
   const [checked, setChecked] = useState(false);
   const [granted, setGranted] = useState(false);
-  const [denialReason, setDenialReason] = useState<
-    "not_permitted" | "no_role" | "expired" | null
-  >(null);
-  const [showModal, setShowModal] = useState(false);
+  const [denialReason, setDenialReason] = useState<"not_permitted" | null>(null);
 
-  const { user, isLoading, logout } = useAuth();
+  const { user, isLoading } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
 
   useEffect(() => {
     if (isLoading) return;
 
-    // if (!user) {
-    //   if (!["/login", "/not-found"].includes(pathname))
-    //     router.replace(redirectTo);
-    //   else {
-    //     setGranted(true);
-    //     setChecked(true);
-    //   }
-    //   return;
-    // }
-
-    // withAuth.tsx — only this block changes
     if (!user) {
       if (!["/login", "/not-found", "/"].includes(pathname)) {
         router.replace(redirectTo);
@@ -161,43 +115,32 @@ const AuthGuard = ({
       return;
     }
 
-    if (!user.isPermitted) {
+    // Only block if explicitly set to false
+    if (user.isPermitted === false) {
       setDenialReason("not_permitted");
       setGranted(false);
       setChecked(true);
       return;
     }
 
-    const { isExpired } = checkSubscription(user);
-    if (isExpired) {
-      setDenialReason("expired");
-      setGranted(false);
-      setChecked(true);
-      return;
-    }
-
-    const hasRole = user.isAdmin || (user.roles && user.roles.length > 0);
-    if (!hasRole) {
-      setDenialReason("no_role");
-      setGranted(false);
-      setChecked(true);
-      return;
-    }
-
+    // Check page-level access
     const allowedPages = user.isAdmin
       ? null
-      : ((user.allowedPages as PageId[]) ?? []);
-    const accessibleHrefs = getAccessibleHrefs(allowedPages);
+      : ((user.allowedPages as PageId[]) ?? null);
 
-    if (
-      pathname !== "/login" &&
-      !accessibleHrefs.some(
-        (href) => pathname === href || pathname.startsWith(href + "/"),
-      )
-    ) {
-      if (!["/dashboard", "/", "/not-found"].includes(pathname)) {
-        router.replace("/not-found");
-        return;
+    // If allowedPages is null or undefined, grant full access (default behavior)
+    if (allowedPages !== null) {
+      const accessibleHrefs = getAccessibleHrefs(allowedPages);
+      if (
+        pathname !== "/login" &&
+        !accessibleHrefs.some(
+          (href) => pathname === href || pathname.startsWith(href + "/"),
+        )
+      ) {
+        if (!["/dashboard", "/", "/not-found"].includes(pathname)) {
+          router.replace("/not-found");
+          return;
+        }
       }
     }
 
@@ -214,73 +157,18 @@ const AuthGuard = ({
     );
   }
 
-  if (!granted && user) {
-    const modalProps = {
-      user: {
-        displayName: user.displayName!,
-        email: user.email!,
-        uid: user.uid,
-      },
-      onClose: () => setShowModal(false),
-    };
-
-    if (denialReason === "not_permitted") {
-      return (
-        <>
-          <BlockedCard
-            iconStyle={{
-              background: "rgba(234,179,8,0.1)",
-              border: "0.5px solid rgba(234,179,8,0.25)",
-            }}
-            icon={<Shield className="w-[18px] h-[18px] text-yellow-400" />}
-            title="Awaiting Approval"
-            description="Your account is pending administrator review. You can send a request to speed up the process."
-            buttonLabel="Request Approval"
-            buttonStyle="text-indigo-300 font-semibold hover:bg-indigo-500/10 transition-colors"
-            onAction={() => setShowModal(true)}
-          />
-          {showModal && <RequestAccessModal {...modalProps} />}
-        </>
-      );
-    }
-
-    if (denialReason === "expired") {
-      return (
-        <>
-          <BlockedCard
-            iconStyle={{
-              background: "rgba(220,60,60,0.12)",
-              border: "0.5px solid rgba(220,60,60,0.25)",
-            }}
-            icon={<Clock className="w-[18px] h-[18px] text-red-400" />}
-            title="Subscription Expired"
-            description="Your subscription period has ended. Request a renewal to continue accessing the platform."
-            buttonLabel="Request Renewal"
-            onAction={() => setShowModal(true)}
-          />
-          {showModal && <RequestAccessModal {...modalProps} />}
-        </>
-      );
-    }
-
-    if (denialReason === "no_role") {
-      return (
-        <>
-          <BlockedCard
-            iconStyle={{
-              background: "rgba(99,91,210,0.14)",
-              border: "0.5px solid rgba(99,91,210,0.3)",
-            }}
-            icon={<ShieldOff className="w-[18px] h-[18px] text-indigo-300" />}
-            title="Access Restricted"
-            description="Account approved, but no roles have been assigned yet. Contact your administrator or request access."
-            buttonLabel="Request Access"
-            onAction={() => setShowModal(true)}
-          />
-          {showModal && <RequestAccessModal {...modalProps} />}
-        </>
-      );
-    }
+  if (!granted && user && denialReason === "not_permitted") {
+    return (
+      <BlockedCard
+        iconStyle={{
+          background: "rgba(99,91,210,0.14)",
+          border: "0.5px solid rgba(99,91,210,0.3)",
+        }}
+        icon={<ShieldOff className="w-[18px] h-[18px] text-indigo-300" />}
+        title="Access Revoked"
+        description="Your account access has been disabled by an administrator. Please contact them for assistance."
+      />
+    );
   }
 
   return <>{children}</>;

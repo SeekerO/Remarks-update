@@ -21,17 +21,12 @@ import {
 import { saveUserProfile } from "./saveUserProfile";
 import { useOfflineLogSync } from "@/lib/hooks/useOfflineLogSync";
 
-export type UserRole = "editor" | "user" | "comelec";
-
 interface CustomUser extends User {
   isAdmin?: boolean;
   isPermitted?: boolean;
   allowedPages?: string[];
-  roles?: UserRole[];
   allowedPresets?: string[];
-  subscriptionStartDate?: string;
-  subscriptionDays?: number;
-  subscriptionInfinite?: boolean;
+  notes?: string;
 }
 
 interface AuthContextType {
@@ -54,20 +49,14 @@ function extractUserFields(userData: Record<string, any>) {
         ? rawPresets
         : undefined;
 
-  const sub = userData.subscription || {};
-
   return {
     isAdmin: userData.isAdmin || false,
+    // Default to true if not explicitly set to false
     isPermitted:
       userData.isPermitted !== undefined ? userData.isPermitted : true,
     allowedPages: userData.allowedPages,
-    roles: Array.isArray(sub.roles) ? (sub.roles as UserRole[]) : [],
     allowedPresets,
-    subscriptionStartDate: sub.subscriptionStartDate,
-    subscriptionDays: sub.subscriptionDays,
-    subscriptionInfinite:
-      sub.subscriptionInfinite === true ||
-      userData.subscriptionInfinite === true,
+    notes: userData.notes || "",
   };
 }
 
@@ -102,13 +91,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
         let fields = {
           isAdmin: false,
-          isPermitted: false,
+          isPermitted: true, // Default true
           allowedPages: undefined,
-          roles: [],
           allowedPresets: undefined,
-          subscriptionStartDate: undefined,
-          subscriptionDays: undefined,
-          subscriptionInfinite: false,
+          notes: "",
         };
 
         if (snapshot.exists()) {
@@ -118,7 +104,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         setUser({ ...currentUser, ...fields });
         setIsLoading(false);
 
-        // ✅ Write presence as object { online, lastSeen }
+        // Write presence
         const presenceRef = ref(db, `presence/${currentUser.uid}`);
         const connectedRef = ref(db, ".info/connected");
 
@@ -132,7 +118,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           }
         });
 
-        // ✅ Subscribe to own presence node and sync to isOnline state
         unsubscribePresence = onValue(presenceRef, (snap) => {
           if (snap.exists()) {
             setIsOnline(snap.val()?.online === true);
@@ -141,7 +126,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           }
         });
 
-        // ✅ Subscribe to user profile changes
         unsubscribePermissions = onValue(userProfileRef, (snap) => {
           if (isInitialLoad) {
             isInitialLoad = false;
@@ -154,16 +138,12 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
             setUser((prev) => {
               if (!prev) return null;
 
-              // ✅ Fixed semicolon bug from original
               const hasChanged =
                 prev.isAdmin !== next.isAdmin ||
                 prev.isPermitted !== next.isPermitted ||
-                prev.subscriptionInfinite !== next.subscriptionInfinite ||
-                prev.subscriptionStartDate !== next.subscriptionStartDate ||
-                prev.subscriptionDays !== next.subscriptionDays ||
+                prev.notes !== next.notes ||
                 JSON.stringify(prev.allowedPages) !==
                   JSON.stringify(next.allowedPages) ||
-                JSON.stringify(prev.roles) !== JSON.stringify(next.roles) ||
                 JSON.stringify(prev.allowedPresets) !==
                   JSON.stringify(next.allowedPresets);
 
@@ -200,7 +180,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   };
 
   const logout = async () => {
-    // ✅ Immediately mark offline + cancel onDisconnect before signing out
     if (auth.currentUser) {
       const presenceRef = ref(db, `presence/${auth.currentUser.uid}`);
       await onDisconnect(presenceRef).cancel();
