@@ -42,16 +42,10 @@ export const TOOL_CREDIT_CONFIGS: ToolCreditConfig[] = [
     defaultFreeCredits: 10,
     urlPath: "/edit/resadjuster",
   },
-  {
-    toolId: "pdfconverter",
-    label: "PDF Converter",
-    icon: "🔄",
-    defaultFreeCredits: 10,
-    urlPath: "/document/pdfconverter",
-  },
+
   {
     toolId: "pdf",
-    label: "PDF Editor",
+    label: "PDF Converter",
     icon: "📄",
     defaultFreeCredits: 10,
     urlPath: "/document/pdf",
