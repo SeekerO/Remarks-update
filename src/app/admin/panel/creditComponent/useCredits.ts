@@ -17,13 +17,20 @@ interface UseCreditsReturn {
   /** Returns true if the deduction succeeded, false if out of credits */
   deductCredit: () => Promise<boolean>;
   /** Admin only: set credits for this tool */
-  setCredits: (remaining: number, total: number, unlimited: boolean) => Promise<void>;
+  setCredits: (
+    remaining: number,
+    total: number,
+    unlimited: boolean,
+  ) => Promise<void>;
   isUnlimited: boolean;
   hasCredits: boolean;
 }
 
-export function useCredits(uid: string | undefined, toolId: string): UseCreditsReturn {
-  const [credits, setCredits] = useState<ToolCreditEntry | null>(null);
+export function useCredits(
+  uid: string | undefined,
+  toolId: string,
+): UseCreditsReturn {
+  const [credits, setCreditsState] = useState<ToolCreditEntry | null>(null);
   const [loading, setLoading] = useState(true);
 
   const config = TOOL_CREDIT_CONFIGS.find((t) => t.toolId === toolId);
@@ -37,11 +44,13 @@ export function useCredits(uid: string | undefined, toolId: string): UseCreditsR
     const creditRef = ref(db, `users/${uid}/toolCredits/${toolId}`);
     const unsub = onValue(creditRef, (snap) => {
       if (snap.exists()) {
-        setCredits(snap.val() as ToolCreditEntry);
+        setCreditsState(snap.val() as ToolCreditEntry);
       } else {
         // First time — initialize with default free credits
-        const defaultEntry = config ? getDefaultEntry(config) : { remaining: 10, total: 10, unlimited: false };
-        setCredits(defaultEntry);
+        const defaultEntry = config
+          ? getDefaultEntry(config)
+          : { remaining: 10, total: 10, unlimited: false };
+        setCreditsState(defaultEntry);
       }
       setLoading(false);
     });
@@ -57,7 +66,9 @@ export function useCredits(uid: string | undefined, toolId: string): UseCreditsR
     // First check if entry exists, if not initialize it
     const snap = await get(creditRef);
     if (!snap.exists()) {
-      const defaultEntry = config ? getDefaultEntry(config) : { remaining: 10, total: 10, unlimited: false };
+      const defaultEntry = config
+        ? getDefaultEntry(config)
+        : { remaining: 10, total: 10, unlimited: false };
       // We'll let the transaction below handle writing
       const { set } = await import("firebase/database");
       await set(creditRef, defaultEntry);
@@ -68,7 +79,9 @@ export function useCredits(uid: string | undefined, toolId: string): UseCreditsR
     await runTransaction(creditRef, (current: ToolCreditEntry | null) => {
       if (!current) {
         // Shouldn't happen after initialization, but handle gracefully
-        const defaultEntry = config ? getDefaultEntry(config) : { remaining: 10, total: 10, unlimited: false };
+        const defaultEntry = config
+          ? getDefaultEntry(config)
+          : { remaining: 10, total: 10, unlimited: false };
         success = true;
         return { ...defaultEntry, remaining: defaultEntry.remaining - 1 };
       }
@@ -78,7 +91,7 @@ export function useCredits(uid: string | undefined, toolId: string): UseCreditsR
       }
       if (current.remaining <= 0) {
         success = false;
-        return current; // Abort transaction by returning current unchanged
+        return; // returning undefined aborts the transaction — don't write
       }
       success = true;
       return { ...current, remaining: current.remaining - 1 };
@@ -88,7 +101,11 @@ export function useCredits(uid: string | undefined, toolId: string): UseCreditsR
   }, [uid, toolId, config]);
 
   const setCredits = useCallback(
-    async (remaining: number, total: number, unlimited: boolean): Promise<void> => {
+    async (
+      remaining: number,
+      total: number,
+      unlimited: boolean,
+    ): Promise<void> => {
       if (!uid || !toolId) return;
       const { set } = await import("firebase/database");
       await set(ref(db, `users/${uid}/toolCredits/${toolId}`), {
@@ -97,13 +114,20 @@ export function useCredits(uid: string | undefined, toolId: string): UseCreditsR
         unlimited,
       });
     },
-    [uid, toolId]
+    [uid, toolId],
   );
 
   const isUnlimited = credits?.unlimited ?? false;
   const hasCredits = isUnlimited || (credits?.remaining ?? 0) > 0;
 
-  return { credits, loading, deductCredit, setCredits, isUnlimited, hasCredits };
+  return {
+    credits,
+    loading,
+    deductCredit,
+    setCredits,
+    isUnlimited,
+    hasCredits,
+  };
 }
 
 // Utility: read all tool credits for a user (used in admin panel)
