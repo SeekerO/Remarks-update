@@ -19,6 +19,7 @@ import {
   ShieldAlert,
 } from "lucide-react";
 import { useAuth } from "@/lib/auth/AuthContext";
+import { HealthStatus, useProviderHealth } from "./hooks/useProviderHealth";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -189,12 +190,28 @@ interface SelectorProps {
   onSelect: (provider: ProviderOption, model: ModelOption) => void;
 }
 
+function getStatusColor(
+  status: HealthStatus | undefined,
+  fallback: string,
+): string {
+  if (!status || status === "online") return fallback;
+  return (
+    {
+      checking: "#f59e0b",
+      offline: "#f87171",
+      auth_error: "#fb923c",
+      unconfigured: "rgba(255,255,255,0.18)",
+    }[status] ?? fallback
+  );
+}
+
 const ProviderModelSelector = ({
   selectedProvider,
   selectedModel,
   isLoading,
+  health,
   onSelect,
-}: SelectorProps) => {
+}: SelectorProps & { health: Record<string, HealthStatus> }) => {
   const [open, setOpen] = useState(false);
   const [hoveredProvider, setHoveredProvider] =
     useState<ProviderOption>(selectedProvider);
@@ -210,10 +227,9 @@ const ProviderModelSelector = ({
     return () => document.removeEventListener("mousedown", handler);
   }, [open]);
 
-  // Keep hovered provider in sync when selected provider changes externally
   useEffect(() => {
     setHoveredProvider(selectedProvider);
-  }, [selectedProvider]);
+  }, [selectedProvider, open]); // ← open must be here
 
   return (
     <div ref={ref} className="relative flex-1 min-w-0">
@@ -223,9 +239,19 @@ const ProviderModelSelector = ({
         disabled={isLoading}
         className="flex items-center gap-1.5 mt-0.5 group/sel disabled:opacity-50"
       >
+        {/* Single dot — health-aware */}
         <span
-          className="w-1.5 h-1.5 rounded-full flex-shrink-0 transition-colors duration-300"
-          style={{ background: isLoading ? "#f59e0b" : selectedProvider.color }}
+          className={`w-1.5 h-1.5 rounded-full flex-shrink-0 transition-colors duration-300 ${
+            health[selectedProvider.id] === "checking" ? "animate-pulse" : ""
+          }`}
+          style={{
+            background: isLoading
+              ? "#f59e0b"
+              : getStatusColor(
+                  health[selectedProvider.id],
+                  selectedProvider.color,
+                ),
+          }}
         />
         <span className="text-[10px] text-white/40 group-hover/sel:text-white/65 transition-colors flex items-center gap-0.5">
           {isLoading
@@ -235,7 +261,7 @@ const ProviderModelSelector = ({
         </span>
       </button>
 
-      {/* Two-column dropdown */}
+      {/* Dropdown */}
       <AnimatePresence>
         {open && (
           <motion.div
@@ -256,10 +282,10 @@ const ProviderModelSelector = ({
               className="flex flex-col py-1.5 flex-shrink-0"
               style={{
                 borderRight: "0.5px solid rgba(255,255,255,0.06)",
-                minWidth: 112,
+                minWidth: 120,
               }}
             >
-              <p className="text-[9px] uppercase tracking-[0.08em] text-white/18 px-3 pb-1.5 pt-0.5">
+              <p className="text-[9px] uppercase tracking-[0.08em] text-white/30 px-3 pb-1.5 pt-0.5">
                 Provider
               </p>
               {PROVIDERS.map((p) => (
@@ -277,12 +303,17 @@ const ProviderModelSelector = ({
                       : undefined
                   }
                 >
+                  {/* Single dot — provider color when online, status color otherwise */}
                   <span
-                    className="w-1.5 h-1.5 rounded-full flex-shrink-0"
-                    style={{ background: p.color }}
+                    className={`w-1.5 h-1.5 rounded-full flex-shrink-0 transition-colors duration-300 ${
+                      health[p.id] === "checking" ? "animate-pulse" : ""
+                    }`}
+                    style={{
+                      background: getStatusColor(health[p.id], p.color),
+                    }}
                   />
                   <span
-                    className="text-[11.5px]"
+                    className="text-[11.5px] flex-1 text-left"
                     style={{
                       color:
                         selectedProvider.id === p.id
@@ -293,7 +324,7 @@ const ProviderModelSelector = ({
                     {p.label}
                   </span>
                   {selectedProvider.id === p.id && (
-                    <span className="ml-auto w-1 h-1 rounded-full bg-indigo-400 flex-shrink-0" />
+                    <span className="w-1 h-1 rounded-full bg-indigo-400 flex-shrink-0" />
                   )}
                 </button>
               ))}
@@ -301,7 +332,7 @@ const ProviderModelSelector = ({
 
             {/* Model column */}
             <div className="flex flex-col py-1.5 flex-1">
-              <p className="text-[9px] uppercase tracking-[0.08em] text-white/18 px-3 pb-1.5 pt-0.5">
+              <p className="text-[9px] uppercase tracking-[0.08em] text-white/30 px-3 pb-1.5 pt-0.5">
                 Model
               </p>
               {hoveredProvider.models.map((m) => {
@@ -337,7 +368,7 @@ const ProviderModelSelector = ({
                         {m.label}
                       </span>
                     </div>
-                    <span className="text-[9px] text-white/22 ml-2 flex-shrink-0">
+                    <span className="text-[9px] text-white/30 ml-2 flex-shrink-0">
                       {m.tag}
                     </span>
                   </button>
@@ -483,15 +514,42 @@ export default function AiAssistant({
   const { user } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
-  const [messages, setMessages] = useState<Message[]>([]);
+  const [messages, setMessages] = useState<Message[]>(() => {
+    try {
+      const saved = localStorage.getItem("avexi-chat-history");
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [hasUnread, setHasUnread] = useState(false);
 
-  const [selectedProvider, setSelectedProvider] =
-    useState<ProviderOption>(DEFAULT_PROVIDER);
-  const [selectedModel, setSelectedModel] =
-    useState<ModelOption>(DEFAULT_MODEL);
+  const [selectedProvider, setSelectedProvider] = useState(DEFAULT_PROVIDER);
+
+  useEffect(() => {
+    const saved = localStorage.getItem("avexi-selected-provider");
+    if (saved)
+      setSelectedProvider(
+        PROVIDERS.find((p) => p.id === saved) ?? DEFAULT_PROVIDER,
+      );
+  }, []);
+
+  const [selectedModel, setSelectedModel] = useState<ModelOption>(() => {
+    try {
+      const providerId = localStorage.getItem("avexi-selected-provider");
+      const modelId = localStorage.getItem("avexi-selected-model");
+      const provider =
+        PROVIDERS.find((p) => p.id === providerId) ?? DEFAULT_PROVIDER;
+      return (
+        provider.models.find((m) => m.id === modelId) ?? provider.models[0]
+      );
+    } catch {
+      return DEFAULT_MODEL;
+    }
+  });
+
   const [privacyDismissed, setPrivacyDismissed] = useState(false);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -504,7 +562,19 @@ export default function AiAssistant({
   ) => {
     setSelectedProvider(provider);
     setSelectedModel(model);
+    localStorage.setItem("avexi-selected-provider", provider.id);
+    localStorage.setItem("avexi-selected-model", model.id);
   };
+
+  const health = useProviderHealth(isOpen);
+
+  const [isMobile, setIsMobile] = useState(false);
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < 640);
+    check();
+    window.addEventListener("resize", check);
+    return () => window.removeEventListener("resize", check);
+  }, []);
 
   useEffect(() => {
     if (isOpen && messages.length === 0) {
@@ -513,15 +583,23 @@ export default function AiAssistant({
         {
           id: uid(),
           role: "assistant",
-          content: `Hello${firstName ? `, ${firstName}` : ""}! I'm your Avexi Assistant. Ask me about any Avexi tool, voter registration procedures, or document workflows.`,
+          content: `Hello${firstName ? `, ${firstName}` : ""}! I'm your Avexi Assistant...`,
           timestamp: Date.now(),
         },
       ]);
     }
     if (!isOpen) setPrivacyDismissed(false);
-  }, [isOpen]);
+  }, [isOpen]); // keep dep array as-is — messages.length===0 is the guard
 
   useEffect(() => {
+    try {
+      // Keep only last 50 messages to avoid bloating storage
+      localStorage.setItem(
+        "avexi-chat-history",
+        JSON.stringify(messages.slice(-50)),
+      );
+    } catch {}
+
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, isLoading]);
 
@@ -623,6 +701,7 @@ export default function AiAssistant({
     abortRef.current?.abort();
     setIsLoading(false);
     setInput("");
+    localStorage.removeItem("avexi-chat-history");
     setMessages([
       {
         id: uid(),
@@ -633,8 +712,8 @@ export default function AiAssistant({
     ]);
   };
 
-  const panelW = isExpanded ? 420 : 355;
-  const panelH = isExpanded ? 600 : 488;
+  const panelW = isMobile ? "100vw" : isExpanded ? 420 : 355;
+  const panelH = isMobile ? "100dvh" : isExpanded ? 600 : 488;
   const showQuickPrompts = messages.length <= 1 && !isLoading;
 
   return (
@@ -677,13 +756,15 @@ export default function AiAssistant({
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.93, y: 14 }}
             transition={{ duration: 0.26, ease: [0.16, 1, 0.3, 1] }}
-            className="fixed bottom-6 right-6 z-[901] flex flex-col overflow-hidden"
+            className="fixed z-[901] flex flex-col overflow-hidden"
             style={{
               width: panelW,
               height: panelH,
+              bottom: isMobile ? 0 : 24,
+              right: isMobile ? 0 : 24,
               background: "linear-gradient(155deg, #0d0d1a 0%, #0f0f1e 100%)",
               border: "0.5px solid rgba(99,102,241,0.18)",
-              borderRadius: 18,
+              borderRadius: isMobile ? "16px 16px 0 0" : 18,
               boxShadow:
                 "0 24px 60px rgba(0,0,0,0.85), 0 0 0 0.5px rgba(255,255,255,0.04)",
               transition: "width 0.22s ease, height 0.22s ease",
@@ -720,6 +801,7 @@ export default function AiAssistant({
                   selectedProvider={selectedProvider}
                   selectedModel={selectedModel}
                   isLoading={isLoading}
+                  health={health} // ← add this
                   onSelect={handleProviderModelSelect}
                 />
               </div>
@@ -732,17 +814,19 @@ export default function AiAssistant({
                 >
                   <RotateCcw className="w-3 h-3" />
                 </button>
-                <button
-                  onClick={() => setIsExpanded((v) => !v)}
-                  title={isExpanded ? "Compact" : "Expand"}
-                  className="p-1.5 rounded-lg text-white/25 hover:text-white/65 hover:bg-white/[0.05] transition-all"
-                >
-                  {isExpanded ? (
-                    <Minimize2 className="w-3 h-3" />
-                  ) : (
-                    <Maximize2 className="w-3 h-3" />
-                  )}
-                </button>
+                {!isMobile && (
+                  <button
+                    onClick={() => setIsExpanded((v) => !v)}
+                    title={isExpanded ? "Compact" : "Expand"}
+                    className="p-1.5 rounded-lg text-white/25 hover:text-white/65 hover:bg-white/[0.05] transition-all"
+                  >
+                    {isExpanded ? (
+                      <Minimize2 className="w-3 h-3" />
+                    ) : (
+                      <Maximize2 className="w-3 h-3" />
+                    )}
+                  </button>
+                )}
                 <button
                   onClick={() => setIsOpen(false)}
                   title="Close"

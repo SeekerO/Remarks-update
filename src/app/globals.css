@@ -943,3 +943,8 @@ input[type="file"]::-webkit-file-upload-button:hover {
 .font-dm-mono {
   font-family: 'DM Mono', monospace !important;
 }
+
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.25; }
+}
