@@ -5,6 +5,7 @@ import { useAuth } from "@/lib/auth/AuthContext";
 import { usePathname } from "next/navigation";
 import MessageNotification from "../messageNotification";
 import IncomingCallToast from "../callNotificationOverlay";
+import AiAssistant from "../aiAssistant";
 
 
 interface WrapperProps {
@@ -42,6 +43,7 @@ const ThemeWrapper: React.FC<WrapperProps> = ({ children }) => {
                               no padding needed on desktop (persistent sidebar)
       */}
       <MessageNotification />
+      <AiAssistant/>
 
       <div
         className={[
