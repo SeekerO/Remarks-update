@@ -5,7 +5,6 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { google } from "googleapis";
-import { tryAuth } from "@/lib/auth/requireAuth";
 
 type Direction = "OUTGOING" | "INCOMING";
 
@@ -76,9 +75,6 @@ function parseCN(cn: string): { type: "R" | "E"; year: number; num: number } {
 
 // GET — fetch all entries from a specific direction sheet
 export async function GET(req: NextRequest) {
-  const [user, errRes] = await tryAuth();
-  if (errRes) return errRes;
-
   const { searchParams } = new URL(req.url);
   const spreadsheetId = searchParams.get("sheetId");
   const direction = (searchParams.get("direction") ?? "OUTGOING") as Direction;
@@ -131,9 +127,6 @@ export async function GET(req: NextRequest) {
 
 // POST — append a new entry to the correct direction sheet
 export async function POST(req: NextRequest) {
-  const [user, errRes] = await tryAuth();
-  if (errRes) return errRes;
-
   const { spreadsheetId, direction, entry } = await req.json();
 
   if (!spreadsheetId || !entry || !direction) {
@@ -165,7 +158,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ success: true });
   } catch (err: any) {
     console.error(`[logbook POST ${direction}]`, err);
-    return NextResponse.json( 
+    return NextResponse.json(
       { error: err?.message ?? "Failed to save entry." },
       { status: 500 },
     );
@@ -174,9 +167,6 @@ export async function POST(req: NextRequest) {
 
 // PUT — update an existing entry by row index in the correct direction sheet
 export async function PUT(req: NextRequest) {
-  const [user, errRes] = await tryAuth();
-  if (errRes) return errRes;
-
   const { spreadsheetId, direction, rowIndex, entry } = await req.json();
 
   if (!spreadsheetId || !direction || !rowIndex || !entry) {
@@ -214,9 +204,6 @@ export async function PUT(req: NextRequest) {
 
 // DELETE — delete a row from the correct direction sheet
 export async function DELETE(req: NextRequest) {
-  const [user, errRes] = await tryAuth();
-  if (errRes) return errRes;
-
   const { spreadsheetId, direction, rowIndex } = await req.json();
 
   if (!spreadsheetId || !direction || !rowIndex) {

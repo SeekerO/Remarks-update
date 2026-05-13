@@ -7,7 +7,6 @@ import {
   CloudUpload, Settings2, Check, AlertCircle,
   ArrowUpFromLine, ArrowDownToLine,
 } from "lucide-react";
-import { apiFetch } from "@/lib/util/apiFetch";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -487,10 +486,9 @@ export default function DocumentLogbookPage() {
     if (!sheetId) return;
     showStatus({ kind: "loading" });
     try {
-      // ← apiFetch: refreshes token + handles 401 redirect
       const [outRes, inRes] = await Promise.all([
-        apiFetch(`/api/logbook?sheetId=${encodeURIComponent(sheetId)}&direction=OUTGOING`),
-        apiFetch(`/api/logbook?sheetId=${encodeURIComponent(sheetId)}&direction=INCOMING`),
+        fetch(`/api/logbook?sheetId=${encodeURIComponent(sheetId)}&direction=OUTGOING`),
+        fetch(`/api/logbook?sheetId=${encodeURIComponent(sheetId)}&direction=INCOMING`),
       ]);
       const [outData, inData] = await Promise.all([outRes.json(), inRes.json()]);
       if (!outRes.ok) throw new Error(outData.error);
@@ -530,14 +528,10 @@ export default function DocumentLogbookPage() {
   const pushEntry = useCallback(
     async (entry: LogEntry) => {
       if (!sheetId) return;
-      // ← apiFetch: no need for Content-Type header, apiFetch sets it automatically
-      const res = await apiFetch("/api/logbook", {
+      const res = await fetch("/api/logbook", {
         method: "POST",
-        body: JSON.stringify({
-          spreadsheetId: sheetId,
-          direction: entry.direction,
-          entry,
-        }),
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ spreadsheetId: sheetId, direction: entry.direction, entry }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
@@ -548,9 +542,9 @@ export default function DocumentLogbookPage() {
   const updateEntry = useCallback(
     async (entry: LogEntry) => {
       if (!sheetId || !entry.rowIndex) return;
-      // ← apiFetch
-      const res = await apiFetch("/api/logbook", {
+      const res = await fetch("/api/logbook", {
         method: "PUT",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           spreadsheetId: sheetId,
           direction: entry.direction,
@@ -567,9 +561,9 @@ export default function DocumentLogbookPage() {
   const deleteEntryFromSheet = useCallback(
     async (rowIndex: number, direction: Direction) => {
       if (!sheetId) return;
-      // ← apiFetch
-      const res = await apiFetch("/api/logbook", {
+      const res = await fetch("/api/logbook", {
         method: "DELETE",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ spreadsheetId: sheetId, direction, rowIndex }),
       });
       const data = await res.json();

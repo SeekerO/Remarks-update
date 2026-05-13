@@ -1,4 +1,3 @@
-import { apiFetch } from '@/lib/util/apiFetch';
 import { NextResponse } from 'next/server';
 
 export const runtime = 'nodejs';
@@ -10,7 +9,7 @@ export async function GET() {
     }
 
     try {
-        const res = await apiFetch('https://api.remove.bg/v1.0/account', {
+        const res = await fetch('https://api.remove.bg/v1.0/account', {
             method: 'GET',
             headers: {
                 'X-Api-Key': apiKey,

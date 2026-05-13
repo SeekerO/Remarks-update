@@ -2,54 +2,7 @@
 // Multi-provider AI assistant: Groq, Google AI Studio, OpenRouter, Cerebras
 // Each provider uses an OpenAI-compatible endpoint except Google (uses its own OpenAI compat layer)
 
-import { tryAuth } from "@/lib/auth/requireAuth";
 import { NextRequest, NextResponse } from "next/server";
-
-// ── Server-side Rate Limiter (Token Bucket per UID) ───────────────────────────
-// apiFetch must NOT be used here — it's a client-only util (uses Firebase browser
-// SDK + window.location). Server routes use native fetch directly.
-
-const RATE_LIMIT = {
-  maxTokens: 10,       // max burst: 10 requests
-  refillRate: 1,       // tokens restored per second
-  windowSec: 60,       // rolling window for refill reference
-};
-
-interface Bucket {
-  tokens: number;
-  lastRefill: number; // epoch ms
-}
-
-// In-memory store: uid → bucket
-// Note: resets on cold start. For multi-instance deployments, swap with Redis/KV.
-const buckets = new Map<string, Bucket>();
-
-function consumeToken(uid: string): { allowed: boolean; remaining: number } {
-  const now = Date.now();
-  let bucket = buckets.get(uid);
-
-  if (!bucket) {
-    bucket = { tokens: RATE_LIMIT.maxTokens, lastRefill: now };
-  }
-
-  // Refill tokens based on elapsed time
-  const elapsed = (now - bucket.lastRefill) / 1000; // seconds
-  const refilled = Math.floor(elapsed * RATE_LIMIT.refillRate);
-
-  if (refilled > 0) {
-    bucket.tokens = Math.min(RATE_LIMIT.maxTokens, bucket.tokens + refilled);
-    bucket.lastRefill = now;
-  }
-
-  if (bucket.tokens <= 0) {
-    buckets.set(uid, bucket);
-    return { allowed: false, remaining: 0 };
-  }
-
-  bucket.tokens -= 1;
-  buckets.set(uid, bucket);
-  return { allowed: true, remaining: bucket.tokens };
-}
 
 // ── System Prompt ──────────────────────────────────────────────────────────────
 
@@ -114,11 +67,12 @@ const PROVIDER_CONFIG: Record<
 
 // ── Retry / Fallback helpers ───────────────────────────────────────────────────
 
+/** Sleep for ms milliseconds */
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 /**
  * Call one provider/model with up to maxRetries retries on 429.
- * Uses native fetch — safe for server-side (Node.js) execution.
+ * Returns the parsed JSON body and the HTTP status, or throws on non-retriable errors.
  */
 async function callProviderWithRetry(
   url: string,
@@ -130,7 +84,6 @@ async function callProviderWithRetry(
   let lastError: { data: any; status: number } | null = null;
 
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
-    // ✅ Native fetch — no browser APIs, no session cookies, no window
     const res = await fetch(url, {
       method: "POST",
       headers,
@@ -139,8 +92,10 @@ async function callProviderWithRetry(
 
     const data = await res.json();
 
+    // Success
     if (res.ok) return { data, status: res.status };
 
+    // 429 rate-limited: back off and retry
     if (res.status === 429) {
       const retryAfter = res.headers.get("Retry-After");
       const delay = retryAfter
@@ -158,14 +113,19 @@ async function callProviderWithRetry(
       }
     }
 
-    if (res.status === 404) return { data, status: res.status };
+    // 404 model not found: don't retry, let caller handle
+    if (res.status === 404) {
+      return { data, status: res.status };
+    }
 
+    // Any other error surface immediately
     return { data, status: res.status };
   }
 
   return lastError!;
 }
 
+/** Build request headers for a given provider. */
 function buildHeaders(
   provider: string,
   apiKey: string,
@@ -190,26 +150,6 @@ function isOk(status: number) {
 
 export async function POST(req: NextRequest) {
   try {
-    // 1. Auth check
-    const [user, errRes] = await tryAuth();
-    if (errRes) return errRes;
-
-    // 2. Per-user rate limiting (token bucket)
-    const { allowed, remaining } = consumeToken(user.uid);
-    if (!allowed) {
-      return NextResponse.json(
-        { error: "Too many requests. Please wait before sending another message." },
-        {
-          status: 429,
-          headers: {
-            "X-RateLimit-Limit": String(RATE_LIMIT.maxTokens),
-            "X-RateLimit-Remaining": "0",
-            "Retry-After": String(Math.ceil(1 / RATE_LIMIT.refillRate)),
-          },
-        },
-      );
-    }
-
     const {
       messages,
       pageContext,
@@ -218,7 +158,6 @@ export async function POST(req: NextRequest) {
       model,
     } = await req.json();
 
-    // 3. Input validation
     if (!messages || !Array.isArray(messages)) {
       return NextResponse.json(
         { error: "Invalid messages array" },
@@ -230,7 +169,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Too many messages" }, { status: 400 });
     }
 
-    // 4. Resolve provider config
+    // Resolve provider config
     const config = PROVIDER_CONFIG[provider];
     if (!config) {
       return NextResponse.json(
@@ -239,7 +178,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // 5. Resolve API key (server-side env only — never exposed to client)
+    // Resolve API key
     const apiKey = process.env[config.envKey];
     if (!apiKey) {
       return NextResponse.json(
@@ -250,13 +189,14 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // 6. Validate model against allowlist
+    // Resolve model — validate against allowlist, fall back to default (fixes 404 on bad model IDs)
     const resolvedModel = config.allowedModels.includes(model)
       ? model
       : config.defaultModel;
 
-    // 7. Build system prompt
+    // Build system prompt with optional context
     let systemPrompt = SYSTEM_PROMPT;
+    // Add before appending:
     if (pageContext)
       systemPrompt += `\n\nCurrent page context: ${pageContext.slice(0, 500)}`;
     if (userName)
@@ -272,14 +212,14 @@ export async function POST(req: NextRequest) {
       ],
     };
 
-    // 8. Primary attempt (with 429 retry + backoff)
+    // Primary attempt (with 429 retry + backoff)
     let { data, status } = await callProviderWithRetry(
       config.baseUrl,
       buildHeaders(provider, apiKey),
       requestBody,
     );
 
-    // 9. 404: model not found — retry with provider's default
+    // 404: model not found — retry with provider's default model
     if (status === 404) {
       console.warn(
         `[ai-assistant] 404 for model "${resolvedModel}" on ${provider}. Falling back to default: ${config.defaultModel}`,
@@ -292,7 +232,7 @@ export async function POST(req: NextRequest) {
       ));
     }
 
-    // 10. Still failing — try next available provider
+    // Still failing (e.g. 429 exhausted) — try next available provider
     if (!isOk(status)) {
       console.warn(
         `[ai-assistant] ${provider} failed with ${status}. Attempting provider fallback...`,
@@ -340,10 +280,7 @@ export async function POST(req: NextRequest) {
     }
 
     const content = data.choices?.[0]?.message?.content ?? "";
-    return NextResponse.json(
-      { content },
-      { headers: { "X-RateLimit-Remaining": String(remaining) } },
-    );
+    return NextResponse.json({ content });
   } catch (err: any) {
     console.error("[ai-assistant] Route error:", err.message);
     return NextResponse.json(

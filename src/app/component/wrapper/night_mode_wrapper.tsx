@@ -7,7 +7,6 @@ import MessageNotification from "../messageNotification";
 import IncomingCallToast from "../callNotificationOverlay";
 import AiAssistant from "../aiAssistant";
 
-
 interface WrapperProps {
   children: React.ReactNode;
 }
@@ -33,7 +32,12 @@ const ThemeWrapper: React.FC<WrapperProps> = ({ children }) => {
 
   return (
     <main className="flex h-screen w-screen overflow-hidden font-sans bg-grid">
-      {showSidebar && <Sidebar />}
+      {showSidebar && (
+        <>
+          <Sidebar />
+          <AiAssistant />
+        </>
+      )}
 
       {/*
         Page content area:
@@ -43,7 +47,6 @@ const ThemeWrapper: React.FC<WrapperProps> = ({ children }) => {
                               no padding needed on desktop (persistent sidebar)
       */}
       <MessageNotification />
-      <AiAssistant/>
 
       <div
         className={[
@@ -51,9 +54,7 @@ const ThemeWrapper: React.FC<WrapperProps> = ({ children }) => {
           showSidebar ? "pb-16 lg:pb-0" : "",
         ].join(" ")}
       >
-        
-          <IncomingCallToast>{children}</IncomingCallToast>
-        
+        <IncomingCallToast>{children}</IncomingCallToast>
       </div>
     </main>
   );

@@ -1,6 +1,5 @@
-import { tryAuth } from "@/lib/auth/requireAuth";
 import { NextResponse } from "next/server";
-import { apiFetch } from "@/lib/util/apiFetch";
+
 const PING_CONFIGS = [
   {
     id: "groq",
@@ -50,10 +49,6 @@ const PING_CONFIGS = [
 
 export async function GET(req: Request) {
   // ── Auth check ──────────────────────────────────────────
-
-  const [user, errRes] = await tryAuth();
-  if (errRes) return errRes;
-
   const secret = req.headers.get("x-health-secret");
 
   if (secret !== process.env.HEALTH_SECRET) {
@@ -68,7 +63,7 @@ export async function GET(req: Request) {
       if (!apiKey) return { id, status: "unconfigured" };
 
       try {
-        const res = await apiFetch(url, {
+        const res = await fetch(url, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
