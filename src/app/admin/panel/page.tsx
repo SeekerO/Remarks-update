@@ -62,8 +62,20 @@ export default function AdminPanel() {
   const handleToggleAdmin = useCallback(
     async (userId: string, currentAdminStatus: boolean) => {
       if (userId === currentUserId) return;
+
+      // 1. Update Realtime Database (for UI/presence)
       await update(ref(db, `users/${userId}`), {
         isAdmin: !currentAdminStatus,
+      });
+
+      // 2. Set the Firebase Auth custom claim (for API token verification)
+      await fetch("/api/admin/set-role", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          targetUid: userId,
+          isAdmin: !currentAdminStatus,
+        }),
       });
     },
     [currentUserId],
@@ -86,12 +98,9 @@ export default function AdminPanel() {
     [],
   );
 
-  const handleSaveNotes = useCallback(
-    async (userId: string, notes: string) => {
-      await update(ref(db, `users/${userId}`), { notes });
-    },
-    [],
-  );
+  const handleSaveNotes = useCallback(async (userId: string, notes: string) => {
+    await update(ref(db, `users/${userId}`), { notes });
+  }, []);
 
   if (!user)
     return (

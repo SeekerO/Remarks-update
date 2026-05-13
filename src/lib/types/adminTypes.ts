@@ -77,8 +77,8 @@ export const TOOL_META: Record<
     description: "COMELEC field offices directory across the Philippines",
     accent: "bg-emerald-500/10",
   },
-  "Test Page": {
-    description: "Testing page for new features.",
+  "Log Book": {
+    description: "KKK Document LogBook.",
     accent: "bg-orange-500/10",
   },
 };
@@ -319,8 +319,8 @@ export const navItems: NavItem[] = [
         sublinks: [],
       },
       {
-        name: "Test Page",
-        href: "/admin/test",
+        name: "Log Book",
+        href: "/admin/logbook",
         icon: TestTube,
         active: true,
         requiredRole: "admin",
