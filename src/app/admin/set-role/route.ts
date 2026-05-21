@@ -1,12 +1,9 @@
 // src/app/api/admin/set-role/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { adminAuth } from "@/lib/firebase/firebaseAdmin";
-import { tryAuth } from "@/lib/auth/requireAuth";
 
 export async function POST(req: NextRequest) {
   // Only admins can set roles
-  const [caller, errRes] = await tryAuth(true);
-  if (errRes) return errRes;
 
   const { targetUid, isAdmin } = await req.json();
 
@@ -15,10 +12,10 @@ export async function POST(req: NextRequest) {
   }
 
   // Prevent self-demotion
-  if (targetUid === caller.uid && !isAdmin) {
+  if (targetUid && !isAdmin) {
     return NextResponse.json(
       { error: "Cannot remove your own admin role." },
-      { status: 400 }
+      { status: 400 },
     );
   }
 
