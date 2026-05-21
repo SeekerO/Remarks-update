@@ -9,7 +9,7 @@
 
 import { useEffect, useRef, useState, useCallback } from "react";
 import { BrowserMultiFormatReader } from "@zxing/browser";
-import { NotFoundException } from "@zxing/library";
+import { NotFoundException, DecodeHintType, BarcodeFormat } from "@zxing/library";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -144,32 +144,60 @@ function BarcodeScanner({ onScan, onClose, targetField }: BarcodeScannerProps) {
     if (!videoRef.current) return;
     setScanStatus("scanning");
     setErrorMsg("");
+
+    // Stop any existing stream before starting a new one
     controlsRef.current?.stop();
+    controlsRef.current = null;
+
     try {
-      const reader = new BrowserMultiFormatReader();
+      // Hint the decoder to prioritise QR + common 1D formats, try harder at angles
+      const hints = new Map();
+      hints.set(DecodeHintType.POSSIBLE_FORMATS, [
+        BarcodeFormat.QR_CODE,
+        BarcodeFormat.CODE_128,
+        BarcodeFormat.CODE_39,
+        BarcodeFormat.EAN_13,
+        BarcodeFormat.EAN_8,
+        BarcodeFormat.DATA_MATRIX,
+      ]);
+      hints.set(DecodeHintType.TRY_HARDER, true);
+
+      const reader = new BrowserMultiFormatReader(hints);
       readerRef.current = reader;
-      const constraints: MediaTrackConstraints = cameraId
-        ? { deviceId: { exact: cameraId } }
-        : { facingMode: "environment" };
-      const controls = await reader.decodeFromConstraints(
-        { video: constraints },
+
+      // @zxing/browser@0.2.x: decodeFromVideoDevice(deviceId, videoEl, callback)
+      // Callback does NOT receive a ctrl arg - use controlsRef instead.
+      // Use a flag to guard against the callback firing after we already stopped.
+      let didCapture = false;
+      const deviceId = cameraId || undefined;
+
+      const controls = await reader.decodeFromVideoDevice(
+        deviceId,
         videoRef.current,
         (result, err) => {
-          if (result) {
+          if (result && !didCapture) {
+            didCapture = true;
             const val = result.getText();
             setScannedValue(val);
             setScanStatus("found");
             controlsRef.current?.stop();
+            controlsRef.current = null;
           }
           if (err && !(err instanceof NotFoundException)) {
             console.warn("[BarcodeScanner]", err);
           }
         },
       );
-      controlsRef.current = controls;
+
+      // Only store controls if capture hasn't happened yet (fast scan edge case)
+      if (!didCapture) {
+        controlsRef.current = controls;
+      } else {
+        controls.stop();
+      }
     } catch (err: any) {
       setErrorMsg(
-        err?.message?.includes("Permission")
+        err?.message?.includes("ermission")
           ? "Camera permission denied. Please allow camera access and try again."
           : (err?.message ?? "Could not access camera."),
       );
