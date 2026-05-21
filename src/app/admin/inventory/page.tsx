@@ -775,7 +775,7 @@ export default function InventoryManager() {
 
   // ── Main render ────────────────────────────────────────────────────────────
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen w-screen bg-gray-50">
       {scannerOpen && (
         <BarcodeScanner targetField={scanTarget} onScan={handleScanResult} onClose={() => setScannerOpen(false)} />
       )}
