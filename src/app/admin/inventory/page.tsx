@@ -622,6 +622,7 @@ export default function InventoryManager() {
   const [showForm, setShowForm] = useState(false);
 
   const [scannerOpen, setScannerOpen] = useState(false);
+  const [scannerKey, setScannerKey] = useState(0);
   const [scanTarget, setScanTarget] = useState<"serialNumber" | "propertyNumber">("serialNumber");
 
   // Load persisted data on mount
@@ -696,8 +697,15 @@ export default function InventoryManager() {
 
   // ── Scanner ────────────────────────────────────────────────────────────────
   function openScanner(field: "serialNumber" | "propertyNumber") {
+    // Close first (unmount old modal + release camera), then reopen with a new key.
+    // The 120ms delay gives the browser time to release the camera device before
+    // the next decodeFromVideoDevice call tries to acquire it again.
+    setScannerOpen(false);
     setScanTarget(field);
-    setScannerOpen(true);
+    setTimeout(() => {
+      setScannerKey((k) => k + 1);
+      setScannerOpen(true);
+    }, 120);
   }
 
   function handleScanResult(value: string) {
@@ -805,7 +813,7 @@ export default function InventoryManager() {
   return (
     <div className="min-h-screen w-screen bg-gray-50">
       {scannerOpen && (
-        <BarcodeScanner targetField={scanTarget} onScan={handleScanResult} onClose={() => setScannerOpen(false)} />
+        <BarcodeScanner key={scannerKey} targetField={scanTarget} onScan={handleScanResult} onClose={() => setScannerOpen(false)} />
       )}
 
       {showColModal && (
