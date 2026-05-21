@@ -1,7 +1,6 @@
 // src/app/api/logbook/route.ts
 // Google Sheets CRUD for Document Logbook
-// Supports two sheets: OUTGOING and INCOMING
-// Sheet columns (A–F): Control Number | Date | Type | Subject of the Document | Name of Sender and Copy Furnished | Notes
+// Sheet columns (A–G): Control Number | Date | Doc Type | Subject | Sender | Notes | Received Via
 
 import { NextRequest, NextResponse } from "next/server";
 import { google } from "googleapis";
@@ -11,10 +10,11 @@ type Direction = "OUTGOING" | "INCOMING";
 const HEADERS = [
   "Control Number",
   "Date",
-  "Type",
+  "Doc Type",
   "Subject of the Document",
-  "Name of Sender and Copy Furnished",
+  "Name of Sender and copy furnished",
   "Notes",
+  "Received via",
 ];
 
 function getSheets() {
@@ -29,11 +29,11 @@ function getSheets() {
 }
 
 function dataRange(direction: Direction) {
-  return `${direction}!A2:F`;
+  return `${direction}!A2:G`;
 }
 
 function headerRange(direction: Direction) {
-  return `${direction}!A1:F1`;
+  return `${direction}!A1:G1`;
 }
 
 async function ensureSheet(
@@ -62,9 +62,8 @@ async function ensureSheet(
   }
 }
 
-// Helper: parse control number back to type/year/num
+// Parse CN to extract type (E/R), year, num
 function parseCN(cn: string): { type: "R" | "E"; year: number; num: number } {
-  // format: KKK-E-25-0001
   const parts = cn.split("-");
   return {
     type: (parts[1] ?? "E") as "R" | "E",
@@ -73,21 +72,25 @@ function parseCN(cn: string): { type: "R" | "E"; year: number; num: number } {
   };
 }
 
-// GET — fetch all entries from a specific direction sheet
+const VALID_DOC_TYPES = ["Memorandum", "Letter", "Case Order"] as const;
+type DocType = typeof VALID_DOC_TYPES[number];
+
+function parseDocType(raw: string): DocType {
+  return VALID_DOC_TYPES.includes(raw as DocType)
+    ? (raw as DocType)
+    : "Memorandum";
+}
+
+// GET — fetch all entries
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const spreadsheetId = searchParams.get("sheetId");
   const direction = (searchParams.get("direction") ?? "OUTGOING") as Direction;
 
-  if (!spreadsheetId) {
-    return NextResponse.json(
-      { error: "Missing sheetId parameter." },
-      { status: 400 },
-    );
-  }
-  if (direction !== "OUTGOING" && direction !== "INCOMING") {
+  if (!spreadsheetId)
+    return NextResponse.json({ error: "Missing sheetId parameter." }, { status: 400 });
+  if (direction !== "OUTGOING" && direction !== "INCOMING")
     return NextResponse.json({ error: "Invalid direction." }, { status: 400 });
-  }
 
   try {
     const sheets = getSheets();
@@ -103,48 +106,48 @@ export async function GET(req: NextRequest) {
       const cn = row[0] ?? "";
       const parsed = parseCN(cn);
       return {
-        rowIndex: index + 2, // 1-based, row 1 = header
+        rowIndex: index + 2,
         cn,
-        date: row[1] ?? "",
+        date:        row[1] ?? "",
+        docType:     parseDocType(row[2] ?? ""),  // col C
+        subject:     row[3] ?? "",                // col D
+        sender:      row[4] ?? "",                // col E
+        notes:       row[5] ?? "",                // col F
+        receivedVia: row[6] ?? "",                // col G
+        // derived from CN — not a sheet column
         type: parsed.type,
         year: parsed.year,
-        num: parsed.num,
-        subject: row[3] ?? "",
-        sender: row[4] ?? "",
-        notes: row[5] ?? "",
+        num:  parsed.num,
       };
     });
 
     return NextResponse.json({ entries });
   } catch (err: any) {
     console.error(`[logbook GET ${direction}]`, err);
-    return NextResponse.json(
-      { error: err?.message ?? "Failed to fetch logbook." },
-      { status: 500 },
-    );
+    return NextResponse.json({ error: err?.message ?? "Failed to fetch." }, { status: 500 });
   }
 }
 
-// POST — append a new entry to the correct direction sheet
+// POST — append a new entry
 export async function POST(req: NextRequest) {
   const { spreadsheetId, direction, entry } = await req.json();
 
-  if (!spreadsheetId || !entry || !direction) {
+  if (!spreadsheetId || !entry || !direction)
     return NextResponse.json({ error: "Missing fields." }, { status: 400 });
-  }
 
   try {
     const sheets = getSheets();
     await ensureSheet(sheets, spreadsheetId, direction as Direction);
 
-    // Columns: Control Number | Date | Type | Subject | Sender | Notes
+    // A: CN | B: Date | C: Doc Type | D: Subject | E: Sender | F: Notes | G: Received Via
     const row = [
       entry.cn,
-      `'${entry.date}`, // ← apostrophe prefix forces plain text in Sheets
-      entry.type,
-      entry.subject,
-      entry.sender,
+      `'${entry.date}`,
+      entry.docType ?? "Memorandum",
+      entry.subject ?? "",
+      entry.sender ?? "",
       entry.notes ?? "",
+      entry.receivedVia ?? "",
     ];
 
     await sheets.spreadsheets.values.append({
@@ -158,20 +161,16 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ success: true });
   } catch (err: any) {
     console.error(`[logbook POST ${direction}]`, err);
-    return NextResponse.json(
-      { error: err?.message ?? "Failed to save entry." },
-      { status: 500 },
-    );
+    return NextResponse.json({ error: err?.message ?? "Failed to save." }, { status: 500 });
   }
 }
 
-// PUT — update an existing entry by row index in the correct direction sheet
+// PUT — update an existing entry by row index
 export async function PUT(req: NextRequest) {
   const { spreadsheetId, direction, rowIndex, entry } = await req.json();
 
-  if (!spreadsheetId || !direction || !rowIndex || !entry) {
+  if (!spreadsheetId || !direction || !rowIndex || !entry)
     return NextResponse.json({ error: "Missing fields." }, { status: 400 });
-  }
 
   try {
     const sheets = getSheets();
@@ -179,36 +178,33 @@ export async function PUT(req: NextRequest) {
     const row = [
       entry.cn,
       entry.date,
-      entry.type,
-      entry.subject,
-      entry.sender,
+      entry.docType ?? "Memorandum",
+      entry.subject ?? "",
+      entry.sender ?? "",
       entry.notes ?? "",
+      entry.receivedVia ?? "",
     ];
 
     await sheets.spreadsheets.values.update({
       spreadsheetId,
-      range: `${direction}!A${rowIndex}:F${rowIndex}`,
-      valueInputOption: "RAW", // ← was "USER_ENTERED"
+      range: `${direction}!A${rowIndex}:G${rowIndex}`,
+      valueInputOption: "RAW",
       requestBody: { values: [row] },
     });
 
     return NextResponse.json({ success: true });
   } catch (err: any) {
     console.error(`[logbook PUT ${direction}]`, err);
-    return NextResponse.json(
-      { error: err?.message ?? "Failed to update entry." },
-      { status: 500 },
-    );
+    return NextResponse.json({ error: err?.message ?? "Failed to update." }, { status: 500 });
   }
 }
 
-// DELETE — delete a row from the correct direction sheet
+// DELETE — delete a row
 export async function DELETE(req: NextRequest) {
   const { spreadsheetId, direction, rowIndex } = await req.json();
 
-  if (!spreadsheetId || !direction || !rowIndex) {
+  if (!spreadsheetId || !direction || !rowIndex)
     return NextResponse.json({ error: "Missing fields." }, { status: 400 });
-  }
 
   try {
     const sheets = getSheets();
@@ -228,8 +224,8 @@ export async function DELETE(req: NextRequest) {
               range: {
                 sheetId,
                 dimension: "ROWS",
-                startIndex: rowIndex - 1, // 0-based
-                endIndex: rowIndex, // exclusive
+                startIndex: rowIndex - 1,
+                endIndex: rowIndex,
               },
             },
           },
@@ -240,9 +236,6 @@ export async function DELETE(req: NextRequest) {
     return NextResponse.json({ success: true });
   } catch (err: any) {
     console.error(`[logbook DELETE ${direction}]`, err);
-    return NextResponse.json(
-      { error: err?.message ?? "Failed to delete entry." },
-      { status: 500 },
-    );
+    return NextResponse.json({ error: err?.message ?? "Failed to delete." }, { status: 500 });
   }
 }

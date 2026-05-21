@@ -2,22 +2,39 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import {
-  Plus, Search, Trash2, Pencil, RefreshCw,
-  FileText, Filter, X, Save, ChevronDown,
-  CloudUpload, Settings2, Check, AlertCircle,
-  ArrowUpFromLine, ArrowDownToLine,
+  Plus,
+  Search,
+  Trash2,
+  Pencil,
+  RefreshCw,
+  FileText,
+  Filter,
+  X,
+  Save,
+  ChevronDown,
+  ChevronUp,
+  CloudUpload,
+  Settings2,
+  Check,
+  AlertCircle,
+  ArrowUpFromLine,
+  ArrowDownToLine,
 } from "lucide-react";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
 type Direction = "OUTGOING" | "INCOMING";
 
+type DocType = "Memorandum" | "Letter" | "Case Order";
+type CnType = "E" | "R";
+
 interface LogEntry {
   rowIndex?: number;
   id: string;
   direction: Direction;
   cn: string;
-  type: "R" | "E";
+  type: CnType;
+  docType: DocType;
   year: number;
   num: number;
   date: string;
@@ -39,13 +56,28 @@ function pad(n: number, l: number) {
   return String(n).padStart(l, "0");
 }
 
-function buildCN(type: "R" | "E", year: number, num: number) {
+function buildCN(type: CnType, year: number, num: number) {
   return `KKK-${type}-${pad(year, 2)}-${pad(num, 4)}`;
 }
 
 function todayISO() {
   const d = new Date();
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1, 2)}-${pad(d.getDate(), 2)}`;
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1, 2)}-${pad(d.getDate(), 2)}T${pad(d.getHours(), 2)}:${pad(d.getMinutes(), 2)}`;
+}
+
+function formatDateTime(value: string) {
+  if (!value) return "—";
+  const d = new Date(value);
+  if (isNaN(d.getTime())) return value;
+  const month = d.toLocaleString("en-US", { month: "long" });
+  const day = d.getDate();
+  const year = d.getFullYear();
+  const time = d.toLocaleString("en-US", {
+    hour: "numeric",
+    minute: "2-digit",
+    hour12: true,
+  });
+  return `${month} ${day} ${year} (${time})`;
 }
 
 function currentYY() {
@@ -106,13 +138,16 @@ function SheetConfig({
                 focus:border-indigo-400 dark:focus:border-indigo-500/50 transition-colors font-mono"
             />
             <p className="text-[10px] text-gray-400 dark:text-white/25 mt-1.5">
-              From your Sheet URL: /spreadsheets/d/<span className="text-indigo-400">ID</span>/edit
+              From your Sheet URL: /spreadsheets/d/
+              <span className="text-indigo-400">ID</span>/edit
             </p>
           </div>
           <div className="p-3 rounded-xl bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/20">
             <p className="text-[11px] text-amber-700 dark:text-amber-300 leading-relaxed">
-              Share the Sheet with the service account email as <strong>Editor</strong>.
-              <strong> OUTGOING</strong> and <strong>INCOMING</strong> tabs will be created automatically if they don&apos;t exist.
+              Share the Sheet with the service account email as{" "}
+              <strong>Editor</strong>.<strong> OUTGOING</strong> and{" "}
+              <strong>INCOMING</strong> tabs will be created automatically if
+              they don&apos;t exist.
             </p>
           </div>
         </div>
@@ -125,7 +160,10 @@ function SheetConfig({
             Cancel
           </button>
           <button
-            onClick={() => { onSave(val.trim()); onClose(); }}
+            onClick={() => {
+              onSave(val.trim());
+              onClose();
+            }}
             disabled={!val.trim()}
             className="flex-1 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-semibold
               disabled:opacity-40 transition-all"
@@ -155,22 +193,35 @@ function EntryModal({
 }) {
   const isEdit = !!initial?.id;
 
-  const nextNum = (type: "R" | "E", year: number, direction: Direction) => {
+  const cnTypeFromDirection = (dir: Direction): CnType =>
+    dir === "OUTGOING" ? "E" : "R";
+
+  const nextNum = (type: CnType, year: number, direction: Direction) => {
     const same = existingEntries.filter(
-      (e) => e.type === type && e.year === year && e.direction === direction && e.id !== initial?.id
+      (e) =>
+        e.type === type &&
+        e.year === year &&
+        e.direction === direction &&
+        e.id !== initial?.id,
     );
     return same.length ? Math.max(...same.map((e) => e.num)) + 1 : 1;
   };
 
-  const [form, setForm] = useState({
-    direction: initial?.direction ?? defaultDirection,
-    type: initial?.type ?? ("E" as "R" | "E"),
-    year: initial?.year ?? currentYY(),
-    num: initial?.num ?? 1,
-    date: initial?.date ?? todayISO(),
-    subject: initial?.subject ?? "",
-    sender: initial?.sender ?? "",
-    notes: initial?.notes ?? "",
+  const [form, setForm] = useState(() => {
+    const dir = initial?.direction ?? defaultDirection;
+    const type = initial?.type ?? cnTypeFromDirection(dir);
+    const year = initial?.year ?? currentYY();
+    return {
+      direction: dir,
+      type,
+      docType: initial?.docType ?? ("Memorandum" as DocType),
+      year,
+      num: initial?.num ?? nextNum(type, year, dir),
+      date: initial?.date ?? todayISO(),
+      subject: initial?.subject ?? "",
+      sender: initial?.sender ?? "",
+      notes: initial?.notes ?? "",
+    };
   });
 
   const cn = buildCN(form.type, form.year, form.num);
@@ -178,7 +229,10 @@ function EntryModal({
   function set(k: string, v: any) {
     setForm((prev) => {
       const next = { ...prev, [k]: v };
-      if ((k === "type" || k === "year" || k === "direction") && !isEdit) {
+      if (k === "direction") {
+        next.type = cnTypeFromDirection(v as Direction);
+      }
+      if ((k === "year" || k === "direction") && !isEdit) {
         next.num = nextNum(next.type, next.year, next.direction);
       }
       return next;
@@ -193,17 +247,22 @@ function EntryModal({
       onClick={(e) => e.target === e.currentTarget && onClose()}
     >
       <div className="w-full max-w-lg bg-white dark:bg-[#0d0d1a] border border-black/[0.08] dark:border-white/[0.08] rounded-2xl shadow-2xl overflow-hidden max-h-[90vh] overflow-y-auto">
-        <div className={`h-0.5 bg-gradient-to-r ${isOutgoing ? "from-orange-400 to-rose-500" : "from-sky-400 to-indigo-500"}`} />
+        <div
+          className={`h-0.5 bg-gradient-to-r ${isOutgoing ? "from-orange-400 to-rose-500" : "from-sky-400 to-indigo-500"}`}
+        />
         <div className="flex items-center gap-3 px-5 py-4 border-b border-black/[0.06] dark:border-white/[0.06]">
-          <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${
-            isOutgoing
-              ? "bg-orange-500/10 border border-orange-500/20"
-              : "bg-sky-500/10 border border-sky-500/20"
-          }`}>
-            {isOutgoing
-              ? <ArrowUpFromLine className="w-4 h-4 text-orange-400" />
-              : <ArrowDownToLine className="w-4 h-4 text-sky-400" />
-            }
+          <div
+            className={`w-8 h-8 rounded-lg flex items-center justify-center ${
+              isOutgoing
+                ? "bg-orange-500/10 border border-orange-500/20"
+                : "bg-sky-500/10 border border-sky-500/20"
+            }`}
+          >
+            {isOutgoing ? (
+              <ArrowUpFromLine className="w-4 h-4 text-orange-400" />
+            ) : (
+              <ArrowDownToLine className="w-4 h-4 text-sky-400" />
+            )}
           </div>
           <p className="text-sm font-semibold text-gray-800 dark:text-white/85">
             {isEdit ? "Edit Entry" : "New Document Entry"}
@@ -217,7 +276,6 @@ function EntryModal({
         </div>
 
         <div className="px-5 py-5 space-y-4">
-
           {/* Direction Picker */}
           <div>
             <label className="text-[10px] font-semibold uppercase tracking-wider text-gray-400 dark:text-white/30 block mb-1.5">
@@ -237,10 +295,11 @@ function EntryModal({
                       : "border-black/[0.08] dark:border-white/[0.07] text-gray-400 dark:text-white/30 hover:bg-gray-50 dark:hover:bg-white/[0.03]"
                   }`}
                 >
-                  {dir === "OUTGOING"
-                    ? <ArrowUpFromLine className="w-3.5 h-3.5" />
-                    : <ArrowDownToLine className="w-3.5 h-3.5" />
-                  }
+                  {dir === "OUTGOING" ? (
+                    <ArrowUpFromLine className="w-3.5 h-3.5" />
+                  ) : (
+                    <ArrowDownToLine className="w-3.5 h-3.5" />
+                  )}
                   {dir}
                 </button>
               ))}
@@ -257,38 +316,48 @@ function EntryModal({
             </div>
           </div>
 
-          {/* Type + Year */}
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="text-[10px] font-semibold uppercase tracking-wider text-gray-400 dark:text-white/30 block mb-1.5">
-                Type
-              </label>
-              <select
-                value={form.type}
-                onChange={(e) => set("type", e.target.value)}
-                className="w-full px-3 py-2.5 rounded-xl border border-black/[0.08] dark:border-white/[0.08]
-                  bg-gray-50 dark:bg-white/[0.03] text-sm text-gray-700 dark:text-white/70
-                  focus:outline-none focus:border-indigo-400 dark:focus:border-indigo-500/50 transition-colors"
-              >
-                <option value="E">E — Email</option>
-                <option value="R">R — Release/Receiving</option>
-              </select>
+          {/* Document Type */}
+          <div>
+            <label className="text-[10px] font-semibold uppercase tracking-wider text-gray-400 dark:text-white/30 block mb-1.5">
+              Document Type
+            </label>
+            <div className="grid grid-cols-3 gap-2">
+              {(["Memorandum", "Letter", "Case Order"] as DocType[]).map(
+                (dt) => (
+                  <button
+                    key={dt}
+                    type="button"
+                    onClick={() => set("docType", dt)}
+                    className={`py-2.5 rounded-xl border text-xs font-semibold transition-all ${
+                      form.docType === dt
+                        ? "bg-indigo-50 dark:bg-indigo-500/10 border-indigo-300 dark:border-indigo-500/40 text-indigo-600 dark:text-indigo-300"
+                        : "border-black/[0.08] dark:border-white/[0.07] text-gray-400 dark:text-white/30 hover:bg-gray-50 dark:hover:bg-white/[0.03]"
+                    }`}
+                  >
+                    {dt}
+                  </button>
+                ),
+              )}
             </div>
-            <div>
-              <label className="text-[10px] font-semibold uppercase tracking-wider text-gray-400 dark:text-white/30 block mb-1.5">
-                Year (YY)
-              </label>
-              <input
-                type="number"
-                min={20}
-                max={99}
-                value={form.year}
-                onChange={(e) => set("year", parseInt(e.target.value) || currentYY())}
-                className="w-full px-3 py-2.5 rounded-xl border border-black/[0.08] dark:border-white/[0.08]
-                  bg-gray-50 dark:bg-white/[0.03] text-sm text-gray-700 dark:text-white/70
-                  focus:outline-none focus:border-indigo-400 dark:focus:border-indigo-500/50 transition-colors"
-              />
-            </div>
+          </div>
+
+          {/* Year */}
+          <div>
+            <label className="text-[10px] font-semibold uppercase tracking-wider text-gray-400 dark:text-white/30 block mb-1.5">
+              Year (YY)
+            </label>
+            <input
+              type="number"
+              min={20}
+              max={99}
+              value={form.year}
+              onChange={(e) =>
+                set("year", parseInt(e.target.value) || currentYY())
+              }
+              className="w-full px-3 py-2.5 rounded-xl border border-black/[0.08] dark:border-white/[0.08]
+                bg-gray-50 dark:bg-white/[0.03] text-sm text-gray-700 dark:text-white/70
+                focus:outline-none focus:border-indigo-400 dark:focus:border-indigo-500/50 transition-colors"
+            />
           </div>
 
           {/* Document Number */}
@@ -308,19 +377,24 @@ function EntryModal({
             />
           </div>
 
-          {/* Date */}
+          {/* Date & Time */}
           <div>
             <label className="text-[10px] font-semibold uppercase tracking-wider text-gray-400 dark:text-white/30 block mb-1.5">
-              Date
+              Date &amp; Time
             </label>
             <input
-              type="date"
+              type="datetime-local"
               value={form.date}
               onChange={(e) => set("date", e.target.value)}
               className="w-full px-3 py-2.5 rounded-xl border border-black/[0.08] dark:border-white/[0.08]
                 bg-gray-50 dark:bg-white/[0.03] text-sm text-gray-700 dark:text-white/70
                 focus:outline-none focus:border-indigo-400 dark:focus:border-indigo-500/50 transition-colors"
             />
+            {form.date && (
+              <p className="text-[10px] text-gray-400 dark:text-white/30 mt-1.5 font-mono">
+                {formatDateTime(form.date)}
+              </p>
+            )}
           </div>
 
           {/* Subject */}
@@ -384,9 +458,11 @@ function EntryModal({
             Cancel
           </button>
           <button
-            onClick={() => onSave({ ...form, cn })}
+            onClick={() => onSave({ ...form, cn, docType: form.docType })}
             className={`flex-1 py-2.5 rounded-xl text-white text-sm font-semibold transition-all flex items-center justify-center gap-2 ${
-              isOutgoing ? "bg-orange-500 hover:bg-orange-400" : "bg-sky-600 hover:bg-sky-500"
+              isOutgoing
+                ? "bg-orange-500 hover:bg-orange-400"
+                : "bg-sky-600 hover:bg-sky-500"
             }`}
           >
             <Save className="w-3.5 h-3.5" />
@@ -406,7 +482,9 @@ function StatusBar({ status }: { status: Status }) {
     return (
       <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-indigo-50 dark:bg-indigo-500/10 border border-indigo-200 dark:border-indigo-500/20">
         <RefreshCw className="w-3.5 h-3.5 text-indigo-500 animate-spin" />
-        <span className="text-[11px] text-indigo-600 dark:text-indigo-300">Syncing with Google Sheets…</span>
+        <span className="text-[11px] text-indigo-600 dark:text-indigo-300">
+          Syncing with Google Sheets…
+        </span>
       </div>
     );
   }
@@ -414,14 +492,18 @@ function StatusBar({ status }: { status: Status }) {
     return (
       <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-500/20">
         <Check className="w-3.5 h-3.5 text-emerald-500" />
-        <span className="text-[11px] text-emerald-600 dark:text-emerald-300">{status.msg}</span>
+        <span className="text-[11px] text-emerald-600 dark:text-emerald-300">
+          {status.msg}
+        </span>
       </div>
     );
   }
   return (
     <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/20">
       <AlertCircle className="w-3.5 h-3.5 text-red-500" />
-      <span className="text-[11px] text-red-600 dark:text-red-300">{status.msg}</span>
+      <span className="text-[11px] text-red-600 dark:text-red-300">
+        {status.msg}
+      </span>
     </div>
   );
 }
@@ -434,6 +516,7 @@ export default function DocumentLogbookPage() {
   const [search, setSearch] = useState("");
   const [filterType, setFilterType] = useState("");
   const [filterYear, setFilterYear] = useState("");
+  const [sortAsc, setSortAsc] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
   const [editEntry, setEditEntry] = useState<LogEntry | undefined>();
   const [sheetConfigOpen, setSheetConfigOpen] = useState(false);
@@ -452,7 +535,9 @@ export default function DocumentLogbookPage() {
       const local = localStorage.getItem("doclog_entries_v3");
       if (local) setEntries(JSON.parse(local));
     } catch {}
-    setTimeout(() => { isInitialLoad.current = false; }, 0);
+    setTimeout(() => {
+      isInitialLoad.current = false;
+    }, 0);
   }, []);
 
   // Persist entries — debounced + write-guarded
@@ -461,7 +546,9 @@ export default function DocumentLogbookPage() {
     clearTimeout(persistTimer.current);
     persistTimer.current = setTimeout(async () => {
       if (isWriting.current) {
-        persistTimer.current = setTimeout(() => { isWriting.current = false; }, 200);
+        persistTimer.current = setTimeout(() => {
+          isWriting.current = false;
+        }, 200);
         return;
       }
       isWriting.current = true;
@@ -476,7 +563,10 @@ export default function DocumentLogbookPage() {
     setStatus(s);
     clearTimeout(statusTimer.current);
     if (s.kind !== "loading") {
-      statusTimer.current = setTimeout(() => setStatus({ kind: "idle" }), clearAfter);
+      statusTimer.current = setTimeout(
+        () => setStatus({ kind: "idle" }),
+        clearAfter,
+      );
     }
   }
 
@@ -487,10 +577,17 @@ export default function DocumentLogbookPage() {
     showStatus({ kind: "loading" });
     try {
       const [outRes, inRes] = await Promise.all([
-        fetch(`/api/logbook?sheetId=${encodeURIComponent(sheetId)}&direction=OUTGOING`),
-        fetch(`/api/logbook?sheetId=${encodeURIComponent(sheetId)}&direction=INCOMING`),
+        fetch(
+          `/api/logbook?sheetId=${encodeURIComponent(sheetId)}&direction=OUTGOING`,
+        ),
+        fetch(
+          `/api/logbook?sheetId=${encodeURIComponent(sheetId)}&direction=INCOMING`,
+        ),
       ]);
-      const [outData, inData] = await Promise.all([outRes.json(), inRes.json()]);
+      const [outData, inData] = await Promise.all([
+        outRes.json(),
+        inRes.json(),
+      ]);
       if (!outRes.ok) throw new Error(outData.error);
       if (!inRes.ok) throw new Error(inData.error);
 
@@ -500,7 +597,10 @@ export default function DocumentLogbookPage() {
           rowIndex: e.rowIndex,
           direction: dir,
           cn: e.cn,
-          type: e.type as "R" | "E",
+          type: e.type as CnType,
+          docType: (["Memorandum", "Letter", "Case Order"].includes(e.docType)
+            ? e.docType
+            : "Memorandum") as DocType,
           year: e.year,
           num: e.num,
           date: e.date,
@@ -531,12 +631,16 @@ export default function DocumentLogbookPage() {
       const res = await fetch("/api/logbook", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ spreadsheetId: sheetId, direction: entry.direction, entry }),
+        body: JSON.stringify({
+          spreadsheetId: sheetId,
+          direction: entry.direction,
+          entry,
+        }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
     },
-    [sheetId]
+    [sheetId],
   );
 
   const updateEntry = useCallback(
@@ -555,7 +659,7 @@ export default function DocumentLogbookPage() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
     },
-    [sheetId]
+    [sheetId],
   );
 
   const deleteEntryFromSheet = useCallback(
@@ -569,7 +673,7 @@ export default function DocumentLogbookPage() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
     },
-    [sheetId]
+    [sheetId],
   );
 
   // ── Save handler ───────────────────────────────────────────────────────────
@@ -578,7 +682,9 @@ export default function DocumentLogbookPage() {
     async (form: Omit<LogEntry, "id" | "rowIndex" | "synced">) => {
       if (editEntry) {
         const updated: LogEntry = { ...editEntry, ...form };
-        setEntries((prev) => prev.map((e) => (e.id === editEntry.id ? updated : e)));
+        setEntries((prev) =>
+          prev.map((e) => (e.id === editEntry.id ? updated : e)),
+        );
         setModalOpen(false);
         setEditEntry(undefined);
 
@@ -587,7 +693,9 @@ export default function DocumentLogbookPage() {
           try {
             await updateEntry(updated);
             setEntries((prev) =>
-              prev.map((e) => (e.id === updated.id ? { ...e, synced: true } : e))
+              prev.map((e) =>
+                e.id === updated.id ? { ...e, synced: true } : e,
+              ),
             );
             showStatus({ kind: "success", msg: "Entry updated in Sheets." });
           } catch (err: any) {
@@ -610,7 +718,7 @@ export default function DocumentLogbookPage() {
         }
       }
     },
-    [editEntry, sheetId, pushEntry, updateEntry, fetchFromSheet]
+    [editEntry, sheetId, pushEntry, updateEntry, fetchFromSheet],
   );
 
   // ── Delete handler ─────────────────────────────────────────────────────────
@@ -626,23 +734,28 @@ export default function DocumentLogbookPage() {
           await deleteEntryFromSheet(entry.rowIndex, entry.direction);
           await fetchFromSheet();
         } catch (err: any) {
-          showStatus({ kind: "error", msg: `Delete sync failed: ${err.message}` });
+          showStatus({
+            kind: "error",
+            msg: `Delete sync failed: ${err.message}`,
+          });
         }
       }
     },
-    [sheetId, deleteEntryFromSheet, fetchFromSheet]
+    [sheetId, deleteEntryFromSheet, fetchFromSheet],
   );
 
   // ── Derived data ───────────────────────────────────────────────────────────
 
   const tabEntries = entries.filter((e) => e.direction === activeTab);
-  const years = [...new Set(tabEntries.map((e) => e.year))].sort((a, b) => b - a);
+  const years = [...new Set(tabEntries.map((e) => e.year))].sort(
+    (a, b) => b - a,
+  );
   const outCount = entries.filter((e) => e.direction === "OUTGOING").length;
   const inCount = entries.filter((e) => e.direction === "INCOMING").length;
 
   const filtered = tabEntries
     .filter((e) => {
-      if (filterType && e.type !== filterType) return false;
+      if (filterType && e.docType !== filterType) return false;
       if (filterYear && String(e.year) !== filterYear) return false;
       if (search) {
         const q = search.toLowerCase();
@@ -656,18 +769,19 @@ export default function DocumentLogbookPage() {
       return true;
     })
     .sort((a, b) => {
-      if (b.year !== a.year) return b.year - a.year;
-      return b.num - a.num;
+      if (a.year !== b.year) return sortAsc ? a.year - b.year : b.year - a.year;
+      return sortAsc ? a.num - b.num : b.num - a.num;
     });
 
   // ── Render ─────────────────────────────────────────────────────────────────
 
   return (
     <div className="min-h-full w-full bg-gray-50 dark:bg-[#0f0e17] overflow-y-auto">
-
       {/* ── Header ── */}
-      <div className="sticky top-0 z-20 bg-white/80 dark:bg-[#0f0e17]/80 backdrop-blur-md
-        border-b border-black/[0.06] dark:border-white/[0.06] px-6 py-4">
+      <div
+        className="sticky top-0 z-20 bg-white/80 dark:bg-[#0f0e17]/80 backdrop-blur-md
+        border-b border-black/[0.06] dark:border-white/[0.06] px-6 py-4"
+      >
         <div className="max-w-7xl mx-auto flex items-center gap-3 flex-wrap">
           <div className="flex items-center gap-3 flex-1 min-w-0">
             <div className="w-8 h-8 rounded-lg bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center flex-shrink-0">
@@ -680,7 +794,9 @@ export default function DocumentLogbookPage() {
               <p className="text-[11px] text-gray-400 dark:text-white/30">
                 KKK-R/E-YY-#### control numbers
                 {sheetId && (
-                  <span className="ml-2 text-emerald-500 dark:text-emerald-400">· Sheets connected</span>
+                  <span className="ml-2 text-emerald-500 dark:text-emerald-400">
+                    · Sheets connected
+                  </span>
                 )}
               </p>
             </div>
@@ -710,12 +826,17 @@ export default function DocumentLogbookPage() {
                   hover:border-indigo-300 dark:hover:border-indigo-500/40
                   disabled:opacity-40 transition-all"
               >
-                <CloudUpload className={`w-3.5 h-3.5 ${status.kind === "loading" ? "animate-bounce" : ""}`} />
+                <CloudUpload
+                  className={`w-3.5 h-3.5 ${status.kind === "loading" ? "animate-bounce" : ""}`}
+                />
               </button>
             )}
 
             <button
-              onClick={() => { setEditEntry(undefined); setModalOpen(true); }}
+              onClick={() => {
+                setEditEntry(undefined);
+                setModalOpen(true);
+              }}
               className={`flex items-center gap-2 px-3 py-2 rounded-xl text-white text-xs font-semibold transition-all ${
                 activeTab === "OUTGOING"
                   ? "bg-orange-500 hover:bg-orange-400"
@@ -730,7 +851,6 @@ export default function DocumentLogbookPage() {
       </div>
 
       <div className="max-w-7xl mx-auto px-6 py-6 space-y-4">
-
         {/* Status bar */}
         <StatusBar status={status} />
 
@@ -756,18 +876,21 @@ export default function DocumentLogbookPage() {
                     : "text-gray-400 dark:text-white/30 hover:text-gray-600 dark:hover:text-white/50"
                 }`}
               >
-                {dir === "OUTGOING"
-                  ? <ArrowUpFromLine className="w-3.5 h-3.5" />
-                  : <ArrowDownToLine className="w-3.5 h-3.5" />
-                }
+                {dir === "OUTGOING" ? (
+                  <ArrowUpFromLine className="w-3.5 h-3.5" />
+                ) : (
+                  <ArrowDownToLine className="w-3.5 h-3.5" />
+                )}
                 {dir}
-                <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-mono ${
-                  isActive
-                    ? dir === "OUTGOING"
-                      ? "bg-orange-100 dark:bg-orange-500/20 text-orange-500 dark:text-orange-300"
-                      : "bg-sky-100 dark:bg-sky-500/20 text-sky-500 dark:text-sky-300"
-                    : "bg-gray-100 dark:bg-white/[0.06] text-gray-400 dark:text-white/25"
-                }`}>
+                <span
+                  className={`text-[10px] px-1.5 py-0.5 rounded-full font-mono ${
+                    isActive
+                      ? dir === "OUTGOING"
+                        ? "bg-orange-100 dark:bg-orange-500/20 text-orange-500 dark:text-orange-300"
+                        : "bg-sky-100 dark:bg-sky-500/20 text-sky-500 dark:text-sky-300"
+                      : "bg-gray-100 dark:bg-white/[0.06] text-gray-400 dark:text-white/25"
+                  }`}
+                >
                   {count}
                 </span>
               </button>
@@ -809,8 +932,9 @@ export default function DocumentLogbookPage() {
                 focus:outline-none focus:border-indigo-400 dark:focus:border-indigo-500/50 transition-colors"
             >
               <option value="">All types</option>
-              <option value="R">R — Release/Receiving</option>
-              <option value="E">E — Email</option>
+              <option value="Memorandum">Memorandum</option>
+              <option value="Letter">Letter</option>
+              <option value="Case Order">Case Order</option>
             </select>
             <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-3 h-3 text-gray-400 dark:text-white/25 pointer-events-none" />
           </div>
@@ -825,7 +949,9 @@ export default function DocumentLogbookPage() {
             >
               <option value="">All years</option>
               {years.map((y) => (
-                <option key={y} value={String(y)}>20{pad(y, 2)}</option>
+                <option key={y} value={String(y)}>
+                  20{pad(y, 2)}
+                </option>
               ))}
             </select>
             <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-3 h-3 text-gray-400 dark:text-white/25 pointer-events-none" />
@@ -839,58 +965,113 @@ export default function DocumentLogbookPage() {
         {/* ── Table ── */}
         {filtered.length > 0 ? (
           <div className="bg-white dark:bg-white/[0.02] border border-black/[0.07] dark:border-white/[0.07] rounded-2xl overflow-hidden">
-            <div className="grid grid-cols-[180px_56px_88px_1fr_1fr_120px_36px] gap-3 px-4 py-2.5
+            <div
+              className="grid grid-cols-[180px_100px_200px_1fr_1fr_120px_36px] gap-3 px-4 py-2.5
               border-b border-black/[0.06] dark:border-white/[0.06]
-              bg-gray-50/80 dark:bg-white/[0.02]">
-              {["Control Number", "Type", "Date", "Subject", "Sender / Copy", "Notes", ""].map((h) => (
-                <div key={h} className="text-[10px] font-semibold uppercase tracking-[0.07em] text-gray-400 dark:text-white/25">
-                  {h}
-                </div>
-              ))}
+              bg-gray-50/80 dark:bg-white/[0.02]"
+            >
+              {[
+                "Control Number",
+                "Doc Type",
+                "Date",
+                "Subject",
+                "Sender / Copy",
+                "Notes",
+                "",
+              ].map((h) =>
+                h === "Control Number" ? (
+                  <button
+                    key={h}
+                    onClick={() => setSortAsc((v) => !v)}
+                    className="flex items-center gap-1 text-[10px] font-semibold uppercase tracking-[0.07em] text-gray-400 dark:text-white/25 hover:text-indigo-500 dark:hover:text-indigo-400 transition-colors group/sort"
+                  >
+                    {h}
+                    <span className="flex flex-col -space-y-0.5 ml-0.5">
+                      <ChevronUp
+                        className={`w-2.5 h-2.5 transition-colors ${sortAsc ? "text-indigo-500 dark:text-indigo-400" : "text-gray-300 dark:text-white/15"}`}
+                      />
+                      <ChevronDown
+                        className={`w-2.5 h-2.5 transition-colors ${!sortAsc ? "text-indigo-500 dark:text-indigo-400" : "text-gray-300 dark:text-white/15"}`}
+                      />
+                    </span>
+                  </button>
+                ) : (
+                  <div
+                    key={h}
+                    className="text-[10px] font-semibold uppercase tracking-[0.07em] text-gray-400 dark:text-white/25"
+                  >
+                    {h}
+                  </div>
+                ),
+              )}
             </div>
 
             {filtered.map((entry) => (
               <div
                 key={entry.id}
-                className="grid grid-cols-[180px_56px_88px_1fr_1fr_120px_36px] gap-3 px-4 py-3
+                className="grid grid-cols-[180px_100px_200px_1fr_1fr_120px_36px] gap-3 px-4 py-3
                   border-b border-black/[0.04] dark:border-white/[0.04] last:border-0
                   hover:bg-gray-50/60 dark:hover:bg-white/[0.02] transition-colors group items-center"
               >
-                <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-mono font-semibold w-fit ${
-                  entry.type === "E"
-                    ? "bg-blue-50 dark:bg-blue-500/10 text-blue-700 dark:text-blue-300"
-                    : "bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-300"
-                }`}>
+                <span
+                  className={`inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-mono font-semibold w-fit ${
+                    entry.type === "E"
+                      ? "bg-blue-50 dark:bg-blue-500/10 text-blue-700 dark:text-blue-300"
+                      : entry.type === "R"
+                        ? "bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-300"
+                        : "bg-yellow-50 dark:bg-yellow-500/10 text-yellow-700 dark:text-yellow-300"
+                  }`}
+                >
                   {entry.cn}
                 </span>
 
-                <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold w-fit ${
-                  entry.type === "E"
-                    ? "bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-300"
-                    : "bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-300"
-                }`}>
-                  {entry.type}
+                <span
+                  className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold w-fit truncate ${
+                    entry.docType === "Memorandum"
+                      ? "bg-green-50 dark:bg-green-500/10 text-green-600 dark:text-green-300"
+                      : entry.docType === "Letter"
+                        ? "bg-violet-50 dark:bg-violet-500/10 text-violet-600 dark:text-violet-300"
+                        : "bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-300"
+                  }`}
+                  title={entry.docType ?? "—"}
+                >
+                  {entry.docType ?? "—"}
                 </span>
 
-                <span className="text-[11px] text-gray-500 dark:text-white/40 font-mono truncate">
-                  {entry.date || "—"}
+                <span
+                  className="text-[11px] text-gray-500 dark:text-white/40 truncate"
+                  title={formatDateTime(entry.date)}
+                >
+                  {formatDateTime(entry.date)}
                 </span>
 
-                <span className="text-xs text-gray-700 dark:text-white/70 truncate" title={entry.subject}>
+                <span
+                  className="text-xs text-gray-700 dark:text-white/70 truncate"
+                  title={entry.subject}
+                >
                   {entry.subject || "—"}
                 </span>
 
-                <span className="text-xs text-gray-500 dark:text-white/50 truncate" title={entry.sender}>
+                <span
+                  className="text-xs text-gray-500 dark:text-white/50 truncate"
+                  title={entry.sender}
+                >
                   {entry.sender || "—"}
                 </span>
 
-                <span className="text-[11px] text-gray-400 dark:text-white/30 truncate" title={entry.notes}>
+                <span
+                  className="text-[11px] text-gray-400 dark:text-white/30 truncate"
+                  title={entry.notes}
+                >
                   {entry.notes || "—"}
                 </span>
 
                 <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                   <button
-                    onClick={() => { setEditEntry(entry); setModalOpen(true); }}
+                    onClick={() => {
+                      setEditEntry(entry);
+                      setModalOpen(true);
+                    }}
                     className="p-1 rounded-md text-gray-400 hover:text-indigo-500 hover:bg-indigo-50
                       dark:hover:bg-indigo-500/10 transition-all"
                   >
@@ -909,15 +1090,18 @@ export default function DocumentLogbookPage() {
           </div>
         ) : (
           <div className="flex flex-col items-center justify-center py-24">
-            <div className={`w-14 h-14 rounded-2xl border flex items-center justify-center mb-4 ${
-              activeTab === "OUTGOING"
-                ? "bg-orange-50 dark:bg-orange-500/10 border-orange-200 dark:border-orange-500/20"
-                : "bg-sky-50 dark:bg-sky-500/10 border-sky-200 dark:border-sky-500/20"
-            }`}>
-              {activeTab === "OUTGOING"
-                ? <ArrowUpFromLine className="w-6 h-6 text-orange-300 dark:text-orange-400/50" />
-                : <ArrowDownToLine className="w-6 h-6 text-sky-300 dark:text-sky-400/50" />
-              }
+            <div
+              className={`w-14 h-14 rounded-2xl border flex items-center justify-center mb-4 ${
+                activeTab === "OUTGOING"
+                  ? "bg-orange-50 dark:bg-orange-500/10 border-orange-200 dark:border-orange-500/20"
+                  : "bg-sky-50 dark:bg-sky-500/10 border-sky-200 dark:border-sky-500/20"
+              }`}
+            >
+              {activeTab === "OUTGOING" ? (
+                <ArrowUpFromLine className="w-6 h-6 text-orange-300 dark:text-orange-400/50" />
+              ) : (
+                <ArrowDownToLine className="w-6 h-6 text-sky-300 dark:text-sky-400/50" />
+              )}
             </div>
             <p className="text-sm font-medium text-gray-500 dark:text-white/40">
               {search || filterType || filterYear
@@ -942,7 +1126,10 @@ export default function DocumentLogbookPage() {
           existingEntries={entries}
           defaultDirection={activeTab}
           onSave={handleSave}
-          onClose={() => { setModalOpen(false); setEditEntry(undefined); }}
+          onClose={() => {
+            setModalOpen(false);
+            setEditEntry(undefined);
+          }}
         />
       )}
 
@@ -951,7 +1138,9 @@ export default function DocumentLogbookPage() {
           sheetId={sheetId}
           onSave={(id) => {
             setSheetId(id);
-            try { localStorage.setItem("doclog_sheet_id", id); } catch {}
+            try {
+              localStorage.setItem("doclog_sheet_id", id);
+            } catch {}
           }}
           onClose={() => setSheetConfigOpen(false)}
         />

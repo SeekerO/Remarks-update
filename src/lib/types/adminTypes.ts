@@ -81,6 +81,10 @@ export const TOOL_META: Record<
     description: "KKK Document LogBook.",
     accent: "bg-orange-500/10",
   },
+    "Inventory Management": {
+    description: "Manage property inventory and tracking",
+    accent: "bg-orange-500/10",
+  },
 };
 
 export type PageId = (typeof AVAILABLE_PAGES)[number]["id"];
@@ -321,6 +325,14 @@ export const navItems: NavItem[] = [
       {
         name: "Log Book",
         href: "/admin/logbook",
+        icon: TestTube,
+        active: true,
+        requiredRole: "admin",
+        sublinks: [],
+      },
+            {
+        name: "Inventory Management",
+        href: "/admin/inventory",
         icon: TestTube,
         active: true,
         requiredRole: "admin",
